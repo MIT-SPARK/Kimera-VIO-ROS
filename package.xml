@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>spark_vio_ros</name>
+  <version>4.0.0</version>
+  <description>gspark_vio_ros</description>
+
+  <maintainer email="yunchang@mit.edu">Yun Chang</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>catkin_simple</buildtool_depend>
+
+  <depend>SparkVio</depend>
+
+</package>
