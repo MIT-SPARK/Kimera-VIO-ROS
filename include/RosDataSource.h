@@ -47,6 +47,9 @@ public:
 
 private:  
 
+  // Define Node Handler for general use (Parameter server)
+  ros::NodeHandle nh_; 
+
   // Define Node Handler for IMU Callback (and Queue)
   ros::NodeHandle nh_imu_;
 
@@ -60,28 +63,26 @@ private:
 	// Define topics upon initialization
 	std::string left_camera_topic_; // parse from ros params 
 	std::string right_camera_topic_; 
-  std::string left_camera_info_topic_;
-  std::string right_camera_info_topic_;
 	std::string imu_topic_; 
 
 	ImuData imuData_; // store IMU data from last frame 
 	Timestamp last_time_stamp_; 
 
-	// Camera info 
-	CameraParams left_camera_info_;
-	CameraParams right_camera_info_;
-	gtsam::Pose3 camL_Pose_camR_; // relative pose between cameras
+	// Stereo info 
+  struct StereoCalibration{
+  	CameraParams left_camera_info_;
+  	CameraParams right_camera_info_;
+  	gtsam::Pose3 camL_Pose_camR_; // relative pose between cameras
+  };
 
 private:
   cv::Mat readRosImage(const std::string& img_name);
 
-  // Parse camera calibration info 
-  bool parseCameraData(sensor_msgs::CameraInfo cam_info, 
-                       CameraParams* cam_param);
+  // Parse camera calibration info (from param server)
+  bool parseCameraData(StereoCalibration* stereo_calib);
 
   // Parse IMU calibration info
-  bool parseImuData(sensor_msgs::Imu, 
-                    ImuData* imudata);
+  bool parseImuData(ImuData* imudata);
 
   // IMU callback 
   void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
@@ -105,6 +106,7 @@ private:
 
 private:
   VioFrontEndParams frontend_params_; 
+  StereoCalibration stereo_calib_; 
 };
 
 } // End of VIO Namespace 
