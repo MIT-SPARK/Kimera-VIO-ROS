@@ -1,0 +1,16 @@
+# EuRoC Calibration File 
+camera_model: pinhole
+distortion_model: radial-tangential
+camera_rate_hz: 20
+camera_resolution: [752, 480]
+
+left_camera_intrinsics: [458.654, 457.296, 367.215, 248.375] #fu, fv, cu, cv
+left_camera_distortion_coefficients: [-0.28340811, 0.07395907, 0.00019359, 1.76187114e-05]
+left_camera_extrinsics: [0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
+                         0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
+                         -0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949,
+                         0.0, 0.0, 0.0, 1.0]
+
+
+
+

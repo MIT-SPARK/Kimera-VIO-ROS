@@ -25,6 +25,7 @@
 
 // ROS Dependencies
 #include <ros/ros.h>
+#include <ros/console.h>
 #include <cv_bridge/cv_bridge.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
@@ -66,7 +67,8 @@ private:
 	std::string imu_topic_; 
 
 	ImuData imuData_; // store IMU data from last frame 
-	Timestamp last_time_stamp_; 
+	Timestamp last_time_stamp_; // Timestamp correponding to last frame
+  int frame_count_; // Keep track of number of frames processed 
 
 	// Stereo info 
   struct StereoCalibration{
@@ -99,7 +101,11 @@ private:
   typedef message_filters::sync_policies::ApproximateTime 
                            <sensor_msgs::Image, sensor_msgs::Image> sync_pol;
 
+  // Declare synchronizer 
   message_filters::Synchronizer<sync_pol> sync;
+
+  // Define subscriber for IMU data
+  ros::Subscriber imu_subscriber_; 
 
   // Print the parameters 
   void print() const;
@@ -107,6 +113,7 @@ private:
 private:
   VioFrontEndParams frontend_params_; 
   StereoCalibration stereo_calib_; 
+  const StereoMatchingParams& stereo_matching_params_;
 };
 
 } // End of VIO Namespace 
