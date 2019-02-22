@@ -23,103 +23,88 @@
 #include "VioFrontEndParams.h"
 #include "ImuFrontEnd.h"
 
+// ROS Dependencies
+#include <ros/ros.h>
+#include <cv_bridge/cv_bridge.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <image_transport/subscriber_filter.h>
+#include "sensor_msgs/Image.h"
+#include "sensor_msgs/Imu.h"
+#include "sensor_msgs/CameraInfo.h"
+#include "nav_msgs/Odometry.h"
+#include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/Vector3Stamped.h"
+
 namespace VIO {
-// Create Class to Manage Message Streams from ROS
-	class RosDataProvider { // TODO Inherit from DataProvider?
-	public:
-    // Stereo VIO Pipeline
-    VioPipeline stereoPipeline_;
 
-    // Pose Estimate Publisher
-    ros::Publisher posePub_;
-    ros::Publisher odomPub_;
+class RosDataProvider: public DataProvider {
+public:
+  RosDataProvider();
+  virtual ~RosDataProvider();
+  virtual bool spin(); // going to have to bind this to a callback
 
-    // PIM Estimate Publisher
-    ros::Publisher pimPub_;
+private:  
 
-    // IMU Filtered Data Publisher
-    ros::Publisher imuPub_;
+  // Define Node Handler for IMU Callback (and Queue)
+  ros::NodeHandle nh_imu_;
 
-    // Velocity Estimate Publisher
-    ros::Publisher velPub_;
+  // Define Node Handler for Cam Callback (and Queue)
+  ros::NodeHandle nh_cam_;
+  image_transport::ImageTransport it_; 
+  // image_tranport should be used for images instead of subscribers
 
-    // IMU Bias Estimate Publishers
-    ros::Publisher biasAccPub_;
-    ros::Publisher biasGyrPub_;
+  typedef image_transport::SubscriberFilter ImageSubscriber; 
 
-    // Frontend and Backend Loggers
-    ros::Publisher frontendPub_;
-    ros::Publisher backendPub_;
+	// Define topics upon initialization
+	std::string left_camera_topic_; // parse from ros params 
+	std::string right_camera_topic_; 
+  std::string left_camera_info_topic_;
+  std::string right_camera_info_topic_;
+	std::string imu_topic_; 
 
-    // Last Pose, Velocity and IMU Bias Estimate
-    Pose3 poseEstimate_;
-    Vector3 velocityEstimate_;
-    Vector6 imubiasEstimate_;
+	ImuData imuData_; // store IMU data from last frame 
+	Timestamp last_time_stamp_; 
 
-    // Pre-Integration Publisher Objects
-    gtsam::NavState pim_navstate_lpf_;
-    int64_t pim_publisher_counter_ = 0; 
+	// Camera info 
+	CameraParams left_camera_info_;
+	CameraParams right_camera_info_;
+	gtsam::Pose3 camL_Pose_camR_; // relative pose between cameras
 
-    // Declare Frame Variables
-    // @ TODO: Sandro --> Remove, this is only for dataset evaluation (not live)
-    int camera_counter_ = 0;
+private:
+  cv::Mat readRosImage(const std::string& img_name);
 
-    // Initialize Pipeline
-    void initializePipeline(ros::Publisher& posePub,
-                            ros::Publisher& odomPub,
-                            ros::Publisher& velPub,
-                            ros::Publisher& biasAccPub,
-                            ros::Publisher& biasGyrPub,
-                            ros::Publisher& pimPub, 
-                            ros::Publisher& imuPub,
-                            ros::Publisher& frontendPub,
-                            ros::Publisher& backendPub);
+  // Parse camera calibration info 
+  bool parseCameraData(sensor_msgs::CameraInfo cam_info, 
+                       CameraParams* cam_param);
 
-    // Callback to Get IMU Data
-    void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
+  // Parse IMU calibration info
+  bool parseImuData(sensor_msgs::Imu, 
+                    ImuData* imudata);
 
-    // Callback to Get Camera Data and Process Frame
-    void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
-                const sensor_msgs::ImageConstPtr& msgRight);
+  // IMU callback 
+  void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
 
-    // Publisher to Publish Pose Estimates
-    void publishPoseEstimate(long long sec, long long nsec);
+  // Callback for stereo images and main spin 
+  void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
+                                   const sensor_msgs::ImageConstPtr& msgRight);
+  
+  // Message filters and to sync stereo images 
+  ImageSubscriber left_img_subscriber_;
+  ImageSubscriber right_img_subscriber_;
 
-    // Publisher to Publish Odometry Estimates
-    void publishOdometryEstimate(long long sec, long long nsec);
+  // Declare Synchronization Policy for Stereo
+  typedef message_filters::sync_policies::ApproximateTime 
+                           <sensor_msgs::Image, sensor_msgs::Image> sync_pol;
 
-    // Publisher to Publish PIM Odometry Estimates
-    void publishPIMOdometryEstimate(long long sec, long long nsec, 
-                                gtsam::NavState pim_navstate);
+  message_filters::Synchronizer<sync_pol> sync;
 
-    // Low-Pass Filter for PIM Odometry Estimate
-    gtsam::NavState lowPassFilterPIM(gtsam::NavState pim_navstate);
+  // Print the parameters 
+  void print() const;
 
-    // Publisher to Publish IMU Bias Estimates
-    void publishBiasEstimate(long long sec, long long nsec);
+private:
+  VioFrontEndParams frontend_params_; 
+};
 
-    // Frontend Logger
-    void frontendLogger();
-
-    // Backend Logger
-    void backendLogger();
-
-    // ROS Spin with Max. Wait for Testing MATLAB
-    void spinAndShutdown(double wait_time_max);
-
-    // Lock Mutex
-    bool checkAndLock() const {
-        return mutex_.try_lock();
-    }
-
-    // Unlock Mutex
-    inline void unlock() const {
-        mutex_.unlock();
-    }
-
-	protected:
-
-    // Mutex to Protect Cam Callbacks (Drop Frame If Used)
-    mutable std::mutex mutex_;
-	};
-}; // End of VIO Namespace 
+} // End of VIO Namespace 
