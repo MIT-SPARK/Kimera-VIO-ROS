@@ -58,16 +58,126 @@ cv::Mat RosDataProvider::readRosImage(sensor_msgs::Image ros_img) {
 
 bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
 	// Parse camera calibration info (from param server)
-	
+
+ 	// Rate 
+ 	double rate; 
+ 	nh_.getParam("camera_rate_hz", rate);
+
+  // Resoltuion 
+  std::vector<int> resolution; 
+  nh_.getParam("camera_resolution", resolution);
+
+  // Get distortion/intrinsics/extrinsics for each camera 
+  for (int i = 0; i < 2; i++){
+  	std::string camera_name;
+  	CameraParams camera_param_i; 
+
+  	// Fill in rate and resolution 
+  	camera_param_i.image_size_ = cv::Size(resolution[0], resolution[1]);
+  	camera_param_i.frame_rate_ = 1.0 / rate; // Terminology wrong but following rest of the repo
+
+  	if (i == 0) {
+  		camera_name = "left_camera_";
+  	} else { 
+  		camera_name = "right_camera_";
+  	}
+  	// Parse intrinsics (camera matrix)
+  	std::vector<double> intrinsics; 
+  	nh_.getParam(camera_name + "intrinsics", intrinsics);
+  	camera_param_i.intrinsics_ = intrinsics; 
+  	// Conver intrinsics to camera matrix (OpenCV format)
+    camera_param_i.camera_matrix_ = cv::Mat::eye(3, 3, CV_64F);
+    camera_param_i.camera_matrix_.at<double>(0, 0) = intrinsics[0];
+    camera_param_i.camera_matrix_.at<double>(1, 1) = intrinsics[1];
+    camera_param_i.camera_matrix_.at<double>(0, 2) = intrinsics[2];
+    camera_param_i.camera_matrix_.at<double>(1, 2) = intrinsics[3];
+
+  	// Parse extrinsics (rotation and translation)
+  	std::vector<double> extrinsics; 
+  	std::vector<double> frame_change; // encode calibration frame to body frame
+  	nh_.getParam(camera_name + "extrinsics", extrinsics);
+  	nh_.getParam(camera_name + "calibration_to_body_frame", frame_change);
+
+  	// Place into matrix 
+  	// 4 4 is hardcoded here because currently only accept extrinsic input 
+  	// in homoegeneous formate [R T ; 0 1]
+  	cv::Mat E_calib = cv::Mat::zeros(4, 4, CV_64F);
+  	cv::Mat calib2body = cv::Mat::zeros(4, 4, CV_64F);
+  	for (int i = 0; i < 16; i++) {
+  		int row = i / 4; 
+  		int col = i % 4; 
+  		E_calib.at<double>(row, col) = extrinsics[i]; 
+  		calib2body.at<double>(row, col) = calib2body[i];
+  	}
+
+  	cv::Mat E_body = calib2body * E_calib; // Extrinsics in body frame 
+  	
+  	camera_param_i.body_Pose_cam_ = UtilsOpenCV::Cvmats2pose(
+  										E_calib.get_minor<3, 3> (0, 0), E_calib.get_minor<3, 1> (0, 3));
+
+  	// Parse distortion 
+  	std::vector<double> d_coeff; 
+  	nh_.getParam(camera_name + "distortion_coefficients", d_coeff);
+  	distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
+
+  	switch (d_coeff.size()) { // Currently have only come across two cases 
+  		case(4): // if given 4 coefficients 
+  			distortion_coeff.at<double>(0,0) = d_coeff[0]; // k1
+  			distortion_coeff.at<double>(0,1) = d_coeff[1]; // k2
+  			distortion_coeff.at<double>(0,3) = d_coeff[2]; // p1
+  			distortion_coeff.at<double>(0,4) = d_coeff[3]; // p2
+  			break; 
+
+  		case(5): // if given 5 coefficients 
+  			for (int k = 0; k < 5; k++) {
+    			distortion_coeff.at<double>(0, k) = d_coeff[k]; // k1, k2, k3, p1, p2
+  			}
+  			break; 
+
+  		default: // otherwise 
+  			ROS_ERROR("Unsupported distortion format");
+  	}
+
+  	camera_param_i.distortion_coeff_ = distortion_coeff;
+
+  	// TODO add skew (can add switch statement when parsing intrinsics)
+  	camera_param_i.calibration_ = gtsam::Cal3DS2(intrinsics_[0], // fx
+      																					 intrinsics_[1], // fy
+      																					 0.0,           // skew
+      																					 intrinsics_[2], // u0
+      																					 intrinsics_[3], // v0
+      																					 distortion_coeff.at<double>(0,0),  //  k1
+      																					 distortion_coeff.at<double>(0,1),  //  k2
+      																					 distortion_coeff.at<double>(0,3),  //  p1
+      																					 distortion_coeff.at<double>(0,4)); //  p2
+
+  	if (i == 0){
+  		stereo_calib.left_camera_info_ = camera_param_i;
+  	} else { 
+  		stereo_calib.right_camera_info_ = camera_param_i;
+  	}
+
+  }
+
+  // Calculate the pose of right camera relative to the left camera
+  stereo_calib.camL_Pose_camR_ = (stereo_calib.left_camera_info.body_Pose_cam_).between(
+                      						stereo_calib.right_camera_info.body_Pose_cam_);
+
+  return true;
 }
 
 bool RosDataProvider::parseImuData(ImuData* imudata) {
 	// Parse IMU calibration info (from param server)
+	double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise, acc_walk; 
 
-	/* NOTE (TODO) Might also need to parse the following: 
-	imuData_.imu_rate_, imuData_.imu_rate_std_, imuData_.imu_rate_maxMismatch_
-	imuData_.gyro_noise_, imuData_.gyro_walk_, imuData_.acc_noise_, imuData_.acc_walk_
-	*/
+	imuData->nominal_imu_rate_ = 1.0 / rate;
+	imuData->imu_rate_ = 1.0 / rate;
+	imuData->imu_rate_std_ = rate_std;
+	imuData->imu_rate_maxMismatch_ = rate_maxMismatch; 
+	imuData->gyro_noise_ = gyro_noise; 
+	imuData->gyro_walk_ = gyro_walk; 
+	imuData->acc_noise_ = acc_noise;
+	imuData->acc_walk_ = acc_walk; 
 }
 
 // IMU callback 
