@@ -15,16 +15,14 @@
 
 namespace VIO {
 
-RosDataProvider::RosDataProvider(): 
+RosDataProvider::RosDataProvider(std::string left_camera_topic, 
+																 std::string right_camera_topic, 
+																 std::string imu_topic): 
+			stereo_calib_(), 
 			it_(nh_cam_),
-			left_img_subscriber_(it_, left_camera_topic_, 1), // Image subscriber (left)
-			right_img_subscriber_(it_, right_camera_topic_, 1), // Image subscriber (right)
+			left_img_subscriber_(it_, left_camera_topic, 1), // Image subscriber (left)
+			right_img_subscriber_(it_, right_camera_topic, 1), // Image subscriber (right)
 			sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_) {
-
-	// Parse topic names from parameter server 
-	nh_.getParam("left_camera_topic", left_camera_topic_);
-	nh_.getParam("right_camera_topic", right_camera_topic_); 
-	nh_.getParam("imu_topic", imu_topic_); 
 
 	// Parse calibration info for camera and IMU 
 	// Calibration info on parameter server (Parsed from yaml)
@@ -34,24 +32,21 @@ RosDataProvider::RosDataProvider():
 	// Set frame count to 0 (Keeping track of number of frames processed)
 	frame_count_ = 0;  
 
-	// Get stereo matching parameters 
-	stereo_matching_params_ = frontend_params_.getStereoMatchingParams();
-
 	// Start IMU subscriber 
-	imu_subscriber nh.subscribe(odom_topic, 10, &Navigator::poseCallback, this); 
+	imu_subscriber_ = nh_.subscribe(imu_topic, 10, &RosDataProvider::callbackIMU, this); 
 
 	// Synchronize stero image callback 
   sync.registerCallback(boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
 }
 
-cv::Mat RosDataProvider::readRosImage(sensor_msgs::Image ros_img) {
+cv::Mat RosDataProvider::readRosImage(const sensor_msgs::ImageConstPtr& img_msg) {
 	// Use cv_bridge to read ros image to cv::Mat
 	cv_bridge::CvImagePtr cv_ptr;
   try{
-    cv_ptrLeft = cv_bridge::toCvCopy(ros_img);
+    cv_ptr = cv_bridge::toCvCopy(img_msg);
   } catch(cv_bridge::Exception& exception) {
-    ROS_ERROR("cv_bridge exception: %s", exception.what());
-    return;
+    ROS_FATAL("cv_bridge exception: %s", exception.what());
+    ros::shutdown();
   }
   return cv_ptr->image; // Return cv::Mat
 }
@@ -100,25 +95,31 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
 
   	// Place into matrix 
   	// 4 4 is hardcoded here because currently only accept extrinsic input 
-  	// in homoegeneous formate [R T ; 0 1]
+  	// in homoegeneous format [R T ; 0 1]
   	cv::Mat E_calib = cv::Mat::zeros(4, 4, CV_64F);
   	cv::Mat calib2body = cv::Mat::zeros(4, 4, CV_64F);
   	for (int i = 0; i < 16; i++) {
   		int row = i / 4; 
   		int col = i % 4; 
   		E_calib.at<double>(row, col) = extrinsics[i]; 
-  		calib2body.at<double>(row, col) = calib2body[i];
+  		calib2body.at<double>(row, col) = frame_change[i];
   	}
 
   	cv::Mat E_body = calib2body * E_calib; // Extrinsics in body frame 
   	
-  	camera_param_i.body_Pose_cam_ = UtilsOpenCV::Cvmats2pose(
-  										E_calib.get_minor<3, 3> (0, 0), E_calib.get_minor<3, 1> (0, 3));
+  	// restore back to vector form 
+  	std::vector<double> extrinsics_body; 
+  	for (int i = 0; i < 16; i++) {
+  		int row = i / 4; 
+  		int col = i % 4; 
+  		extrinsics_body.push_back(E_body.at<double>(row, col));
+  	}
+  	camera_param_i.body_Pose_cam_ = UtilsOpenCV::Vec2pose(extrinsics_body, 4, 4);
 
   	// Parse distortion 
   	std::vector<double> d_coeff; 
   	nh_.getParam(camera_name + "distortion_coefficients", d_coeff);
-  	distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
+  	cv::Mat distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
 
   	switch (d_coeff.size()) { // Currently have only come across two cases 
   		case(4): // if given 4 coefficients 
@@ -135,33 +136,33 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
   			break; 
 
   		default: // otherwise 
-  			ROS_ERROR("Unsupported distortion format");
+  			ROS_FATAL("Unsupported distortion format");
   	}
 
   	camera_param_i.distortion_coeff_ = distortion_coeff;
 
   	// TODO add skew (can add switch statement when parsing intrinsics)
-  	camera_param_i.calibration_ = gtsam::Cal3DS2(intrinsics_[0], // fx
-      																					 intrinsics_[1], // fy
+  	camera_param_i.calibration_ = gtsam::Cal3DS2(intrinsics[0], // fx
+      																					 intrinsics[1], // fy
       																					 0.0,           // skew
-      																					 intrinsics_[2], // u0
-      																					 intrinsics_[3], // v0
+      																					 intrinsics[2], // u0
+      																					 intrinsics[3], // v0
       																					 distortion_coeff.at<double>(0,0),  //  k1
       																					 distortion_coeff.at<double>(0,1),  //  k2
       																					 distortion_coeff.at<double>(0,3),  //  p1
       																					 distortion_coeff.at<double>(0,4)); //  p2
 
   	if (i == 0){
-  		stereo_calib.left_camera_info_ = camera_param_i;
+  		stereo_calib->left_camera_info_ = camera_param_i;
   	} else { 
-  		stereo_calib.right_camera_info_ = camera_param_i;
+  		stereo_calib->right_camera_info_ = camera_param_i;
   	}
 
   }
 
   // Calculate the pose of right camera relative to the left camera
-  stereo_calib.camL_Pose_camR_ = (stereo_calib.left_camera_info.body_Pose_cam_).between(
-                      						stereo_calib.right_camera_info.body_Pose_cam_);
+  stereo_calib->camL_Pose_camR_ = (stereo_calib->left_camera_info_.body_Pose_cam_).between(
+                      						stereo_calib->right_camera_info_.body_Pose_cam_);
 
   return true;
 }
@@ -170,14 +171,32 @@ bool RosDataProvider::parseImuData(ImuData* imudata) {
 	// Parse IMU calibration info (from param server)
 	double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise, acc_walk; 
 
-	imuData->nominal_imu_rate_ = 1.0 / rate;
-	imuData->imu_rate_ = 1.0 / rate;
-	imuData->imu_rate_std_ = rate_std;
-	imuData->imu_rate_maxMismatch_ = rate_maxMismatch; 
-	imuData->gyro_noise_ = gyro_noise; 
-	imuData->gyro_walk_ = gyro_walk; 
-	imuData->acc_noise_ = acc_noise;
-	imuData->acc_walk_ = acc_walk; 
+	std::vector<double> extrinsics; 
+
+	nh_.getParam("imu_rate_hz", rate);
+	nh_.getParam("gyroscope_noise_density", gyro_noise); 
+	nh_.getParam("gyroscope_random_walk", gyro_walk);
+	nh_.getParam("accelerometer_noise_density", acc_noise);
+	nh_.getParam("accelerometer_random_walk", acc_walk);
+	nh_.getParam("imu_extrinsics", extrinsics);
+
+	imudata->nominal_imu_rate_ = 1.0 / rate;
+	imudata->imu_rate_ = 1.0 / rate;
+	imudata->imu_rate_std_ = 0.0; // set to 0 for now
+	imudata->imu_rate_maxMismatch_ = 0.0; // set to 0 for now 
+	imudata->gyro_noise_ = gyro_noise; 
+	imudata->gyro_walk_ = gyro_walk; 
+	imudata->acc_noise_ = acc_noise;
+	imudata->acc_walk_ = acc_walk; 
+
+	// Store extrinsics (Currently only support homoegeneous format [R T ; 0 1]) 4 x 4
+	// Also expects imu frame to be aligned with body frame 
+	imudata->body_Pose_cam_ = UtilsOpenCV::Vec2pose(extrinsics, 4, 4);
+  gtsam::Pose3 identityPose;
+  ROS_DEBUG_COND(!imudata->body_Pose_cam_.equals(identityPose), 
+  			"Expected identity body_Pose_cam_ (body frame chosen as IMU frame");
+
+	return true; 
 }
 
 // IMU callback 
@@ -193,15 +212,15 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
   imu_accgyr(4) = msgIMU->angular_velocity.y;
   imu_accgyr(5) = msgIMU->angular_velocity.z; 
 
-  Timestamp timestamp = (msgIMU->header.stamp.sec * 1e9 + msgLeft->header.stamp.nsec);
+  Timestamp timestamp = (msgIMU->header.stamp.sec * 1e9 + msgIMU->header.stamp.nsec);
 
   // add measurement to buffer (CHECK if this is OK, need to manually delete old data?)
-  imudata->imu_buffer_.addMeasurement(timestamp, imu_accgyr);
+  imuData_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
 
 }
 
 // Callback for stereo images and main spin 
-void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
+void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
                                  const sensor_msgs::ImageConstPtr& msgRight){
 	// Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
 	// (Think of this as the spin of the other parser/data-providers)
@@ -214,22 +233,26 @@ void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
 	ImuMeasurements imu_meas; 
 
   ROS_DEBUG_COND(utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable !=
-        				 kitti_data_.imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
+        				 imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
         				 last_time_stamp_,
         				 timestamp,
         				 &imu_meas.timestamps_,
         				 &imu_meas.measurements_), "IMU data not available");
 
   // Call VIO Pipeline.
-  ROS_INFO("Processing frame %d with timestamp: %d", frame_count_, timestamp)
+  ROS_INFO("Processing frame %d with timestamp: %ld", frame_count_, timestamp);
+
+  // Stereo matching parameters
+  const StereoMatchingParams& stereo_matching_params = frontend_params_.getStereoMatchingParams();
 
   vio_callback_(StereoImuSyncPacket(
-		                StereoFrame(k, timestamp_frame_k,
+		                StereoFrame(frame_count_, 
+		               	timestamp,
 		                left_image,
 		                stereo_calib_.left_camera_info_,
 		                right_image,
 		                stereo_calib_.right_camera_info_,
-		                stereo_calib_.camL_pose_camR,
+		                stereo_calib_.camL_Pose_camR_,
 		                stereo_matching_params),
 		                imu_meas.timestamps_,
 		                imu_meas.measurements_));

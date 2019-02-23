@@ -22,12 +22,19 @@ int main(int argc, char *argv[]) {
   // Initialize ROS node
   ros::init(argc, argv, "spark_vio");
 
+  // Parse topic names from parameter server
+  ros::NodeHandle nh; 
+  std::string left_camera_topic, right_camera_topic, imu_topic; 
+  nh.getParam("left_camera_topic", left_camera_topic);
+  nh.getParam("right_camera_topic", right_camera_topic); 
+  nh.getParam("imu_topic", imu_topic); 
+
   // Ctor ETHDatasetParser, and parse dataset.
   VIO::ETHDatasetParser eth_dataset_parser;
   VIO::Pipeline vio_pipeline (&eth_dataset_parser); 
 
   // Register callback to vio_pipeline.
-  RosDataProvider ros_wrapper();
+  VIO::RosDataProvider ros_wrapper(left_camera_topic, right_camera_topic, imu_topic);
   ros_wrapper.registerVioCallback(
         std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
 

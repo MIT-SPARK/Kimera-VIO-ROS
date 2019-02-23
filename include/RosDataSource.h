@@ -17,6 +17,7 @@
 #include <string>
 #include <functional>
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/matx.hpp>
 #include "datasource/DataSource.h"
 #include "StereoImuSyncPacket.h"
 #include "StereoFrame.h"
@@ -27,7 +28,6 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <cv_bridge/cv_bridge.h>
-#include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <image_transport/subscriber_filter.h>
@@ -42,7 +42,9 @@ namespace VIO {
 
 class RosDataProvider: public DataProvider {
 public:
-  RosDataProvider();
+  RosDataProvider(std::string left_camera_topic, 
+                  std::string right_camera_topic, 
+                  std::string imu_topic);
   virtual ~RosDataProvider();
   virtual bool spin(); // going to have to bind this to a callback
 
@@ -78,7 +80,7 @@ private:
   };
 
 private:
-  cv::Mat readRosImage(const std::string& img_name);
+  cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg);
 
   // Parse camera calibration info (from param server)
   bool parseCameraData(StereoCalibration* stereo_calib);
@@ -113,7 +115,6 @@ private:
 private:
   VioFrontEndParams frontend_params_; 
   StereoCalibration stereo_calib_; 
-  const StereoMatchingParams& stereo_matching_params_;
 };
 
 } // End of VIO Namespace 

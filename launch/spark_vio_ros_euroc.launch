@@ -1,6 +1,6 @@
 <launch>
 	<arg name="dataset_name" value="EuRoC" />
-	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)_calibration.yaml" />
+	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml" />
 
 	<!-- More todo later -->
 </launch>

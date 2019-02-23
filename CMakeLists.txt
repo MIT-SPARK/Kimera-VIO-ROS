@@ -5,8 +5,8 @@ find_package(catkin_simple REQUIRED)
 
 catkin_simple()
 
-cs_add_executable(testbuild src/RosDataSource.cpp)
-target_link_libraries(testbuild PUBLIC SparkVio::sparkvio)
+cs_add_executable(spark_vio_euroc src/stereoVIOROS.cpp src/RosDataSource.cpp)
+target_link_libraries(spark_vio_euroc PUBLIC SparkVio::sparkvio)
 
 cs_install()
 
