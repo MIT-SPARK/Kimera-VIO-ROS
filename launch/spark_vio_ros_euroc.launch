@@ -1,6 +1,39 @@
 <launch>
 	<arg name="dataset_name" value="EuRoC" />
-	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml" />
+	<!-- Each dataset has its own set of parameter files -->
 
-	<!-- More todo later -->
+	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml" />
+	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml" />
+
+	<!-- More parameter arguments -->
+	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
+	<arg name="TRACKER_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/trackerParameters.yaml" />
+	<arg name="VIO_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/StereoVIO.flags" />
+	<arg name="MESHER_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Mesher.flags" />
+	<arg name="BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/VioBackEnd.flags" />
+	<arg name="REGULAR_BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/RegularVioBackEnd.flags" />
+	<arg name="VISUALIZER_FLAGS" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Visualizer3D.flags" />
+	<arg name="VERBOSITY" value="0" />
+	<arg name="BACKEND_TYPE" value="1" /> <!-- For regular VIO -->
+
+	<!-- Because of the current setup this is neccessary (need to edit ETH parser) -->
+	<arg name="DUMMY_DATASET_PATH" value="/home/yunchang/data/MH_03" />
+
+	<!-- Launch main node  -->
+	<node name="stereo_vio_ros" pkg="spark_vio_ros" type="stereo_vio_ros" 
+				args="--logtostderr=1
+  					  --colorlogtostderr=1 
+  					  --log_prefix=1 
+  					  --vio_params_path=$(arg VIO_PARAMS_PATH) 
+  					  --dataset_path=$(arg DUMMY_DATASET_PATH)
+  					  --initial_k=10 
+  					  --final_k=100 
+  					  --tracker_params_path=$(arg TRACKER_PARAMS_PATH) 
+  					  --flagfile=$(arg VIO_FLAGS_PATH) 
+  					  --flagfile=$(arg MESHER_FLAGS_PATH)
+  					  --flagfile=$(arg BACKEND_FLAGS_PATH)
+  					  --flagfile=$(arg REGULAR_BACKEND_FLAGS_PATH)
+  					  --flagfile=$(arg VISUALIZER_FLAGS)
+  					  --v=$(arg VERBOSITY)
+  					  --backend_type=$(arg BACKEND_TYPE)" />
 </launch>

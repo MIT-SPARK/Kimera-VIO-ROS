@@ -39,6 +39,8 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   sync.registerCallback(boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
 }
 
+RosDataProvider::~RosDataProvider() {}
+
 cv::Mat RosDataProvider::readRosImage(const sensor_msgs::ImageConstPtr& img_msg) {
 	// Use cv_bridge to read ros image to cv::Mat
 	cv_bridge::CvImagePtr cv_ptr;

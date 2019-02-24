@@ -46,7 +46,6 @@ public:
                   std::string right_camera_topic, 
                   std::string imu_topic);
   virtual ~RosDataProvider();
-  virtual bool spin(); // going to have to bind this to a callback
 
 private:  
 

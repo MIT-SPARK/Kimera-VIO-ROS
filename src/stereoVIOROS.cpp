@@ -3,6 +3,10 @@
  * @author Yun Chang based off stereoVIOEuroc.cpp
  */
 
+// Still need gflags for parameters in VIO
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+
 // Dependencies from ROS 
 #include <ros/ros.h>
 
@@ -28,6 +32,11 @@ int main(int argc, char *argv[]) {
   nh.getParam("left_camera_topic", left_camera_topic);
   nh.getParam("right_camera_topic", right_camera_topic); 
   nh.getParam("imu_topic", imu_topic); 
+
+  // Initialize Google's flags library.
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  // Initialize Google's logging library.
+  google::InitGoogleLogging(argv[0]);
 
   // Ctor ETHDatasetParser, and parse dataset.
   VIO::ETHDatasetParser eth_dataset_parser;
