@@ -24,10 +24,14 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 			right_img_subscriber_(it_, right_camera_topic, 1), // Image subscriber (right)
 			sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_) {
 
+	ROS_INFO(">>>>>>> Initializing Spark-VIO <<<<<<<");
 	// Parse calibration info for camera and IMU 
 	// Calibration info on parameter server (Parsed from yaml)
 	parseCameraData(&stereo_calib_);
 	parseImuData(&imuData_);
+
+	// print parameters for check 
+	print();
 
 	// Set frame count to 0 (Keeping track of number of frames processed)
 	frame_count_ = 0;  
@@ -37,6 +41,8 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 
 	// Synchronize stero image callback 
   sync.registerCallback(boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
+
+  ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
 }
 
 RosDataProvider::~RosDataProvider() {}
@@ -68,7 +74,6 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
   for (int i = 0; i < 2; i++){
   	std::string camera_name;
   	CameraParams camera_param_i; 
-
   	// Fill in rate and resolution 
   	camera_param_i.image_size_ = cv::Size(resolution[0], resolution[1]);
   	camera_param_i.frame_rate_ = 1.0 / rate; // Terminology wrong but following rest of the repo
@@ -93,29 +98,29 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
   	std::vector<double> extrinsics; 
   	std::vector<double> frame_change; // encode calibration frame to body frame
   	nh_.getParam(camera_name + "extrinsics", extrinsics);
-  	nh_.getParam(camera_name + "calibration_to_body_frame", frame_change);
-
+  	nh_.getParam("calibration_to_body_frame", frame_change);
   	// Place into matrix 
   	// 4 4 is hardcoded here because currently only accept extrinsic input 
   	// in homoegeneous format [R T ; 0 1]
   	cv::Mat E_calib = cv::Mat::zeros(4, 4, CV_64F);
   	cv::Mat calib2body = cv::Mat::zeros(4, 4, CV_64F);
-  	for (int i = 0; i < 16; i++) {
-  		int row = i / 4; 
-  		int col = i % 4; 
-  		E_calib.at<double>(row, col) = extrinsics[i]; 
-  		calib2body.at<double>(row, col) = frame_change[i];
+  	for (int k = 0; k < 16; k++) {
+  		int row = k / 4; 
+  		int col = k % 4; 
+  		E_calib.at<double>(row, col) = extrinsics[k]; 
+  		calib2body.at<double>(row, col) = frame_change[k];
   	}
 
   	cv::Mat E_body = calib2body * E_calib; // Extrinsics in body frame 
   	
   	// restore back to vector form 
   	std::vector<double> extrinsics_body; 
-  	for (int i = 0; i < 16; i++) {
-  		int row = i / 4; 
-  		int col = i % 4; 
+  	for (int k = 0; k < 16; k++) {
+  		int row = k / 4; 
+  		int col = k % 4; 
   		extrinsics_body.push_back(E_body.at<double>(row, col));
   	}
+
   	camera_param_i.body_Pose_cam_ = UtilsOpenCV::Vec2pose(extrinsics_body, 4, 4);
 
   	// Parse distortion 
@@ -166,6 +171,7 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
   stereo_calib->camL_Pose_camR_ = (stereo_calib->left_camera_info_.body_Pose_cam_).between(
                       						stereo_calib->right_camera_info_.body_Pose_cam_);
 
+  ROS_INFO("Parsed stereo camera calibration");
   return true;
 }
 
@@ -198,6 +204,7 @@ bool RosDataProvider::parseImuData(ImuData* imudata) {
   ROS_DEBUG_COND(!imudata->body_Pose_cam_.equals(identityPose), 
   			"Expected identity body_Pose_cam_ (body frame chosen as IMU frame");
 
+  ROS_INFO("Parsed IMU calibration");
 	return true; 
 }
 
@@ -215,6 +222,7 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
   imu_accgyr(5) = msgIMU->angular_velocity.z; 
 
   Timestamp timestamp = (msgIMU->header.stamp.sec * 1e9 + msgIMU->header.stamp.nsec);
+  ROS_INFO("Recieved message at time %ld", timestamp);
 
   // add measurement to buffer (CHECK if this is OK, need to manually delete old data?)
   imuData_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
@@ -260,6 +268,20 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 		                imu_meas.measurements_));
 
   last_time_stamp_ = timestamp;
+}
+
+void RosDataProvider::print() const {
+	std::cout << ">>>>>>>>> RosDataProvider::print <<<<<<<<<<<" << std::endl;
+  stereo_calib_.camL_Pose_camR_.print("camL_Pose_calR \n");
+  // For each of the 2 cameras.
+  std::cout << ">> Left camera params <<" << std::endl; 
+  stereo_calib_.left_camera_info_.print(); 
+  std::cout << ">> Right camera params <<" << std::endl; 
+  stereo_calib_.right_camera_info_.print(); 
+  std::cout << ">> IMU info << " << std::endl; 
+  imuData_.print(); 
+  std::cout << std::endl; 
+  std::cout << "========================================" << std::endl; 
 }
 
 } // End of VIO namespace
