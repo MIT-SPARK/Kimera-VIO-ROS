@@ -47,23 +47,23 @@ int main(int argc, char *argv[]) {
   ros_wrapper.registerVioCallback(
         std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
 
-  // // Spin dataset.
-  // auto tic = VIO::utils::Timer::tic();
-  // const bool is_pipeline_successful = ros_wrapper.spin();
+  // Spin dataset.
+  auto tic = VIO::utils::Timer::tic();
+  const bool is_pipeline_successful = ros_wrapper.spin();
 
-  // auto spin_duration = VIO::utils::Timer::toc(tic);
-  // LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
+  auto spin_duration = VIO::utils::Timer::toc(tic);
+  LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
 
-  // // Dataset spin has finished, shutdown VIO.
-  // vio_pipeline.shutdown();
+  // Dataset spin has finished, shutdown VIO.
+  vio_pipeline.shutdown();
 
-  // if (is_pipeline_successful) {
-  //   // Log overall time of pipeline run.
-  //   VIO::LoggerMatlab logger;
-  //   logger.openLogFiles(11);
-  //   logger.logPipelineOverallTiming(spin_duration);
-  //   logger.closeLogFiles();
-  // }
+  if (is_pipeline_successful) {
+    // Log overall time of pipeline run.
+    VIO::LoggerMatlab logger;
+    logger.openLogFiles(11);
+    logger.logPipelineOverallTiming(spin_duration);
+    logger.closeLogFiles();
+  }
 
-  // return is_pipeline_successful? EXIT_SUCCESS : EXIT_FAILURE;
+  return is_pipeline_successful? EXIT_SUCCESS : EXIT_FAILURE;
 }

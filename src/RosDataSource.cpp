@@ -19,6 +19,7 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 																 std::string right_camera_topic, 
 																 std::string imu_topic): 
 			stereo_calib_(), 
+			DataProvider(), 
 			it_(nh_cam_),
 			left_img_subscriber_(it_, left_camera_topic, 1), // Image subscriber (left)
 			right_img_subscriber_(it_, right_camera_topic, 1), // Image subscriber (right)
@@ -43,6 +44,7 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   sync.registerCallback(boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
 
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
+  ros::spinOnce();
 }
 
 RosDataProvider::~RosDataProvider() {}
@@ -222,7 +224,10 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
   imu_accgyr(5) = msgIMU->angular_velocity.z; 
 
   Timestamp timestamp = (msgIMU->header.stamp.sec * 1e9 + msgIMU->header.stamp.nsec);
-  ROS_INFO("Recieved message at time %ld", timestamp);
+  // ROS_INFO("Recieved message at time %ld", timestamp);
+  if (last_time_stamp_ == 0) { // initialize first time stamp
+  	last_time_stamp_ = timestamp; 
+  }
 
   // add measurement to buffer (CHECK if this is OK, need to manually delete old data?)
   imuData_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
@@ -242,32 +247,49 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 
 	ImuMeasurements imu_meas; 
 
-  ROS_DEBUG_COND(utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable !=
-        				 imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-        				 last_time_stamp_,
-        				 timestamp,
-        				 &imu_meas.timestamps_,
-        				 &imu_meas.measurements_), "IMU data not available");
+	if (utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable != 
+								 imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
+								 last_time_stamp_, 
+								 timestamp, 
+								 &imu_meas.timestamps_, 
+								 &imu_meas.measurements_)) {
+		ROS_WARN("IMU data not available between specified timestamps. Skipping frame.");
+	} else {
 
-  // Call VIO Pipeline.
-  ROS_INFO("Processing frame %d with timestamp: %ld", frame_count_, timestamp);
+	  // Call VIO Pipeline.
+	  ROS_INFO("Processing frame %d with timestamp: %ld", frame_count_, timestamp);
 
-  // Stereo matching parameters
-  const StereoMatchingParams& stereo_matching_params = frontend_params_.getStereoMatchingParams();
+	  std::cout << "last ts: " << last_time_stamp_ << " ts: " << timestamp << std::endl; 
 
-  vio_callback_(StereoImuSyncPacket(
-		                StereoFrame(frame_count_, 
-		               	timestamp,
-		                left_image,
-		                stereo_calib_.left_camera_info_,
-		                right_image,
-		                stereo_calib_.right_camera_info_,
-		                stereo_calib_.camL_Pose_camR_,
-		                stereo_matching_params),
-		                imu_meas.timestamps_,
-		                imu_meas.measurements_));
+	  // Stereo matching parameters
+	  const StereoMatchingParams& stereo_matching_params = frontend_params_.getStereoMatchingParams();
 
-  last_time_stamp_ = timestamp;
+	  vio_callback_(StereoImuSyncPacket(
+			                StereoFrame(frame_count_, 
+			               	timestamp,
+			                left_image,
+			                stereo_calib_.left_camera_info_,
+			                right_image,
+			                stereo_calib_.right_camera_info_,
+			                stereo_calib_.camL_Pose_camR_,
+			                stereo_matching_params),
+			                imu_meas.timestamps_,
+			                imu_meas.measurements_));
+
+	  ROS_INFO("StereoImuSyncPacket %d sent", frame_count_);
+
+	  last_time_stamp_ = timestamp;
+	}
+
+  frame_count_++; 
+}
+
+bool RosDataProvider::spin() {
+	ros::Rate rate(5);
+	while (ros::ok()){
+		ros::spinOnce();
+		rate.sleep();
+	}
 }
 
 void RosDataProvider::print() const {

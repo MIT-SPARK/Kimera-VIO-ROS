@@ -15,7 +15,7 @@
 	<arg name="BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/VioBackEnd.flags" />
 	<arg name="REGULAR_BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/RegularVioBackEnd.flags" />
 	<arg name="VISUALIZER_FLAGS" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Visualizer3D.flags" />
-	<arg name="VERBOSITY" value="10" />
+	<arg name="VERBOSITY" value="0" />
 	<arg name="BACKEND_TYPE" value="1" /> <!-- For regular VIO -->
 
 	<!-- Because of the current setup this is neccessary (need to edit ETH parser) -->
