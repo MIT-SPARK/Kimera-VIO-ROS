@@ -27,6 +27,8 @@
 // ROS Dependencies
 #include <ros/ros.h>
 #include <ros/console.h>
+#include <ros/spinner.h>
+#include <ros/callback_queue.h>
 #include <cv_bridge/cv_bridge.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>

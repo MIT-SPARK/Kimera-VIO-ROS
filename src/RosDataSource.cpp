@@ -37,11 +37,30 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 	// Set frame count to 0 (Keeping track of number of frames processed)
 	frame_count_ = 0;  
 
+	////// Define IMU Subscriber
+
 	// Start IMU subscriber 
 	imu_subscriber_ = nh_.subscribe(imu_topic, 10, &RosDataProvider::callbackIMU, this); 
 
-	// Synchronize stero image callback 
-  sync.registerCallback(boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
+	// Define Callback Queue for IMU Data
+	ros::CallbackQueue imu_queue; 
+	nh_imu_.setCallbackQueue(&imu_queue);
+	
+	// Spawn Async Spinner with 1 Threads (Running on Custom Queue) for IMU
+	ros::AsyncSpinner async_spinner_imu(1, &imu_queue);
+	async_spinner_imu.start();
+
+	////// Synchronize stero image callback 
+
+	sync.registerCallback(boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
+
+	// Define Callback Queue for Cam Data
+  ros::CallbackQueue cam_queue;
+  nh_cam_.setCallbackQueue(&cam_queue);
+
+  // Spawn Async Spinner with 1 Threads (Running on Custom Queue) for Cam
+  ros::AsyncSpinner async_spinner_cam(1, &cam_queue);
+	async_spinner_cam.start();
 
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
   ros::spinOnce();
