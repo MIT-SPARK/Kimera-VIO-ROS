@@ -65,11 +65,6 @@ private:
 
   typedef image_transport::SubscriberFilter ImageSubscriber; 
 
-	// Define topics upon initialization
-	std::string left_camera_topic_; // parse from ros params 
-	std::string right_camera_topic_; 
-	std::string imu_topic_; 
-
 	ImuData imuData_; // store IMU data from last frame 
 	Timestamp last_time_stamp_; // Timestamp correponding to last frame
   int frame_count_; // Keep track of number of frames processed 

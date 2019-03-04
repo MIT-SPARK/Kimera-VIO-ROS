@@ -242,15 +242,19 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
   imu_accgyr(4) = msgIMU->angular_velocity.y;
   imu_accgyr(5) = msgIMU->angular_velocity.z; 
 
-  Timestamp timestamp = (msgIMU->header.stamp.sec * 1e9 + msgIMU->header.stamp.nsec);
+  std::cout << "sec: " << msgIMU->header.stamp.sec << " nsec: " << msgIMU->header.stamp.nsec << std::endl;
+
+  long double sec = (long double) msgIMU->header.stamp.sec; 
+  long double nsec = (long double) msgIMU->header.stamp.nsec;
+  Timestamp timestamp = (long int) (sec * 1e9 + nsec);
   // ROS_INFO("Recieved message at time %ld", timestamp);
+
   if (last_time_stamp_ == 0) { // initialize first time stamp
   	last_time_stamp_ = timestamp; 
   }
 
   // add measurement to buffer (CHECK if this is OK, need to manually delete old data?)
   imuData_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
-
 }
 
 // Callback for stereo images and main spin 
@@ -262,7 +266,9 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 	cv::Mat right_image = readRosImage(msgRight);
 
 	// Timestamp is in nanoseconds 
-	Timestamp timestamp = (msgLeft->header.stamp.sec * 1e9 + msgLeft->header.stamp.nsec);
+	long double sec = (long double) msgLeft->header.stamp.sec; 
+  long double nsec = (long double) msgLeft->header.stamp.nsec;
+  Timestamp timestamp = (long int) (sec * 1e9 + nsec);
 
 	ImuMeasurements imu_meas; 
 

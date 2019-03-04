@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
   // Spin dataset.
   auto tic = VIO::utils::Timer::tic();
   const bool is_pipeline_successful = ros_wrapper.spin();
-
+  
   auto spin_duration = VIO::utils::Timer::toc(tic);
   LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
 
