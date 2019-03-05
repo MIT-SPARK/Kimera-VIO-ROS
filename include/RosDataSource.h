@@ -106,6 +106,9 @@ private:
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_; 
 
+  // Define imu topic since might need to wait 
+  std::string imu_topic_;
+
   // Print the parameters 
   void print() const;
 

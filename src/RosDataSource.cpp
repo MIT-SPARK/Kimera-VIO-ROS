@@ -37,33 +37,41 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 	// Set frame count to 0 (Keeping track of number of frames processed)
 	frame_count_ = 0;  
 
+	// Initialize last timestamp to be 0 
+	last_time_stamp_ = 0;
+
 	////// Define IMU Subscriber
 
-	// Start IMU subscriber 
-	imu_subscriber_ = nh_.subscribe(imu_topic, 10, &RosDataProvider::callbackIMU, this); 
+	imu_topic_ = imu_topic; 
+
+	// Start IMU subscriber
 
 	// Define Callback Queue for IMU Data
 	ros::CallbackQueue imu_queue; 
 	nh_imu_.setCallbackQueue(&imu_queue);
 	
-	// Spawn Async Spinner with 1 Threads (Running on Custom Queue) for IMU
-	ros::AsyncSpinner async_spinner_imu(1, &imu_queue);
+	// Spawn Async Spinner (Running on Custom Queue) for IMU
+	// 0 to use number of processor queues 
+
+	ros::AsyncSpinner async_spinner_imu(0, &imu_queue);
 	async_spinner_imu.start();
 
-	////// Synchronize stero image callback 
+	imu_subscriber_ = nh_imu_.subscribe(imu_topic, 10, &RosDataProvider::callbackIMU, this); 
 
-	sync.registerCallback(boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
+	////// Synchronize stero image callback 
 
 	// Define Callback Queue for Cam Data
   ros::CallbackQueue cam_queue;
   nh_cam_.setCallbackQueue(&cam_queue);
 
-  // Spawn Async Spinner with 1 Threads (Running on Custom Queue) for Cam
-  ros::AsyncSpinner async_spinner_cam(1, &cam_queue);
+  // Spawn Async Spinner (Running on Custom Queue) for Cam
+  ros::AsyncSpinner async_spinner_cam(0, &cam_queue);
 	async_spinner_cam.start();
 
+	sync.registerCallback(boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
+
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
-  ros::spinOnce();
+  // ros::waitForShutdown();
 }
 
 RosDataProvider::~RosDataProvider() {}
@@ -242,12 +250,10 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
   imu_accgyr(4) = msgIMU->angular_velocity.y;
   imu_accgyr(5) = msgIMU->angular_velocity.z; 
 
-  std::cout << "sec: " << msgIMU->header.stamp.sec << " nsec: " << msgIMU->header.stamp.nsec << std::endl;
-
   long double sec = (long double) msgIMU->header.stamp.sec; 
   long double nsec = (long double) msgIMU->header.stamp.nsec;
   Timestamp timestamp = (long int) (sec * 1e9 + nsec);
-  // ROS_INFO("Recieved message at time %ld", timestamp);
+  ROS_INFO("Recieved message at time %ld", timestamp);
 
   if (last_time_stamp_ == 0) { // initialize first time stamp
   	last_time_stamp_ = timestamp; 
@@ -270,16 +276,38 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
   long double nsec = (long double) msgLeft->header.stamp.nsec;
   Timestamp timestamp = (long int) (sec * 1e9 + nsec);
 
+  if (timestamp == last_time_stamp_) {
+  	ROS_WARN("Frame timestamp same as last frame. Skipping frame.");
+  	return;
+  }
+
 	ImuMeasurements imu_meas; 
 
 	if (utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable != 
-								 imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
+								 imuData_.imu_buffer_.getImuDataInterpolatedBorders(
 								 last_time_stamp_, 
 								 timestamp, 
 								 &imu_meas.timestamps_, 
 								 &imu_meas.measurements_)) {
-		ROS_WARN("IMU data not available between specified timestamps. Skipping frame.");
-	} else {
+
+		std::cout << "wait" << std::endl; 
+		// ros::topic::waitForMessage<sensor_msgs::Imu>(imu_topic_, ros::Duration(1000000));
+		ros::Duration(1).sleep();
+		std::cout << "wait end" << std::endl; 
+  	// Try call again 
+  	if (utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable != 
+							 imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
+							 last_time_stamp_, 
+							 timestamp, 
+							 &imu_meas.timestamps_, 
+							 &imu_meas.measurements_)) {
+  		// Still unavailable. Skip 
+  		ROS_WARN("IMU data not available between timestamps %ld and %ld. Skipping frame.", 
+					 		 last_time_stamp_, timestamp);
+  		return; 
+  	}
+  	// otherwise succeeded 
+	}
 
 	  // Call VIO Pipeline.
 	  ROS_INFO("Processing frame %d with timestamp: %ld", frame_count_, timestamp);
@@ -304,13 +332,12 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 	  ROS_INFO("StereoImuSyncPacket %d sent", frame_count_);
 
 	  last_time_stamp_ = timestamp;
-	}
 
   frame_count_++; 
 }
 
 bool RosDataProvider::spin() {
-	ros::Rate rate(5);
+	ros::Rate rate(10);
 	while (ros::ok()){
 		ros::spinOnce();
 		rate.sleep();
