@@ -335,9 +335,6 @@ bool RosDataProvider::spin() {
 			  last_time_stamp_ = timestamp;
 			  frame_count_++; 
 
-			  // publish odometry 
-			  publishOdometry();
-
 			} else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
 				ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
 				// remove next frame (this would usually for the first frame)
