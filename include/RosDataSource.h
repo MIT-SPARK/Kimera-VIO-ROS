@@ -40,6 +40,10 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Vector3Stamped.h"
 
+#include "StereoImageBuffer.h"
+
+// using namespace StereoImageBuffer;
+
 namespace VIO {
 
 class RosDataProvider: public DataProvider {
@@ -68,6 +72,8 @@ private:
 	ImuData imuData_; // store IMU data from last frame 
 	Timestamp last_time_stamp_; // Timestamp correponding to last frame
   int frame_count_; // Keep track of number of frames processed 
+
+  StereoBuffer stereo_buffer_; 
 
 	// Stereo info 
   struct StereoCalibration{
