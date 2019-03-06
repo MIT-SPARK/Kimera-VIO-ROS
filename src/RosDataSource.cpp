@@ -273,6 +273,17 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 }
 
 bool RosDataProvider::spin() {
+
+	// First initialize vio pipeline
+
+  // Dummy ETH data (required for now get rid later)
+  ETHDatasetParser eth_dataset_parser;
+  Pipeline vio_pipeline (&eth_dataset_parser); 
+
+  // Register callback to vio_pipeline.
+  registerVioCallback(
+        std::bind(&Pipeline::spin, &vio_pipeline, std::placeholders::_1));
+
 	ros::Rate rate(60);
 	while (ros::ok()){
 		// Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
@@ -346,6 +357,10 @@ bool RosDataProvider::spin() {
 	rate.sleep();
 
 	}
+
+	// Dataset spin has finished, shutdown VIO.
+  vio_pipeline.shutdown();
+  return true; 
 }
 
 void RosDataProvider::print() const {

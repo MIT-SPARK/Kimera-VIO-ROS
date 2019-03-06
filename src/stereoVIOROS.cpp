@@ -11,8 +11,6 @@
 #include <ros/ros.h>
 
 // Dependencies from VIO
-#include "ETH_parser.h"
-#include "pipeline/Pipeline.h"
 #include "utils/Timer.h"
 #include "LoggerMatlab.h"
 
@@ -26,6 +24,11 @@ int main(int argc, char *argv[]) {
   // Initialize ROS node
   ros::init(argc, argv, "spark_vio");
 
+  // Initialize Google's flags library.
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  // Initialize Google's logging library.
+  google::InitGoogleLogging(argv[0]);
+
   // Parse topic names from parameter server
   ros::NodeHandle nh; 
   std::string left_camera_topic, right_camera_topic, imu_topic; 
@@ -33,19 +36,7 @@ int main(int argc, char *argv[]) {
   nh.getParam("right_camera_topic", right_camera_topic); 
   nh.getParam("imu_topic", imu_topic); 
 
-  // Initialize Google's flags library.
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  // Initialize Google's logging library.
-  google::InitGoogleLogging(argv[0]);
-
-  // Ctor ETHDatasetParser, and parse dataset.
-  VIO::ETHDatasetParser eth_dataset_parser;
-  VIO::Pipeline vio_pipeline (&eth_dataset_parser); 
-
-  // Register callback to vio_pipeline.
   VIO::RosDataProvider ros_wrapper(left_camera_topic, right_camera_topic, imu_topic);
-  ros_wrapper.registerVioCallback(
-        std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
 
   // Spin dataset.
   auto tic = VIO::utils::Timer::tic();
@@ -53,9 +44,6 @@ int main(int argc, char *argv[]) {
 
   auto spin_duration = VIO::utils::Timer::toc(tic);
   LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
-
-  // Dataset spin has finished, shutdown VIO.
-  vio_pipeline.shutdown();
 
   if (is_pipeline_successful) {
     // Log overall time of pipeline run.
