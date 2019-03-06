@@ -23,7 +23,9 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 			it_(nh_cam_),
 			left_img_subscriber_(it_, left_camera_topic, 1), // Image subscriber (left)
 			right_img_subscriber_(it_, right_camera_topic, 1), // Image subscriber (right)
-			sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_) {
+			sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_), 
+			vio_pipeline_(&eth_dataset_parser) // initialize vio pipeline
+	{
 
 	ROS_INFO(">>>>>>> Initializing Spark-VIO <<<<<<<");
 	// Parse calibration info for camera and IMU 
@@ -71,7 +73,10 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 	async_spinner_cam.start();
 
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
-  // ros::waitForShutdown();
+ 	
+  // Register callback to vio_pipeline.
+  registerVioCallback(
+        std::bind(&Pipeline::spin, &vio_pipeline_, std::placeholders::_1)); 
 }
 
 RosDataProvider::~RosDataProvider() {}
@@ -274,16 +279,6 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 
 bool RosDataProvider::spin() {
 
-	// First initialize vio pipeline
-
-  // Dummy ETH data (required for now get rid later)
-  ETHDatasetParser eth_dataset_parser;
-  Pipeline vio_pipeline (&eth_dataset_parser); 
-
-  // Register callback to vio_pipeline.
-  registerVioCallback(
-        std::bind(&Pipeline::spin, &vio_pipeline, std::placeholders::_1));
-
 	ros::Rate rate(60);
 	while (ros::ok()){
 		// Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
@@ -342,6 +337,8 @@ bool RosDataProvider::spin() {
 			  last_time_stamp_ = timestamp;
 			  frame_count_++; 
 
+			  // publish odometry 
+
 			} else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
 				ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
 				// remove next frame (this would usually for the first frame)
@@ -359,7 +356,7 @@ bool RosDataProvider::spin() {
 	}
 
 	// Dataset spin has finished, shutdown VIO.
-  vio_pipeline.shutdown();
+  vio_pipeline_.shutdown();
   return true; 
 }
 

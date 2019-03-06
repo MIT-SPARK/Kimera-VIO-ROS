@@ -117,6 +117,11 @@ private:
   // Define imu topic since might need to wait 
   std::string imu_topic_;
 
+  // Define pipeline
+  // Dummy ETH data (required for now get rid later)
+  ETHDatasetParser eth_dataset_parser;
+  Pipeline vio_pipeline_;
+
   // Print the parameters 
   void print() const;
 
