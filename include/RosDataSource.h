@@ -72,6 +72,7 @@ private:
   typedef image_transport::SubscriberFilter ImageSubscriber; 
 
 	ImuData imuData_; // store IMU data from last frame 
+  ImuParams imuParams_;
 	Timestamp last_time_stamp_; // Timestamp correponding to last frame
   int frame_count_; // Keep track of number of frames processed 
 
@@ -91,7 +92,7 @@ private:
   bool parseCameraData(StereoCalibration* stereo_calib);
 
   // Parse IMU calibration info
-  bool parseImuData(ImuData* imudata);
+  bool parseImuData(ImuData* imudata, ImuParams* imuparams);
 
   // IMU callback 
   void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
@@ -116,11 +117,6 @@ private:
 
   // Define imu topic since might need to wait 
   std::string imu_topic_;
-
-  // Define pipeline
-  // Dummy ETH data (required for now get rid later)
-  ETHDatasetParser eth_dataset_parser;
-  Pipeline vio_pipeline_;
 
   // Print the parameters 
   void print() const;

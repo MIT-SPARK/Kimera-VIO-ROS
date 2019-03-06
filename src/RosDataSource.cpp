@@ -23,15 +23,14 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 			it_(nh_cam_),
 			left_img_subscriber_(it_, left_camera_topic, 1), // Image subscriber (left)
 			right_img_subscriber_(it_, right_camera_topic, 1), // Image subscriber (right)
-			sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_), 
-			vio_pipeline_(&eth_dataset_parser) // initialize vio pipeline
+			sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_)
 	{
 
 	ROS_INFO(">>>>>>> Initializing Spark-VIO <<<<<<<");
 	// Parse calibration info for camera and IMU 
 	// Calibration info on parameter server (Parsed from yaml)
 	parseCameraData(&stereo_calib_);
-	parseImuData(&imuData_);
+	parseImuData(&imuData_, &imuParams_);
 
 	// print parameters for check 
 	print();
@@ -73,10 +72,6 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 	async_spinner_cam.start();
 
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
- 	
-  // Register callback to vio_pipeline.
-  registerVioCallback(
-        std::bind(&Pipeline::spin, &vio_pipeline_, std::placeholders::_1)); 
 }
 
 RosDataProvider::~RosDataProvider() {}
@@ -209,7 +204,7 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
   return true;
 }
 
-bool RosDataProvider::parseImuData(ImuData* imudata) {
+bool RosDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
 	// Parse IMU calibration info (from param server)
 	double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise, acc_walk; 
 
@@ -226,17 +221,12 @@ bool RosDataProvider::parseImuData(ImuData* imudata) {
 	imudata->imu_rate_ = 1.0 / rate;
 	imudata->imu_rate_std_ = 0.00500009; // set to 0 for now
 	imudata->imu_rate_maxMismatch_ = 0.00500019; // set to 0 for now 
-	imudata->gyro_noise_ = gyro_noise; 
-	imudata->gyro_walk_ = gyro_walk; 
-	imudata->acc_noise_ = acc_noise;
-	imudata->acc_walk_ = acc_walk; 
+	imuparams->gyro_noise_ = gyro_noise; 
+	imuparams->gyro_walk_ = gyro_walk; 
+	imuparams->acc_noise_ = acc_noise;
+	imuparams->acc_walk_ = acc_walk; 
 
-	// Store extrinsics (Currently only support homoegeneous format [R T ; 0 1]) 4 x 4
-	// Also expects imu frame to be aligned with body frame 
-	imudata->body_Pose_cam_ = UtilsOpenCV::Vec2pose(extrinsics, 4, 4);
-  gtsam::Pose3 identityPose;
-  ROS_DEBUG_COND(!imudata->body_Pose_cam_.equals(identityPose), 
-  			"Expected identity body_Pose_cam_ (body frame chosen as IMU frame");
+	// Expects imu frame to be aligned with body frame 
 
   ROS_INFO("Parsed IMU calibration");
 	return true; 
@@ -278,6 +268,14 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 }
 
 bool RosDataProvider::spin() {
+	// Define pipeline
+  // Dummy ETH data (required for now get rid later)
+  ETHDatasetParser eth_dataset_parser;
+	Pipeline vio_pipeline_(&eth_dataset_parser, imuParams_); // initialize vio pipeline
+
+	// Register callback to vio_pipeline.
+  registerVioCallback(
+        std::bind(&Pipeline::spin, &vio_pipeline_, std::placeholders::_1)); 
 
 	ros::Rate rate(60);
 	while (ros::ok()){
@@ -338,6 +336,7 @@ bool RosDataProvider::spin() {
 			  frame_count_++; 
 
 			  // publish odometry 
+			  publishOdometry();
 
 			} else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
 				ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
