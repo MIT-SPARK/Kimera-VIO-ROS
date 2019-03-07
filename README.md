@@ -2,6 +2,12 @@
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
 # Installation
+Note that this is o be used with the `feature/kitti_dataset` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
+```
+git clone git@github.mit.edu:SPARK/spark_vio_ros.git
+cd ..
+catkin build
+```
 
 # Usage
 An example one can try is with the EuRoC dataset. To run, type 
