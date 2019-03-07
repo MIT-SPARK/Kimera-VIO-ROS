@@ -4,6 +4,8 @@
 
 	<arg name="data" />
 
+	<arg name="rate" default="1.0" />
+
 	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml" />
 	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml" />
 
@@ -41,5 +43,5 @@
   					  --backend_type=$(arg BACKEND_TYPE)" />
 
   	<!-- Launch rosbag -->
-  	<node pkg="rosbag" type="play" name="player" args="--clock $(arg data)"/>
+  	<node pkg="rosbag" type="play" name="player" args="--clock $(arg data) --rate $(arg rate)"/>
 </launch>

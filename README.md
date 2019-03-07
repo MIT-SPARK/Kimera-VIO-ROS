@@ -2,7 +2,7 @@
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
 # Installation
-Note that this is o be used with the `feature/kitti_dataset` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
+Note that this is to be used with the `feature/kitti_dataset` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
 ```
 git clone git@github.mit.edu:SPARK/spark_vio_ros.git
 cd ..
@@ -11,11 +11,17 @@ catkin build
 
 # Usage
 An example one can try is with the EuRoC dataset. To run, type 
-`roslaunch spark_vio_ros spark_vio_ros_euroc.launch data:="<path-to-rosbag>"`
+`roslaunch spark_vio_ros spark_vio_ros_euroc.launch data:="<path-to-rosbag>" rate:="<playback rate factor>`
+Note that the data parameter is required and the rate is default set to 1.0 (real time)
 
-To use your own dataset, you can copy the EuRoC folder and exchange all the values within the folder to those corresponding to your dataset (calibration, topic name, tracker/vio values, etc. ). Then, copy the launch file and just exchange the argument for dataset name to the name of your new folder. 
+To use your own dataset, you can copy the param/EuRoC folder and exchange all the values within the folder to those corresponding to your dataset (calibration, topic name, tracker/vio values, etc. ). Then, copy the launch file and just exchange the argument for dataset name to the name of your new folder. 
+
+For debugging, the VERBOSITY argument in the launch file can be toggled. 
 
 # ToDo
 Check Issues and Projects tabs.
 
 # Notes/FAQ
+One possible source of confusion is the DUMMY_DATASET_PATH argument. This is needed because of the way the SparkVio architecture is currently setup. More precisely, it requires the ETH Parser to be passed into the pipeline, so the quick way around it is to give it a dummy eth dataset (placed in the temp folder), that it doesn't really use. 
+
+Another thing to note is that in regularVioParameters.yaml, autoinitialize needs to be set to 1, otherwise the pipeline will initialize according to the ground truth in the dummy data. 
