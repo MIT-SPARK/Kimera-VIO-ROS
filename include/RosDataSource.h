@@ -100,6 +100,8 @@ private:
   // Callback for stereo images and main spin 
   void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
                                    const sensor_msgs::ImageConstPtr& msgRight);
+
+  void publishOutput(gtsam::Pose3 pose, gtsam::Vector3 velocity, Timestamp ts) const;
   
   // Message filters and to sync stereo images 
   ImageSubscriber left_img_subscriber_;
@@ -114,6 +116,9 @@ private:
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_; 
+
+  // Define publisher to publish odometry 
+  ros::Publisher odom_publisher; 
 
   // Define imu topic since might need to wait 
   std::string imu_topic_;

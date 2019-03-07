@@ -71,6 +71,11 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   ros::AsyncSpinner async_spinner_cam(0, &cam_queue);
 	async_spinner_cam.start();
 
+	// start odometry publisher 
+	std::string odom_topic_name; 
+	nh_.getParam("odometry_topic_name", odom_topic_name);
+	odom_publisher = nh_.advertise<nav_msgs::Odometry>(odom_topic_name, 10);
+
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
 }
 
@@ -335,11 +340,15 @@ bool RosDataProvider::spin() {
 			  last_time_stamp_ = timestamp;
 			  frame_count_++; 
 
+			  // publish pipeline output 
+			  gtsam::Pose3 estimated_pose = vio_pipeline_.get_estimated_pose();
+			  gtsam::Vector3 estimated_velocity = vio_pipeline_.get_estimated_velocity();
+			  publishOutput(estimated_pose, estimated_velocity, timestamp); 
+
 			} else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
 				ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
 				// remove next frame (this would usually for the first frame)
 				stereo_buffer_.remove_next();
-				std::cout << "remove da frame" << std::endl; 
 			}
 
 			// else it would be the kNotYetAvailable then just wait for next loop
@@ -354,6 +363,38 @@ bool RosDataProvider::spin() {
 	// Dataset spin has finished, shutdown VIO.
   vio_pipeline_.shutdown();
   return true; 
+}
+
+void RosDataProvider::publishOutput(gtsam::Pose3 pose, gtsam::Vector3 velocity, Timestamp ts) const {
+	// publish 
+	// First publish odometry estimate 
+	nav_msgs::Odometry odometry_msg; 
+
+	long int sec = ts / 1e9; 
+	long int nsec = ts - sec * 1e9; 
+
+	// create header 
+	odometry_msg.header.stamp.sec = sec;
+	odometry_msg.header.stamp.nsec = nsec; 
+	odometry_msg.header.frame_id = "/base_link";
+
+	// position 
+	odometry_msg.pose.pose.position.x = pose.x();
+	odometry_msg.pose.pose.position.y = pose.y();
+	odometry_msg.pose.pose.position.z = pose.z();
+
+	// orientation
+	odometry_msg.pose.pose.orientation.w = pose.rotation().toQuaternion().w();
+	odometry_msg.pose.pose.orientation.x = pose.rotation().toQuaternion().x();
+	odometry_msg.pose.pose.orientation.y = pose.rotation().toQuaternion().y();
+	odometry_msg.pose.pose.orientation.z = pose.rotation().toQuaternion().z();
+
+	// linear velocity 
+	odometry_msg.twist.twist.linear.x = velocity(0); 
+	odometry_msg.twist.twist.linear.y = velocity(1);
+	odometry_msg.twist.twist.linear.z = velocity(2);
+
+  odom_publisher.publish(odometry_msg);
 }
 
 void RosDataProvider::print() const {

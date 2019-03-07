@@ -4,3 +4,4 @@
 left_camera_topic: /cam0/image_raw
 right_camera_topic: /cam1/image_raw
 imu_topic: /imu0
+odometry_topic_name: /SparkVIO/GTSAM/odometry
