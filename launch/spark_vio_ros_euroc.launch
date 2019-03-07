@@ -20,7 +20,7 @@
 
 	<!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
 	<!-- Note that it is necessary that the autoInitialize = 1 in regularVioParameters if you don't match dummy data to your rosbag -->
-	<arg name="DUMMY_DATASET_PATH" value="/home/yunchang/data/MH_01" />
+	<arg name="DUMMY_DATASET_PATH" value="$(find spark_vio_ros)/temp/dummy_eth_data" />
 
 	<!-- Launch main node  -->
 	<node name="stereo_vio_ros" pkg="spark_vio_ros" type="stereo_vio_ros" output="screen" 
