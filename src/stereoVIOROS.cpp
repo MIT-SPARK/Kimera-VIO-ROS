@@ -1,6 +1,6 @@
-/* @file   stereoVIOKitti.cpp
- * @brief  example of VIO pipeline running on the KITTI dataset
- * @author Yun Chang based off stereoVIOEuroc.cpp
+/* @file   stereoVIOROS.cpp
+ * @brief  ROS Wrapper for Spark-VIO
+ * @author Yun Chang based off stereoVIOEuroc.cpp(in spark-VIO repo)
  */
 
 // Still need gflags for parameters in VIO

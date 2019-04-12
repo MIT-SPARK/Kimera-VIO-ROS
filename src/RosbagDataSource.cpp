@@ -1,6 +1,6 @@
 /**
- * @file   RosDataSource.cpp
- * @brief  ROS wrapper
+ * @file   RosbagDataSource.cpp
+ * @brief  Parse rosbad and run spark vio 
  * @author Yun Chang
  */
 #include "RosDataSource.h"
