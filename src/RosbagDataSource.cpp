@@ -3,11 +3,11 @@
  * @brief  Parse rosbad and run spark vio 
  * @author Yun Chang
  */
-#include "RosDataSource.h"
+#include "RosbagDataSource.h"
 
 namespace VIO {
 
-RosDataProvider::RosDataProvider(std::string left_camera_topic, 
+RosbagDataProvider::RosbagDataProvider(std::string left_camera_topic, 
 																 std::string right_camera_topic, 
 																 std::string imu_topic): 
 			stereo_calib_(), 
@@ -39,7 +39,7 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 
 	// Start IMU subscriber
 
-	imu_subscriber_ = nh_imu_.subscribe(imu_topic, 10, &RosDataProvider::callbackIMU, this); 
+	imu_subscriber_ = nh_imu_.subscribe(imu_topic, 10, &RosbagDataProvider::callbackIMU, this); 
 
 	// Define Callback Queue for IMU Data
 	ros::CallbackQueue imu_queue; 
@@ -53,7 +53,7 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 
 	////// Synchronize stero image callback 
 
-	sync.registerCallback(boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
+	sync.registerCallback(boost::bind(&RosbagDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
 
 	// Define Callback Queue for Cam Data
   ros::CallbackQueue cam_queue;
@@ -71,9 +71,9 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
 }
 
-RosDataProvider::~RosDataProvider() {}
+RosbagDataProvider::~RosbagDataProvider() {}
 
-cv::Mat RosDataProvider::readRosImage(const sensor_msgs::ImageConstPtr& img_msg) {
+cv::Mat RosbagDataProvider::readRosImage(const sensor_msgs::ImageConstPtr& img_msg) {
 	// Use cv_bridge to read ros image to cv::Mat
 	cv_bridge::CvImagePtr cv_ptr;
   try{
@@ -85,7 +85,7 @@ cv::Mat RosDataProvider::readRosImage(const sensor_msgs::ImageConstPtr& img_msg)
   return cv_ptr->image; // Return cv::Mat
 }
 
-bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
+bool RosbagDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
 	// Parse camera calibration info (from param server)
 
  	// Rate 
@@ -201,7 +201,7 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
   return true;
 }
 
-bool RosDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
+bool RosbagDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
 	// Parse IMU calibration info (from param server)
 	double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise, acc_walk; 
 
@@ -230,7 +230,7 @@ bool RosDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
 }
 
 // IMU callback 
-void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
+void RosbagDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
 	// Callback and store IMU data and timestamp until next StereoImuSyncPacket is made
   gtsam::Vector6 gyroAccData; 
   gtsam::Vector6 imu_accgyr;
@@ -256,7 +256,7 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
 }
 
 // Callback for stereo images and main spin 
-void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
+void RosbagDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
                                  const sensor_msgs::ImageConstPtr& msgRight){
 
 	// store in stereo buffer 
@@ -264,7 +264,7 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 
 }
 
-bool RosDataProvider::spin() {
+bool RosbagDataProvider::spin() {
 	// Define pipeline
   // Dummy ETH data (required for now get rid later)
   ETHDatasetParser eth_dataset_parser;
@@ -357,7 +357,7 @@ bool RosDataProvider::spin() {
   return true; 
 }
 
-void RosDataProvider::publishOutput(gtsam::Pose3 pose, gtsam::Vector3 velocity, Timestamp ts) const {
+void RosbagDataProvider::publishOutput(gtsam::Pose3 pose, gtsam::Vector3 velocity, Timestamp ts) const {
 	// publish 
 	// First publish odometry estimate 
 	nav_msgs::Odometry odometry_msg; 
@@ -389,8 +389,8 @@ void RosDataProvider::publishOutput(gtsam::Pose3 pose, gtsam::Vector3 velocity, 
   odom_publisher.publish(odometry_msg);
 }
 
-void RosDataProvider::print() const {
-	std::cout << ">>>>>>>>> RosDataProvider::print <<<<<<<<<<<" << std::endl;
+void RosbagDataProvider::print() const {
+	std::cout << ">>>>>>>>> RosbagDataProvider::print <<<<<<<<<<<" << std::endl;
   stereo_calib_.camL_Pose_camR_.print("camL_Pose_calR \n");
   // For each of the 2 cameras.
   std::cout << ">> Left camera params <<" << std::endl; 
