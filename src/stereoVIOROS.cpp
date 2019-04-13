@@ -17,6 +17,8 @@
 // Dependencies from this repository 
 #include "RosDataSource.h"
 
+#include <future>
+
 ////////////////////////////////////////////////////////////////////////////////
 // stereoVIOexample using ROS wrapper example
 ////////////////////////////////////////////////////////////////////////////////
@@ -36,13 +38,29 @@ int main(int argc, char *argv[]) {
   nh.getParam("right_camera_topic", right_camera_topic); 
   nh.getParam("imu_topic", imu_topic); 
 
+  VIO::ETHDatasetParser eth_dataset_parser; // Dummy ETH data (Since need this in pipeline)
   VIO::RosDataProvider ros_wrapper(left_camera_topic, right_camera_topic, imu_topic);
+
+  VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams());
+
+  // Register callback to vio_pipeline.
+  ros_wrapper.registerVioCallback(
+      std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1)); 
 
   // Spin dataset.
   auto tic = VIO::utils::Timer::tic();
-  const bool is_pipeline_successful = ros_wrapper.spin();
+  auto handle = std::async(std::launch::async,
+                           &VIO::RosDataProvider::spin, &ros_wrapper);
+  auto handle_pipeline = std::async(std::launch::async,
+             &VIO::Pipeline::shutdownWhenFinished, &vio_pipeline);
+  vio_pipeline.spinViz();
+  const bool is_pipeline_successful = handle.get();
+  handle_pipeline.get();
 
   auto spin_duration = VIO::utils::Timer::toc(tic);
+  // const bool is_pipeline_successful = ros_wrapper.spin();
+
+  // auto spin_duration = VIO::utils::Timer::toc(tic);
   LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
 
   if (is_pipeline_successful) {

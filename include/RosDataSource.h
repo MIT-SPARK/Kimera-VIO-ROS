@@ -48,6 +48,10 @@ public:
   virtual ~RosDataProvider();
   virtual bool spin();
 
+  inline ImuParams getImuParams() const {
+    return imuParams_;
+  }
+
 private:  
 
   // Define Node Handler for general use (Parameter server)

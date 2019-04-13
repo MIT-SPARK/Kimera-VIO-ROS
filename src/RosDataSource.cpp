@@ -265,15 +265,6 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 }
 
 bool RosDataProvider::spin() {
-	// Define pipeline
-  // Dummy ETH data (required for now get rid later)
-  ETHDatasetParser eth_dataset_parser;
-	Pipeline vio_pipeline_(&eth_dataset_parser, imuParams_); // initialize vio pipeline
-
-	// Register callback to vio_pipeline.
-  registerVioCallback(
-        std::bind(&Pipeline::spin, &vio_pipeline_, std::placeholders::_1)); 
-
 	ros::Rate rate(60);
 	while (ros::ok()){
 		// Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
@@ -332,10 +323,10 @@ bool RosDataProvider::spin() {
 			  last_time_stamp_ = timestamp;
 			  frame_count_++; 
 
-			  // publish pipeline output 
-			  gtsam::Pose3 estimated_pose = vio_pipeline_.get_estimated_pose();
-			  gtsam::Vector3 estimated_velocity = vio_pipeline_.get_estimated_velocity();
-			  publishOutput(estimated_pose, estimated_velocity, timestamp); 
+			  // // publish pipeline output 
+			  // gtsam::Pose3 estimated_pose = vio_pipeline_.get_estimated_pose();
+			  // gtsam::Vector3 estimated_velocity = vio_pipeline_.get_estimated_velocity();
+			  // publishOutput(estimated_pose, estimated_velocity, timestamp); 
 
 			} else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
 				ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
@@ -352,8 +343,8 @@ bool RosDataProvider::spin() {
 
 	}
 
-	// Dataset spin has finished, shutdown VIO.
-  vio_pipeline_.shutdown();
+  // Dataset spin has finished, shutdown VIO.
+  // vio_pipeline_.shutdown();
   return true; 
 }
 
