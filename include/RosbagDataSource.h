@@ -22,8 +22,10 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <cv_bridge/cv_bridge.h>
-#include "nav_msgs/Odometry.h"
+#include "sensor_msgs/Image.h"
+#include "sensor_msgs/Imu.h"
 #include <rosbag/bag.h>
+#include <rosbag/view.h>
 
 namespace VIO {
 
@@ -34,6 +36,10 @@ public:
                   std::string imu_topic);
   virtual ~RosbagDataProvider();
   virtual bool spin();
+
+  inline ImuParams getImuParams() const {
+    return imuParams_;
+  }
 
 private:  
 	ImuData imuData_; // store IMU data from last frame 
@@ -48,6 +54,18 @@ private:
   	gtsam::Pose3 camL_Pose_camR_; // relative pose between cameras
   };
 
+  struct Data {
+    inline size_t getNumberOfImages() const {return left_img_.size();}
+    // The image names of the images from left camera 
+    std::vector<sensor_msgs::ImageConstPtr&> left_imgs_;
+    // The image names of the images from right camera
+    std::vector<sensor_msgs::ImageConstPtr&> right_imgs_;
+    // Vector of timestamps see issue in .cpp file 
+    std::vector<Timestamp> timestamps_;
+    //IMU data 
+    ImuData imuData_;
+  };
+
 private:
   // Parse camera calibration info (from param server)
   bool parseCameraData(StereoCalibration* stereo_calib);
@@ -55,7 +73,12 @@ private:
   // Parse IMU calibration info
   bool parseImuData(ImuData* imudata, ImuParams* imuparams);
 
-  void publishOutput(gtsam::Pose3 pose, gtsam::Vector3 velocity, Timestamp ts) const;
+  // Parse rosbag data 
+  bool parseRosbag(std::string bag_path, 
+                   std::string left_imgs_topic, 
+                   std::string right_imgs_topic, 
+                   std::string imu_topic, 
+                   Data* data); 
   
   // Print the parameters 
   void print() const;
@@ -63,6 +86,7 @@ private:
 private:
   VioFrontEndParams frontend_params_; 
   StereoCalibration stereo_calib_; 
+  Data data_;
 };
 
 } // End of VIO Namespace 

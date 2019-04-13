@@ -9,13 +9,11 @@ namespace VIO {
 
 RosbagDataProvider::RosbagDataProvider(std::string left_camera_topic, 
 																 std::string right_camera_topic, 
-																 std::string imu_topic): 
+																 std::string imu_topic,
+																 std::string bag_input_path): 
 			stereo_calib_(), 
 			DataProvider(), 
-			it_(nh_cam_),
-			left_img_subscriber_(it_, left_camera_topic, 1), // Image subscriber (left)
-			right_img_subscriber_(it_, right_camera_topic, 1), // Image subscriber (right)
-			sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_)
+			data_()
 	{
 
 	ROS_INFO(">>>>>>> Initializing Spark-VIO <<<<<<<");
@@ -23,52 +21,11 @@ RosbagDataProvider::RosbagDataProvider(std::string left_camera_topic,
 	// Calibration info on parameter server (Parsed from yaml)
 	parseCameraData(&stereo_calib_);
 	parseImuData(&imuData_, &imuParams_);
+	// parse data from rosbag
+	parseRosbag(bag_input_path, left_camera_topic, right_camera_topic, imu_topic, &data_);
 
 	// print parameters for check 
 	print();
-
-	// Set frame count to 0 (Keeping track of number of frames processed)
-	frame_count_ = 0;  
-
-	// Initialize last timestamp to be 0 
-	last_time_stamp_ = 0;
-
-	////// Define IMU Subscriber
-
-	imu_topic_ = imu_topic; 
-
-	// Start IMU subscriber
-
-	imu_subscriber_ = nh_imu_.subscribe(imu_topic, 10, &RosbagDataProvider::callbackIMU, this); 
-
-	// Define Callback Queue for IMU Data
-	ros::CallbackQueue imu_queue; 
-	nh_imu_.setCallbackQueue(&imu_queue);
-	
-	// Spawn Async Spinner (Running on Custom Queue) for IMU
-	// 0 to use number of processor queues 
-
-	ros::AsyncSpinner async_spinner_imu(0, &imu_queue);
-	async_spinner_imu.start();
-
-	////// Synchronize stero image callback 
-
-	sync.registerCallback(boost::bind(&RosbagDataProvider::callbackCamAndProcessStereo, this, _1, _2) );
-
-	// Define Callback Queue for Cam Data
-  ros::CallbackQueue cam_queue;
-  nh_cam_.setCallbackQueue(&cam_queue);
-
-  // Spawn Async Spinner (Running on Custom Queue) for Cam
-  ros::AsyncSpinner async_spinner_cam(0, &cam_queue);
-	async_spinner_cam.start();
-
-	// start odometry publisher 
-	std::string odom_topic_name; 
-	nh_.getParam("odometry_topic_name", odom_topic_name);
-	odom_publisher = nh_.advertise<nav_msgs::Odometry>(odom_topic_name, 10);
-
-  ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
 }
 
 RosbagDataProvider::~RosbagDataProvider() {}
@@ -176,14 +133,14 @@ bool RosbagDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
 
   	// TODO add skew (can add switch statement when parsing intrinsics)
   	camera_param_i.calibration_ = gtsam::Cal3DS2(intrinsics[0], // fx
-      																					 intrinsics[1], // fy
-      																					 0.0,           // skew
-      																					 intrinsics[2], // u0
-      																					 intrinsics[3], // v0
-      																					 distortion_coeff.at<double>(0,0),  //  k1
-      																					 distortion_coeff.at<double>(0,1),  //  k2
-      																					 distortion_coeff.at<double>(0,3),  //  p1
-      																					 distortion_coeff.at<double>(0,4)); //  p2
+																								 intrinsics[1], // fy
+																								 0.0,           // skew
+																								 intrinsics[2], // u0
+																								 intrinsics[3], // v0
+																								 distortion_coeff.at<double>(0,0),  //  k1
+																								 distortion_coeff.at<double>(0,1),  //  k2
+																								 distortion_coeff.at<double>(0,3),  //  p1
+																								 distortion_coeff.at<double>(0,4)); //  p2
 
   	if (i == 0){
   		stereo_calib->left_camera_info_ = camera_param_i;
@@ -229,164 +186,113 @@ bool RosbagDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
 	return true; 
 }
 
-// IMU callback 
-void RosbagDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
-	// Callback and store IMU data and timestamp until next StereoImuSyncPacket is made
-  gtsam::Vector6 gyroAccData; 
-  gtsam::Vector6 imu_accgyr;
+bool RosbagDataProvider::parseRosbag(std::string bag_path, std::string bag_path, 
+									                   std::string left_imgs_topic, 
+									                   std::string right_imgs_topic, 
+									                   std::string imu_topic, 
+									                   Data* data) {
+	// Fill in rosbag to data_
+	rosbag::Bag bag; 
+	bag.open(bag_path);
 
-  imu_accgyr(0) = msgIMU->linear_acceleration.x; 
-  imu_accgyr(1) = msgIMU->linear_acceleration.y; 
-  imu_accgyr(2) = msgIMU->linear_acceleration.z; 
-  imu_accgyr(3) = msgIMU->angular_velocity.x; 
-  imu_accgyr(4) = msgIMU->angular_velocity.y;
-  imu_accgyr(5) = msgIMU->angular_velocity.z; 
+	std::vector<std::string> topics;
+  topics.push_back(left_imgs_topic);
+  topics.push_back(right_imgs_topic);
+  topics.push_back(imu_topic);
 
-  long double sec = (long double) msgIMU->header.stamp.sec; 
-  long double nsec = (long double) msgIMU->header.stamp.nsec;
-  Timestamp timestamp = (long int) (sec * 1e9 + nsec);
-  // ROS_INFO("Recieved message at time %ld", timestamp);
+	rosbag::View view(bag, rosbag::TopicQuery(topics));
 
-  if (last_time_stamp_ == 0) { // initialize first time stamp
-  	last_time_stamp_ = timestamp; 
+  foreach(rosbag::MessageInstance const m, view) {
+  	// left image 
+  	sensor_msgs::ImageConstPtr l_img = m.instantiate<sensor_msgs::Image>();
+  	if (l_img != NULL) {
+  		// Timestamp is in nanoseconds 
+			long double sec = (long double) l_img->header.stamp.sec; 
+		  long double nsec = (long double) l_img->header.stamp.nsec;
+		  Timestamp timestamp = (long int) (sec * 1e9 + nsec);
+  		data->timestamps_.push_back(timestamp)
+  		data->left_imgs_.push_back(l_img);
+  	}
+  	// right image 
+  	sensor_msgs::ImageConstPtr r_img = m.instantiate<sensor_msgs::Image>();
+  	if (r_img != NULL) {
+  		data->right_imgs_.push_back(r_img);
+  	}
+  	// imu 
+  	sensor_msgs::ImuConstPtr& imudata = m.instantiate<sensor_msgs::Imu>();
+  	if (imu != NULL) {
+
+		  gtsam::Vector6 imu_accgyr;
+		  imu_accgyr(0) = imudata->linear_acceleration.x; 
+		  imu_accgyr(1) = imudata->linear_acceleration.y; 
+		  imu_accgyr(2) = imudata->linear_acceleration.z; 
+		  imu_accgyr(3) = imudata->angular_velocity.x; 
+		  imu_accgyr(4) = imudata->angular_velocity.y;
+		  imu_accgyr(5) = imudata->angular_velocity.z; 
+
+		  long double sec = (long double) imudata->header.stamp.sec; 
+		  long double nsec = (long double) imudata->header.stamp.nsec;
+		  Timestamp timestamp = (long int) (sec * 1e9 + nsec);
+  		data->imuData_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
+  	}
   }
 
-  // add measurement to buffer (CHECK if this is OK, need to manually delete old data?)
-  imuData_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
-}
-
-// Callback for stereo images and main spin 
-void RosbagDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
-                                 const sensor_msgs::ImageConstPtr& msgRight){
-
-	// store in stereo buffer 
-  stereo_buffer_.add_stereo_frame(msgLeft, msgRight);
-
+  // Sanity check: 
+ 	if (data->left_imgs_.size() == 0 || data->right_imgs_.size() == 0) 
+ 		ROS_ERROR("0 images parsed from ros bag");
+ 	if (data->imuData_.imu_buffer_.size() <= data->left_imgs_.size()) {
+ 		ROS_ERROR("Less than or equal number fo imu data as image data");
+ 	}
 }
 
 bool RosbagDataProvider::spin() {
-	// Define pipeline
-  // Dummy ETH data (required for now get rid later)
-  ETHDatasetParser eth_dataset_parser;
-	Pipeline vio_pipeline_(&eth_dataset_parser, imuParams_); // initialize vio pipeline
 
-	// Register callback to vio_pipeline.
-  registerVioCallback(
-        std::bind(&Pipeline::spin, &vio_pipeline_, std::placeholders::_1)); 
+	timestamp_last_frame = data_.timestamps_.at(0);
 
-	ros::Rate rate(60);
-	while (ros::ok()){
+	// Stereo matching parameters
+	const StereoMatchingParams& stereo_matching_params = frontend_params_.getStereoMatchingParams();
+
+	for (size_t k = 0; k < data_.getNumberOfImages(); k++) {
 		// Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
 		// (Think of this as the spin of the other parser/data-providers)
+		timestamp_frame_k = data_.timestamps_.at(k);
 
-		Timestamp timestamp = stereo_buffer_.get_earliest_timestamp(); 
+    ImuMeasurements imu_meas; 
+    CHECK(utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable ==
+          data_.imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
+          timestamp_last_frame,
+          timestamp_frame_k,
+          &imu_meas.timestamps_,
+          &imu_meas.measurements_)) 
+          << "Make sure queried timestamp lies before the first IMU sample in the buffer";
+    // Call VIO Pipeline.
+    VLOG(10) << "Call VIO processing for frame k: " << k
+             << " with timestamp: " << timestamp_frame_k << '\n'
+             << "////////////////////////////////// Creating packet!\n"
+             << "STAMPS IMU rows : \n" << imu_meas.timestamps_.rows() << '\n'
+             << "STAMPS IMU cols : \n" << imu_meas.timestamps_.cols() << '\n'
+             << "STAMPS IMU: \n" << imu_meas.timestamps_ << '\n'
+             << "ACCGYR IMU rows : \n" << imu_meas.measurements_.rows() << '\n'
+             << "ACCGYR IMU cols : \n" << imu_meas.measurements_.cols() << '\n'
+             << "ACCGYR IMU: \n" << imu_meas.measurements_ << '\n';
 
-		if (stereo_buffer_.get_earliest_timestamp() <= last_time_stamp_) {
-			if (stereo_buffer_.size() != 0) {
-				ROS_WARN("Next frame in image buffer is from the same or earlier time than the last processed frame. Skip frame.");
-				// remove next frame (this would usually for the first frame)
-				stereo_buffer_.remove_next();
-			}
-			// else just waiting for next stereo frames
+    timestamp_last_frame = timestamp_frame_k;
 
-		} else {
-			// Test if IMU data available
-			ImuMeasurements imu_meas; 
+    vio_callback_(StereoImuSyncPacket(
+                   StereoFrame(k, timestamp_frame_k,
+                               readRosImage(data_.left_imgs_.at(k)),
+                               stereo_calib_.left_camera_info_,
+                               readRosImage(data_.right_imgs_.at(k)),
+                               stereo_calib_.right_cam_info_,
+                               stereo_calib_.camL_pose_camR_,
+                               stereo_matching_params),
+                               imu_meas.timestamps_,
+                               imu_meas.measurements_));
 
-			utils::ThreadsafeImuBuffer::QueryResult imu_query = 
-									imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-																			last_time_stamp_,
-																			timestamp, 
-																			&imu_meas.timestamps_, 
-																			&imu_meas.measurements_);
-
-			if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
-				// data available
-				sensor_msgs::ImageConstPtr left_ros_img, right_ros_img; 
-				stereo_buffer_.extract_latest_images(left_ros_img, right_ros_img);
-
-				// read to cv type 
-				cv::Mat left_image = readRosImage(left_ros_img);
-				cv::Mat right_image = readRosImage(right_ros_img);
-
-				// Call VIO Pipeline.
-			  // ROS_INFO("Processing frame %d with timestamp: %ld", frame_count_, timestamp);
-
-			  // Stereo matching parameters
-			  const StereoMatchingParams& stereo_matching_params = frontend_params_.getStereoMatchingParams();
-
-			  vio_callback_(StereoImuSyncPacket(
-					                StereoFrame(frame_count_, 
-					               	timestamp,
-					                left_image,
-					                stereo_calib_.left_camera_info_,
-					                right_image,
-					                stereo_calib_.right_camera_info_,
-					                stereo_calib_.camL_Pose_camR_,
-					                stereo_matching_params),
-					                imu_meas.timestamps_,
-					                imu_meas.measurements_));
-
-			  // ROS_INFO("StereoImuSyncPacket %d sent", frame_count_);
-
-			  last_time_stamp_ = timestamp;
-			  frame_count_++; 
-
-			  // publish pipeline output 
-			  gtsam::Pose3 estimated_pose = vio_pipeline_.get_estimated_pose();
-			  gtsam::Vector3 estimated_velocity = vio_pipeline_.get_estimated_velocity();
-			  publishOutput(estimated_pose, estimated_velocity, timestamp); 
-
-			} else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
-				ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
-				// remove next frame (this would usually for the first frame)
-				stereo_buffer_.remove_next();
-			}
-
-			// else it would be the kNotYetAvailable then just wait for next loop
-		}
-
-	// spin loop
-	ros::spinOnce();
-	rate.sleep();
-
+    VLOG(10) << "Finished VIO processing for frame k = " << k; 	
 	}
-
-	// Dataset spin has finished, shutdown VIO.
-  vio_pipeline_.shutdown();
+  
   return true; 
-}
-
-void RosbagDataProvider::publishOutput(gtsam::Pose3 pose, gtsam::Vector3 velocity, Timestamp ts) const {
-	// publish 
-	// First publish odometry estimate 
-	nav_msgs::Odometry odometry_msg; 
-
-	long int sec = ts / 1e9; 
-	long int nsec = ts - sec * 1e9; 
-
-	// create header 
-	odometry_msg.header.stamp.sec = sec;
-	odometry_msg.header.stamp.nsec = nsec; 
-	odometry_msg.header.frame_id = "/base_link";
-
-	// position 
-	odometry_msg.pose.pose.position.x = pose.x();
-	odometry_msg.pose.pose.position.y = pose.y();
-	odometry_msg.pose.pose.position.z = pose.z();
-
-	// orientation
-	odometry_msg.pose.pose.orientation.w = pose.rotation().toQuaternion().w();
-	odometry_msg.pose.pose.orientation.x = pose.rotation().toQuaternion().x();
-	odometry_msg.pose.pose.orientation.y = pose.rotation().toQuaternion().y();
-	odometry_msg.pose.pose.orientation.z = pose.rotation().toQuaternion().z();
-
-	// linear velocity 
-	odometry_msg.twist.twist.linear.x = velocity(0); 
-	odometry_msg.twist.twist.linear.y = velocity(1);
-	odometry_msg.twist.twist.linear.z = velocity(2);
-
-  odom_publisher.publish(odometry_msg);
 }
 
 void RosbagDataProvider::print() const {
