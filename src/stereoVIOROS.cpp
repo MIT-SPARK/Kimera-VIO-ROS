@@ -51,16 +51,12 @@ int main(int argc, char *argv[]) {
   auto tic = VIO::utils::Timer::tic();
   auto handle = std::async(std::launch::async,
                            &VIO::RosDataProvider::spin, &ros_wrapper);
-  auto handle_pipeline = std::async(std::launch::async,
-             &VIO::Pipeline::shutdownWhenFinished, &vio_pipeline);
+
   vio_pipeline.spinViz();
   const bool is_pipeline_successful = handle.get();
-  handle_pipeline.get();
 
   auto spin_duration = VIO::utils::Timer::toc(tic);
-  // const bool is_pipeline_successful = ros_wrapper.spin();
 
-  // auto spin_duration = VIO::utils::Timer::toc(tic);
   LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
 
   if (is_pipeline_successful) {

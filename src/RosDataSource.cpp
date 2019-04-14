@@ -261,11 +261,10 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 
 	// store in stereo buffer 
   stereo_buffer_.add_stereo_frame(msgLeft, msgRight);
-
 }
 
 bool RosDataProvider::spin() {
-	ros::Rate rate(60);
+	// ros::Rate rate(60);
 	while (ros::ok()){
 		// Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
 		// (Think of this as the spin of the other parser/data-providers)
@@ -337,14 +336,15 @@ bool RosDataProvider::spin() {
 			// else it would be the kNotYetAvailable then just wait for next loop
 		}
 
-	// spin loop
-	ros::spinOnce();
-	rate.sleep();
+		// spin loop
+		ros::spinOnce();
+		// rate.sleep();
 
 	}
 
   // Dataset spin has finished, shutdown VIO.
   // vio_pipeline_.shutdown();
+  ROS_INFO("Done.");
   return true; 
 }
 
