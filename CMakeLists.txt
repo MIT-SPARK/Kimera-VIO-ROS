@@ -9,6 +9,9 @@ catkin_simple()
 cs_add_executable(stereo_vio_ros src/stereoVIOROS.cpp src/RosDataSource.cpp src/StereoImageBuffer.cpp)
 target_link_libraries(stereo_vio_ros SparkVio::sparkvio)
 
+cs_add_executable(stereo_vio_ros_offline src/stereoVIOROS_offline.cpp src/RosbagDataSource.cpp)
+target_link_libraries(stereo_vio_ros_offline SparkVio::sparkvio)
+
 cs_install()
 
 cs_export()

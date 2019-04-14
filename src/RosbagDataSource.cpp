@@ -20,9 +20,13 @@ RosbagDataProvider::RosbagDataProvider(std::string left_camera_topic,
 	// Parse calibration info for camera and IMU 
 	// Calibration info on parameter server (Parsed from yaml)
 	parseCameraData(&stereo_calib_);
-	parseImuData(&imuData_, &imuParams_);
+	parseImuData(&data_, &imuParams_);
+
+	ROS_INFO(">>>>>>> Parsed stereo and IMU parameters"); 
 	// parse data from rosbag
 	parseRosbag(bag_input_path, left_camera_topic, right_camera_topic, imu_topic, &data_);
+
+	ROS_INFO(">>>>>>> Parsed rosbag data");
 
 	// print parameters for check 
 	print();
@@ -158,7 +162,7 @@ bool RosbagDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
   return true;
 }
 
-bool RosbagDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
+bool RosbagDataProvider::parseImuData(Data* data, ImuParams* imuparams) {
 	// Parse IMU calibration info (from param server)
 	double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise, acc_walk; 
 
@@ -171,10 +175,10 @@ bool RosbagDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
 	nh_.getParam("accelerometer_random_walk", acc_walk);
 	nh_.getParam("imu_extrinsics", extrinsics);
 
-	imudata->nominal_imu_rate_ = 1.0 / rate;
-	imudata->imu_rate_ = 1.0 / rate;
-	imudata->imu_rate_std_ = 0.00500009; // set to 0 for now
-	imudata->imu_rate_maxMismatch_ = 0.00500019; // set to 0 for now 
+	data->imuData_.nominal_imu_rate_ = 1.0 / rate;
+	data->imuData_.imu_rate_ = 1.0 / rate;
+	data->imuData_.imu_rate_std_ = 0.00500009; // set to 0 for now
+	data->imuData_.imu_rate_maxMismatch_ = 0.00500019; // set to 0 for now 
 	imuparams->gyro_noise_ = gyro_noise; 
 	imuparams->gyro_walk_ = gyro_walk; 
 	imuparams->acc_noise_ = acc_noise;
@@ -186,7 +190,7 @@ bool RosbagDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
 	return true; 
 }
 
-bool RosbagDataProvider::parseRosbag(std::string bag_path, std::string bag_path, 
+bool RosbagDataProvider::parseRosbag(std::string bag_path, 
 									                   std::string left_imgs_topic, 
 									                   std::string right_imgs_topic, 
 									                   std::string imu_topic, 
@@ -202,26 +206,26 @@ bool RosbagDataProvider::parseRosbag(std::string bag_path, std::string bag_path,
 
 	rosbag::View view(bag, rosbag::TopicQuery(topics));
 
-  foreach(rosbag::MessageInstance const m, view) {
-  	// left image 
-  	sensor_msgs::ImageConstPtr l_img = m.instantiate<sensor_msgs::Image>();
-  	if (l_img != NULL) {
+  for (rosbag::MessageInstance msg: view) {
+  	// Images
+  	sensor_msgs::ImageConstPtr img = msg.instantiate<sensor_msgs::Image>();
+  	if (img != NULL) {
   		// Timestamp is in nanoseconds 
-			long double sec = (long double) l_img->header.stamp.sec; 
-		  long double nsec = (long double) l_img->header.stamp.nsec;
+			long double sec = (long double) img->header.stamp.sec; 
+		  long double nsec = (long double) img->header.stamp.nsec;
 		  Timestamp timestamp = (long int) (sec * 1e9 + nsec);
-  		data->timestamps_.push_back(timestamp)
-  		data->left_imgs_.push_back(l_img);
+		  // Check left or right image 
+		  if (msg.getTopic() == left_imgs_topic) {
+	  		data->timestamps_.push_back(timestamp);
+	  		data->left_imgs_.push_back(img);
+	  	} else if (msg.getTopic() == right_imgs_topic) {
+	  		data->right_imgs_.push_back(img);
+	  	}
   	}
-  	// right image 
-  	sensor_msgs::ImageConstPtr r_img = m.instantiate<sensor_msgs::Image>();
-  	if (r_img != NULL) {
-  		data->right_imgs_.push_back(r_img);
-  	}
-  	// imu 
-  	sensor_msgs::ImuConstPtr& imudata = m.instantiate<sensor_msgs::Imu>();
-  	if (imu != NULL) {
 
+  	// IMU 
+  	sensor_msgs::ImuConstPtr imudata = msg.instantiate<sensor_msgs::Imu>();
+  	if (imudata != NULL && msg.getTopic() == imu_topic) {
 		  gtsam::Vector6 imu_accgyr;
 		  imu_accgyr(0) = imudata->linear_acceleration.x; 
 		  imu_accgyr(1) = imudata->linear_acceleration.y; 
@@ -247,7 +251,7 @@ bool RosbagDataProvider::parseRosbag(std::string bag_path, std::string bag_path,
 
 bool RosbagDataProvider::spin() {
 
-	timestamp_last_frame = data_.timestamps_.at(0);
+	Timestamp timestamp_last_frame = data_.timestamps_.at(0);
 
 	// Stereo matching parameters
 	const StereoMatchingParams& stereo_matching_params = frontend_params_.getStereoMatchingParams();
@@ -255,47 +259,56 @@ bool RosbagDataProvider::spin() {
 	for (size_t k = 0; k < data_.getNumberOfImages(); k++) {
 		// Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
 		// (Think of this as the spin of the other parser/data-providers)
-		timestamp_frame_k = data_.timestamps_.at(k);
+		Timestamp timestamp_frame_k = data_.timestamps_.at(k);
+		std::cout << k << " with timestamp: " << timestamp_frame_k << std::endl; 
 
-    ImuMeasurements imu_meas; 
-    CHECK(utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable ==
-          data_.imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-          timestamp_last_frame,
-          timestamp_frame_k,
-          &imu_meas.timestamps_,
-          &imu_meas.measurements_)) 
-          << "Make sure queried timestamp lies before the first IMU sample in the buffer";
-    // Call VIO Pipeline.
-    VLOG(10) << "Call VIO processing for frame k: " << k
-             << " with timestamp: " << timestamp_frame_k << '\n'
-             << "////////////////////////////////// Creating packet!\n"
-             << "STAMPS IMU rows : \n" << imu_meas.timestamps_.rows() << '\n'
-             << "STAMPS IMU cols : \n" << imu_meas.timestamps_.cols() << '\n'
-             << "STAMPS IMU: \n" << imu_meas.timestamps_ << '\n'
-             << "ACCGYR IMU rows : \n" << imu_meas.measurements_.rows() << '\n'
-             << "ACCGYR IMU cols : \n" << imu_meas.measurements_.cols() << '\n'
-             << "ACCGYR IMU: \n" << imu_meas.measurements_ << '\n';
+		if (timestamp_frame_k > timestamp_last_frame) {
+	    ImuMeasurements imu_meas; 
+	    utils::ThreadsafeImuBuffer::QueryResult imu_query = 
+									data_.imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
+																			timestamp_last_frame,
+																			timestamp_frame_k, 
+																			&imu_meas.timestamps_, 
+																			&imu_meas.measurements_);
+	    CHECK(imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable)
+	    			<< "Make sure queried timestamp lies before the first IMU sample in the buffer";
+	    
+	    // Call VIO Pipeline.
+	    VLOG(10) << "Call VIO processing for frame k: " << k
+	             << " with timestamp: " << timestamp_frame_k << '\n'
+	             << "////////////////////////////////// Creating packet!\n"
+	             << "STAMPS IMU rows : \n" << imu_meas.timestamps_.rows() << '\n'
+	             << "STAMPS IMU cols : \n" << imu_meas.timestamps_.cols() << '\n'
+	             << "STAMPS IMU: \n" << imu_meas.timestamps_ << '\n'
+	             << "ACCGYR IMU rows : \n" << imu_meas.measurements_.rows() << '\n'
+	             << "ACCGYR IMU cols : \n" << imu_meas.measurements_.cols() << '\n'
+	             << "ACCGYR IMU: \n" << imu_meas.measurements_ << '\n';
 
-    timestamp_last_frame = timestamp_frame_k;
+	    timestamp_last_frame = timestamp_frame_k;
 
-    vio_callback_(StereoImuSyncPacket(
-                   StereoFrame(k, timestamp_frame_k,
-                               readRosImage(data_.left_imgs_.at(k)),
-                               stereo_calib_.left_camera_info_,
-                               readRosImage(data_.right_imgs_.at(k)),
-                               stereo_calib_.right_cam_info_,
-                               stereo_calib_.camL_pose_camR_,
-                               stereo_matching_params),
-                               imu_meas.timestamps_,
-                               imu_meas.measurements_));
+	    vio_callback_(StereoImuSyncPacket(
+	                   StereoFrame(k, timestamp_frame_k,
+	                               readRosImage(data_.left_imgs_.at(k)),
+	                               stereo_calib_.left_camera_info_,
+	                               readRosImage(data_.right_imgs_.at(k)),
+	                               stereo_calib_.right_camera_info_,
+	                               stereo_calib_.camL_Pose_camR_,
+	                               stereo_matching_params),
+	                               imu_meas.timestamps_,
+	                               imu_meas.measurements_));
 
-    VLOG(10) << "Finished VIO processing for frame k = " << k; 	
+	    VLOG(10) << "Finished VIO processing for frame k = " << k; 	
+	  } else {
+	  	ROS_WARN("Skipping frame %d. Frame timestamp less than or equal to last frame.", (int) k);
+	  }
 	}
   
   return true; 
 }
 
 void RosbagDataProvider::print() const {
+	std::cout << "\n " << std::endl; 
+	std::cout << ">>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl; 
 	std::cout << ">>>>>>>>> RosbagDataProvider::print <<<<<<<<<<<" << std::endl;
   stereo_calib_.camL_Pose_camR_.print("camL_Pose_calR \n");
   // For each of the 2 cameras.
@@ -304,7 +317,9 @@ void RosbagDataProvider::print() const {
   std::cout << ">> Right camera params <<" << std::endl; 
   stereo_calib_.right_camera_info_.print(); 
   std::cout << ">> IMU info << " << std::endl; 
-  imuData_.print(); 
+  data_.imuData_.print(); 
+
+  std::cout << "number of stereo frames: " << data_.getNumberOfImages() << std::endl; 
   std::cout << std::endl; 
   std::cout << "========================================" << std::endl; 
 }

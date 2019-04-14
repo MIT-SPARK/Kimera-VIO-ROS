@@ -10,6 +10,7 @@
 #include <functional>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/matx.hpp>
+
 #include "datasource/DataSource.h"
 #include "StereoImuSyncPacket.h"
 #include "StereoFrame.h"
@@ -33,7 +34,8 @@ class RosbagDataProvider: public DataProvider {
 public:
   RosbagDataProvider(std::string left_camera_topic, 
                   std::string right_camera_topic, 
-                  std::string imu_topic);
+                  std::string imu_topic,
+                  std::string bag_input_path);
   virtual ~RosbagDataProvider();
   virtual bool spin();
 
@@ -42,7 +44,9 @@ public:
   }
 
 private:  
-	ImuData imuData_; // store IMU data from last frame 
+  // Define Node Handler for Parameter server
+  ros::NodeHandle nh_; 
+
   ImuParams imuParams_;
 	Timestamp last_time_stamp_; // Timestamp correponding to last frame
   int frame_count_; // Keep track of number of frames processed  
@@ -55,11 +59,11 @@ private:
   };
 
   struct Data {
-    inline size_t getNumberOfImages() const {return left_img_.size();}
+    inline size_t getNumberOfImages() const {return left_imgs_.size();}
     // The image names of the images from left camera 
-    std::vector<sensor_msgs::ImageConstPtr&> left_imgs_;
+    std::vector<sensor_msgs::ImageConstPtr> left_imgs_;
     // The image names of the images from right camera
-    std::vector<sensor_msgs::ImageConstPtr&> right_imgs_;
+    std::vector<sensor_msgs::ImageConstPtr> right_imgs_;
     // Vector of timestamps see issue in .cpp file 
     std::vector<Timestamp> timestamps_;
     //IMU data 
@@ -67,11 +71,13 @@ private:
   };
 
 private:
+  cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg);
+
   // Parse camera calibration info (from param server)
   bool parseCameraData(StereoCalibration* stereo_calib);
 
   // Parse IMU calibration info
-  bool parseImuData(ImuData* imudata, ImuParams* imuparams);
+  bool parseImuData(Data* data, ImuParams* imuparams);
 
   // Parse rosbag data 
   bool parseRosbag(std::string bag_path, 
