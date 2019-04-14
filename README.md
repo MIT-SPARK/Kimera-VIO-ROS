@@ -2,7 +2,7 @@
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
 # Installation
-Note that this is to be used with the `feature/kitti_dataset` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
+Note that this is to be used with the `feature/parallelization/kitti_dataset` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
 ```
 git clone git@github.mit.edu:SPARK/spark_vio_ros.git
 cd ..
@@ -17,6 +17,10 @@ Note that the data parameter is required and the rate is default set to 1.0 (rea
 To use your own dataset, you can copy the param/EuRoC folder and exchange all the values within the folder to those corresponding to your dataset (calibration, topic name, tracker/vio values, etc. ). Then, copy the launch file and just exchange the argument for dataset name to the name of your new folder. 
 
 For debugging, the VERBOSITY argument in the launch file can be toggled. 
+
+You can also run this offline, basically parsing the rosbag. To do this, type
+`roslaunch spark_vio_ros spark_vio_ros_euroc_offline.launch data:="<path-to-rosbag>" rate:="<playback rate factor>`
+You can use your own dataset, as explained above. 
 
 # ToDo
 Check Issues and Projects tabs.
