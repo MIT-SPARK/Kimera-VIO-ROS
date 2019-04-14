@@ -22,7 +22,7 @@ For debugging, the VERBOSITY argument in the launch file can be toggled.
 
 You can also run this offline (the rosbag is parsed before starting the pipeline). To do this, type
 ```
-roslaunch spark_vio_ros spark_vio_ros_euroc_offline.launch data:="<path-to-rosbag>" rate:="<playback rate factor>
+roslaunch spark_vio_ros spark_vio_ros_euroc_offline.launch data:="<path-to-rosbag>"
 ```
 You can use your own dataset, as explained above. 
 
