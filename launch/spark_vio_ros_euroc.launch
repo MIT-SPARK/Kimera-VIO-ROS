@@ -19,6 +19,8 @@
 	<arg name="VISUALIZER_FLAGS" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Visualizer3D.flags" />
 	<arg name="VERBOSITY" value="0" />
 	<arg name="BACKEND_TYPE" value="1" /> <!-- For regular VIO -->
+	<arg name="LOG_OUTPUT" value="False" />
+	<arg name="OUTPUT_PATH" value="$(find spark_vio_ros)/results" />
 
 	<!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
 	<!-- Note that it is necessary that the autoInitialize = 1 in regularVioParameters if you don't match dummy data to your rosbag -->
@@ -40,7 +42,9 @@
   					  --flagfile=$(arg REGULAR_BACKEND_FLAGS_PATH)
   					  --flagfile=$(arg VISUALIZER_FLAGS)
   					  --v=$(arg VERBOSITY)
-  					  --backend_type=$(arg BACKEND_TYPE)" />
+  					  --backend_type=$(arg BACKEND_TYPE)
+  					  --log_output=$(arg LOG_OUTPUT)
+  					  --output_path=$(arg OUTPUT_PATH)" />
 
   	<!-- Launch rosbag -->
   	<node pkg="rosbag" type="play" name="player" args="--clock $(arg data) --rate $(arg rate)"/>
