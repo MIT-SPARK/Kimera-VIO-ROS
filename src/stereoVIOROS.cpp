@@ -7,14 +7,14 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-// Dependencies from ROS 
+// Dependencies from ROS
 #include <ros/ros.h>
 
 // Dependencies from VIO
 #include "utils/Timer.h"
 #include "LoggerMatlab.h"
 
-// Dependencies from this repository 
+// Dependencies from this repository
 #include "RosDataSource.h"
 
 #include <future>
@@ -32,11 +32,11 @@ int main(int argc, char *argv[]) {
   google::InitGoogleLogging(argv[0]);
 
   // Parse topic names from parameter server
-  ros::NodeHandle nh; 
-  std::string left_camera_topic, right_camera_topic, imu_topic; 
+  ros::NodeHandle nh;
+  std::string left_camera_topic, right_camera_topic, imu_topic;
   nh.getParam("left_camera_topic", left_camera_topic);
-  nh.getParam("right_camera_topic", right_camera_topic); 
-  nh.getParam("imu_topic", imu_topic); 
+  nh.getParam("right_camera_topic", right_camera_topic);
+  nh.getParam("imu_topic", imu_topic);
 
   VIO::ETHDatasetParser eth_dataset_parser; // Dummy ETH data (Since need this in pipeline)
   VIO::RosDataProvider ros_wrapper(left_camera_topic, right_camera_topic, imu_topic);
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 
   // Register callback to vio_pipeline.
   ros_wrapper.registerVioCallback(
-      std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1)); 
+        std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
 
   // Spin dataset.
   auto tic = VIO::utils::Timer::tic();

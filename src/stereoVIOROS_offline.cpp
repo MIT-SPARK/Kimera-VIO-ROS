@@ -7,14 +7,14 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-// Dependencies from ROS 
+// Dependencies from ROS
 #include <ros/ros.h>
 
 // Dependencies from VIO
 #include "utils/Timer.h"
 #include "LoggerMatlab.h"
 
-// Dependencies from this repository 
+// Dependencies from this repository
 #include "RosbagDataSource.h"
 
 #include <future>
@@ -34,27 +34,28 @@ int main(int argc, char *argv[]) {
   google::InitGoogleLogging(argv[0]);
 
   // Parse topic names from parameter server
-  ros::NodeHandle nh; 
-  std::string left_camera_topic, right_camera_topic, imu_topic; 
+  ros::NodeHandle nh;
+  std::string left_camera_topic, right_camera_topic, imu_topic;
   nh.getParam("left_camera_topic", left_camera_topic);
-  nh.getParam("right_camera_topic", right_camera_topic); 
-  nh.getParam("imu_topic", imu_topic); 
+  nh.getParam("right_camera_topic", right_camera_topic);
+  nh.getParam("imu_topic", imu_topic);
 
   VIO::ETHDatasetParser eth_dataset_parser; // Dummy ETH data (Since need this in pipeline)
-  VIO::RosbagDataProvider rosbag_parser(left_camera_topic, right_camera_topic, imu_topic, FLAGS_rosbag_path);
+  VIO::RosbagDataProvider rosbag_parser(left_camera_topic, right_camera_topic,
+                                        imu_topic, FLAGS_rosbag_path);
 
   VIO::Pipeline vio_pipeline (&eth_dataset_parser, rosbag_parser.getImuParams());
 
   // Register callback to vio_pipeline.
   rosbag_parser.registerVioCallback(
-      std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1)); 
+        std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
 
   // Spin dataset and handle threads
   auto tic = VIO::utils::Timer::tic();
   auto handle = std::async(std::launch::async,
                            &VIO::RosbagDataProvider::spin, &rosbag_parser);
   auto handle_pipeline = std::async(std::launch::async,
-                         &VIO::Pipeline::shutdownWhenFinished, &vio_pipeline);
+                                    &VIO::Pipeline::shutdownWhenFinished, &vio_pipeline);
   vio_pipeline.spinViz();
   const bool is_pipeline_successful = handle.get();
   handle_pipeline.get();
