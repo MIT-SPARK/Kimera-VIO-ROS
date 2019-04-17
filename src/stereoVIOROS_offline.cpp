@@ -3,6 +3,8 @@
  * @author Yun Chang based off stereoVIOEuroc.cpp(in spark-VIO repo)
  */
 
+#include <future>
+
 // Still need gflags for parameters in VIO
 #include <gflags/gflags.h>
 #include <glog/logging.h>
@@ -11,13 +13,11 @@
 #include <ros/ros.h>
 
 // Dependencies from VIO
-#include "utils/Timer.h"
-#include "LoggerMatlab.h"
+#include <utils/Timer.h>
+#include <LoggerMatlab.h>
 
 // Dependencies from this repository
 #include "RosbagDataSource.h"
-
-#include <future>
 
 DEFINE_string(rosbag_path, "rosbag", "Path to rosbag");
 
@@ -25,13 +25,13 @@ DEFINE_string(rosbag_path, "rosbag", "Path to rosbag");
 // stereoVIOexample using ROS wrapper example
 ////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char *argv[]) {
-  // Initialize ROS node
-  ros::init(argc, argv, "spark_vio");
-
   // Initialize Google's flags library.
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   // Initialize Google's logging library.
   google::InitGoogleLogging(argv[0]);
+
+  // Initialize ROS node
+  ros::init(argc, argv, "spark_vio");
 
   // Parse topic names from parameter server
   ros::NodeHandle nh;
@@ -40,7 +40,8 @@ int main(int argc, char *argv[]) {
   nh.getParam("right_camera_topic", right_camera_topic);
   nh.getParam("imu_topic", imu_topic);
 
-  VIO::ETHDatasetParser eth_dataset_parser; // Dummy ETH data (Since need this in pipeline)
+  // Dummy ETH data (Since need this in pipeline)
+  VIO::ETHDatasetParser eth_dataset_parser;
   VIO::RosbagDataProvider rosbag_parser(left_camera_topic, right_camera_topic,
                                         imu_topic, FLAGS_rosbag_path);
 

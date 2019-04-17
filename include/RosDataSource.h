@@ -10,15 +10,7 @@
 #include <functional>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/matx.hpp>
-#include "datasource/DataSource.h"
-#include "StereoImuSyncPacket.h"
-#include "StereoFrame.h"
-#include "VioFrontEndParams.h"
-#include "ImuFrontEnd.h"
-#include "ETH_parser.h"
-#include "pipeline/Pipeline.h"
 
-// ROS Dependencies
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <ros/spinner.h>
@@ -27,12 +19,21 @@
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <image_transport/subscriber_filter.h>
-#include "sensor_msgs/Image.h"
-#include "sensor_msgs/Imu.h"
-#include "sensor_msgs/CameraInfo.h"
-#include "nav_msgs/Odometry.h"
-#include "geometry_msgs/PoseStamped.h"
-#include "geometry_msgs/Vector3Stamped.h"
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/CameraInfo.h>
+#include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
+
+#include <common/vio_types.h>
+#include <datasource/DataSource.h>
+#include <StereoImuSyncPacket.h>
+#include <StereoFrame.h>
+#include <VioFrontEndParams.h>
+#include <ImuFrontEnd.h>
+#include <ETH_parser.h>
+#include <pipeline/Pipeline.h>
 
 #include "StereoImageBuffer.h"
 
@@ -97,7 +98,9 @@ private:
   void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
                                    const sensor_msgs::ImageConstPtr& msgRight);
 
-  void publishOutput(gtsam::Pose3 pose, gtsam::Vector3 velocity, Timestamp ts) const;
+  void publishOutput(const gtsam::Pose3& pose,
+                     const gtsam::Vector3& velocity,
+                     const Timestamp& ts) const;
 
   // Message filters and to sync stereo images
   ImageSubscriber left_img_subscriber_;

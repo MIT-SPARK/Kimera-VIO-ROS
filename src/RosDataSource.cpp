@@ -209,12 +209,12 @@ bool RosDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
 
   std::vector<double> extrinsics;
 
-  nh_.getParam("imu_rate_hz", rate);
-  nh_.getParam("gyroscope_noise_density", gyro_noise);
-  nh_.getParam("gyroscope_random_walk", gyro_walk);
-  nh_.getParam("accelerometer_noise_density", acc_noise);
-  nh_.getParam("accelerometer_random_walk", acc_walk);
-  nh_.getParam("imu_extrinsics", extrinsics);
+  CHECK(nh_.getParam("imu_rate_hz", rate));
+  CHECK(nh_.getParam("gyroscope_noise_density", gyro_noise));
+  CHECK(nh_.getParam("gyroscope_random_walk", gyro_walk));
+  CHECK(nh_.getParam("accelerometer_noise_density", acc_noise));
+  CHECK(nh_.getParam("accelerometer_random_walk", acc_walk));
+  CHECK(nh_.getParam("imu_extrinsics", extrinsics));
 
   imudata->nominal_imu_rate_ = 1.0 / rate;
   imudata->imu_rate_ = 1.0 / rate;
@@ -262,7 +262,7 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
                                                   const sensor_msgs::ImageConstPtr& msgRight){
 
   // store in stereo buffer
-  stereo_buffer_.add_stereo_frame(msgLeft, msgRight);
+  stereo_buffer_.addStereoFrame(msgLeft, msgRight);
 }
 
 bool RosDataProvider::spin() {
@@ -271,13 +271,13 @@ bool RosDataProvider::spin() {
     // Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
     // (Think of this as the spin of the other parser/data-providers)
 
-    Timestamp timestamp = stereo_buffer_.get_earliest_timestamp();
+    Timestamp timestamp = stereo_buffer_.getEarliestTimestamp();
 
-    if (stereo_buffer_.get_earliest_timestamp() <= last_time_stamp_) {
+    if (stereo_buffer_.getEarliestTimestamp() <= last_time_stamp_) {
       if (stereo_buffer_.size() != 0) {
         ROS_WARN("Next frame in image buffer is from the same or earlier time than the last processed frame. Skip frame.");
         // remove next frame (this would usually for the first frame)
-        stereo_buffer_.remove_next();
+        stereo_buffer_.removeNext();
       }
       // else just waiting for next stereo frames
 
@@ -295,7 +295,7 @@ bool RosDataProvider::spin() {
       if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
         // data available
         sensor_msgs::ImageConstPtr left_ros_img, right_ros_img;
-        stereo_buffer_.extract_latest_images(left_ros_img, right_ros_img);
+        stereo_buffer_.extractLatestImages(left_ros_img, right_ros_img);
 
         // read to cv type
         cv::Mat left_image = readRosImage(left_ros_img);
@@ -332,7 +332,7 @@ bool RosDataProvider::spin() {
       } else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
         ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
         // remove next frame (this would usually for the first frame)
-        stereo_buffer_.remove_next();
+        stereo_buffer_.removeNext();
       }
 
       // else it would be the kNotYetAvailable then just wait for next loop
@@ -350,8 +350,9 @@ bool RosDataProvider::spin() {
   return true;
 }
 
-void RosDataProvider::publishOutput(gtsam::Pose3 pose, gtsam::Vector3 velocity, Timestamp ts) const {
-  // publish
+void RosDataProvider::publishOutput(const gtsam::Pose3& pose,
+                                    const gtsam::Vector3& velocity,
+                                    const Timestamp& ts) const {
   // First publish odometry estimate
   nav_msgs::Odometry odometry_msg;
 
@@ -361,7 +362,7 @@ void RosDataProvider::publishOutput(gtsam::Pose3 pose, gtsam::Vector3 velocity, 
   // create header
   odometry_msg.header.stamp.sec = sec;
   odometry_msg.header.stamp.nsec = nsec;
-  odometry_msg.header.frame_id = "/base_link";
+  odometry_msg.header.frame_id = "base_link";
 
   // position
   odometry_msg.pose.pose.position.x = pose.x();
