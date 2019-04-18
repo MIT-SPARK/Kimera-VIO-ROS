@@ -289,8 +289,8 @@ bool RosDataProvider::spin() {
 																			timestamp, 
 																			&imu_meas.timestamps_, 
 																			&imu_meas.measurements_);
-
 			if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
+
 				// data available
 				sensor_msgs::ImageConstPtr left_ros_img, right_ros_img; 
 				stereo_buffer_.extract_latest_images(left_ros_img, right_ros_img);
