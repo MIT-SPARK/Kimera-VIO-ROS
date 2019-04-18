@@ -125,8 +125,8 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     // Parse extrinsics (rotation and translation)
     std::vector<double> extrinsics;
     std::vector<double> frame_change; // encode calibration frame to body frame
-    nh_.getParam(camera_name + "extrinsics", extrinsics);
-    nh_.getParam("calibration_to_body_frame", frame_change);
+    CHECK(nh_.getParam(camera_name + "extrinsics", extrinsics));
+    CHECK(nh_.getParam("calibration_to_body_frame", frame_change));
     // Place into matrix
     // 4 4 is hardcoded here because currently only accept extrinsic input
     // in homoegeneous format [R T ; 0 1]
@@ -271,13 +271,13 @@ bool RosDataProvider::spin() {
 		// Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
 		// (Think of this as the spin of the other parser/data-providers)
 
-		Timestamp timestamp = stereo_buffer_.get_earliest_timestamp(); 
+		Timestamp timestamp = stereo_buffer_.getEarliestTimestamp(); 
 
-		if (stereo_buffer_.get_earliest_timestamp() <= last_time_stamp_) {
+		if (stereo_buffer_.getEarliestTimestamp() <= last_time_stamp_) {
 			if (stereo_buffer_.size() != 0) {
 				ROS_WARN("Next frame in image buffer is from the same or earlier time than the last processed frame. Skip frame.");
 				// remove next frame (this would usually for the first frame)
-				stereo_buffer_.remove_next();
+				stereo_buffer_.removeNext();
 			}
 			// else just waiting for next stereo frames
 
@@ -295,7 +295,7 @@ bool RosDataProvider::spin() {
 
 				// data available
 				sensor_msgs::ImageConstPtr left_ros_img, right_ros_img; 
-				stereo_buffer_.extract_latest_images(left_ros_img, right_ros_img);
+				stereo_buffer_.extractLatestImages(left_ros_img, right_ros_img);
 
 				// read to cv type 
 				cv::Mat left_image = readRosImage(left_ros_img);
@@ -332,7 +332,7 @@ bool RosDataProvider::spin() {
 			} else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
 				ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
 				// remove next frame (this would usually for the first frame)
-				stereo_buffer_.remove_next();
+				stereo_buffer_.removeNext();
 			}
 
 			// else it would be the kNotYetAvailable then just wait for next loop

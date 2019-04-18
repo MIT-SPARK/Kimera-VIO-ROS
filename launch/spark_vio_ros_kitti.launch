@@ -1,5 +1,5 @@
 <launch>
-	<arg name="dataset_name" value="EuRoC" />
+	<arg name="dataset_name" value="Kitti" />
 	<!-- Each dataset has its own set of parameter files -->
 
 	<arg name="data" />
@@ -20,7 +20,7 @@
 	<arg name="VERBOSITY" default="0" />
 	<arg name="BACKEND_TYPE" default="1" /> <!-- For regular VIO -->
 	<arg name="LOG_OUTPUT" default="False" />
-	<arg name="OUTPUT_PATH" default="$(find spark_vio_ros)/results" />
+	<arg name="OUTPUT_PATH" default="./" />
 	<arg name="VISUALIZE" default="True" /> <!-- Note that this is duplicated from the flags file -->
 
 	<!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
@@ -28,7 +28,7 @@
 	<arg name="DUMMY_DATASET_PATH" value="$(find spark_vio_ros)/temp/dummy_eth_data" />
 
 	<!-- Launch main node  -->
-	<node name="stereo_vio_ros" pkg="spark_vio_ros" type="stereo_vio_ros" output="screen" 
+	<node name="stereo_vio_ros" pkg="spark_vio_ros" type="stereo_vio_ros_offline" output="screen" 
 				args="--logtostderr=1
   					  --colorlogtostderr=1 
   					  --log_prefix=1 
@@ -45,9 +45,8 @@
   					  --v=$(arg VERBOSITY)
   					  --backend_type=$(arg BACKEND_TYPE)
   					  --log_output=$(arg LOG_OUTPUT)
+  					  --rosbag_path=$(arg data)
   					  --output_path=$(arg OUTPUT_PATH)
   					  --visualize=$(arg VISUALIZE)" />
 
-  	<!-- Launch rosbag -->
-  	<node pkg="rosbag" type="play" name="player" args="--clock $(arg data) --rate $(arg rate)"/>
 </launch>

@@ -23,7 +23,7 @@ right_camera_extrinsics: [9.993513e-01, 1.860866e-02, -3.083487e-02, -5.370000e-
 # If extrinsics is not in body frame (in this case it is so identity ) 
 calibration_to_body_frame: [0.0083, 0.0128, 0.9999, 0.8127,
                             -0.9999, -0.0141, 0.0085, -0.2432, 
-                            0.0142, -0.9998, 0.0127, 1.0715
+                            0.0142, -0.9998, 0.0127, 1.0715,
                             0.0, 0.0, 0.0, 1.0]
 
 # IMU calibrations 

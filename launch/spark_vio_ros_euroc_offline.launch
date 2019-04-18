@@ -20,7 +20,7 @@
 	<arg name="VERBOSITY" value="0" />
 	<arg name="BACKEND_TYPE" value="1" /> <!-- For regular VIO -->
 	<arg name="LOG_OUTPUT" default="False" />
-	<arg name="OUTPUT_PATH" default="$(find spark_vio_ros)/results" />
+	<arg name="OUTPUT_PATH" default="./"/>
 	<arg name="VISUALIZE" default="True" /> <!-- Note that this is duplicated from the flags file -->
 
   <!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->

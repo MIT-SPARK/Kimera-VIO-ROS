@@ -12,7 +12,7 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <sensor_msgs/Image.h>
-
+#include "datasource/DataSource.h"
 #include <common/vio_types.h>
 
 struct StereoPacket {

@@ -4,7 +4,6 @@
  * @author Yun Chang
  */
 
-#include "glog/logging.h"
 #include "RosbagDataSource.h"
 
 namespace VIO {
@@ -211,24 +210,11 @@ bool RosbagDataProvider::parseRosbag(std::string bag_path,
 
   rosbag::View view(bag, rosbag::TopicQuery(topics));
 
+  bool start_parsing_stereo = false; // Keep track of this since cannot process image before imu data
+  Timestamp last_imu_timestamp = 0; // For some dataset, have duplicated measurements for same time
   for (rosbag::MessageInstance msg: view) {
     // Get topic.
     const std::string& msg_topic = msg.getTopic();
-
-    // Check if msg is an image.
-    sensor_msgs::ImageConstPtr img = msg.instantiate<sensor_msgs::Image>();
-    if (img != nullptr) {
-      // Check left or right image.
-      if (msg_topic == left_imgs_topic) {
-        // Timestamp is in nanoseconds
-        rosbag_data->timestamps_.push_back(img->header.stamp.toNSec());
-        rosbag_data->left_imgs_.push_back(img);
-      } else if (msg_topic == right_imgs_topic) {
-        rosbag_data->right_imgs_.push_back(img);
-      } else {
-        ROS_WARN_STREAM("Img with unexpected topic: " << msg_topic);
-      }
-    }
 
     // IMU
     sensor_msgs::ImuConstPtr imu_data = msg.instantiate<sensor_msgs::Imu>();
@@ -240,8 +226,32 @@ bool RosbagDataProvider::parseRosbag(std::string bag_path,
       imu_accgyr(3) = imu_data->angular_velocity.x;
       imu_accgyr(4) = imu_data->angular_velocity.y;
       imu_accgyr(5) = imu_data->angular_velocity.z;
-      rosbag_data->imu_data_.imu_buffer_.addMeasurement(imu_data->header.stamp.toNSec(),
-                                                imu_accgyr);
+      Timestamp imu_data_timestamp = imu_data->header.stamp.toNSec();
+      if (imu_data_timestamp > last_imu_timestamp) {
+        rosbag_data->imu_data_.imu_buffer_.addMeasurement(imu_data_timestamp,
+                                                  imu_accgyr);
+        last_imu_timestamp = imu_data_timestamp;
+      }
+      start_parsing_stereo = true;
+    }
+
+    // Check if msg is an image.
+    sensor_msgs::ImageConstPtr img = msg.instantiate<sensor_msgs::Image>();
+    if (img != nullptr) {
+      if (start_parsing_stereo) {
+        // Check left or right image.
+        if (msg_topic == left_imgs_topic) {
+          // Timestamp is in nanoseconds
+          rosbag_data->timestamps_.push_back(img->header.stamp.toNSec());
+          rosbag_data->left_imgs_.push_back(img);
+        } else if (msg_topic == right_imgs_topic) {
+          rosbag_data->right_imgs_.push_back(img);
+        } else {
+          ROS_WARN_STREAM("Img with unexpected topic: " << msg_topic);
+        }
+      } else {
+        ROS_WARN("Skipping frame since IMU data not yet available");
+      }
     }
   }
 
@@ -276,8 +286,11 @@ bool RosbagDataProvider::spin() {
             timestamp_frame_k,
             &imu_meas.timestamps_,
             &imu_meas.measurements_);
+      std::cout << "begin timestamp: " << timestamp_last_frame << std::endl; 
+      std::cout << "end timestamp: " << timestamp_frame_k << std::endl;
+      // std::cout << "imu buffer: " << rosbag_data_.imu_data_.imu_buffer_.values_ << std::endl; 
       CHECK(imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable)
-          << "Make sure queried timestamp lies before the first IMU sample in the buffer";
+          << "Make sure queried timestamp does not lie before the first IMU sample in the buffer";
 
       // Call VIO Pipeline.
       VLOG(10) << "Call VIO processing for frame k: " << k
