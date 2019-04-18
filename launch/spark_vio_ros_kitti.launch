@@ -17,7 +17,7 @@
 	<arg name="BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/VioBackEnd.flags" />
 	<arg name="REGULAR_BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/RegularVioBackEnd.flags" />
 	<arg name="VISUALIZER_FLAGS" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Visualizer3D.flags" />
-	<arg name="VERBOSITY" default="9" />
+	<arg name="VERBOSITY" default="0" />
 	<arg name="BACKEND_TYPE" default="1" /> <!-- For regular VIO -->
 	<arg name="LOG_OUTPUT" default="False" />
 	<arg name="OUTPUT_PATH" default="./" />
