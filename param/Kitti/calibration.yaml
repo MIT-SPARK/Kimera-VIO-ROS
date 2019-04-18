@@ -1,4 +1,4 @@
-# EuRoC Calibration File
+# Kitti Calibration File
 
 # Camera  
 camera_model: pinhole
@@ -8,26 +8,26 @@ camera_resolution: [1392, 512] # width, height
 
 left_camera_intrinsics: [984.2439, 690, 980.8141, 233.1966] # fu, fv, cu, cv
 left_camera_distortion_coefficients: [-0.3728755, 0.2037299, 0.002219027, 0.001383707, -0.07233722] # k1, k2, k3, p1, p2
-left_camera_extrinsics: [1.0, 0.0, 0.0, 2.573699e-16,
-                         0.0, 1,0, 0,0, -1.059758e-16,
-                         0.0, 0.0, 1.0, 1.614870e-16,
+left_camera_extrinsics: [1.0, 0.0, 0.0, 0,
+                         0.0, 1.0, 0.0, 0,
+                         0.0, 0.0, 1.0, 0,
                          0.0, 0.0, 0.0, 1.0]
 
 right_camera_intrinsics: [989.5267, 702, 987.8386, 245.559] # fu, fv, cu, cv
 right_camera_distortion_coefficients: [-0.344661, 0.1790019, 0.001148107, -0.0006298563, -0.05314062] # k1, k2, k3, p1, p2
-right_camera_extrinsics: [9.993513e-01, 1.860866e-02, -3.083487e-02, -5.370000e-01,
-                          -1.887662e-02, 9.997863e-01, -8.421873e-03, 4.822061e-03,
-                          3.067156e-02, 8.998467e-03, 9.994890e-01, -1.252488e-02,
+right_camera_extrinsics: [0.9993513, -0.01860866, 0.03083487, 0.5370000,
+                          0.01887662, 0.9997863, 0.008421873, -0.004822061,
+                          -0.03067156, -0.008998467, 0.9994890, 0.01252488,
                           0.0, 0.0, 0.0, 1.0]
 
 # If extrinsics is not in body frame (in this case it is so identity ) 
-calibration_to_body_frame: [0.0083, 0.0128, 0.9999, 0.8127,
-                            -0.9999, -0.0141, 0.0085, -0.2432, 
-                            0.0142, -0.9998, 0.0127, 1.0715,
-                            0.0, 0.0, 0.0, 1.0]
+calibration_to_body_frame: [0.0083 , 0.0128, 0.9999, 1.0833,
+                            -0.9999, -0.0141, 0.0085, -0.3099,
+                            0.0142, -0.9998, 0.0127, 0.7299,
+                            0, 0, 0, 1.0]
 
 # IMU calibrations 
-imu_rate_hz: 200
+imu_rate_hz: 100
 imu_extrinsics: [1.0, 0.0, 0.0, 0.0,
                  0.0, 1.0, 0.0, 0.0,
                  0.0, 0.0, 1.0, 0.0,

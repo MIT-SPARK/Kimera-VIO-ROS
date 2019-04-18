@@ -97,9 +97,7 @@ bool RosbagDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
       E_calib.at<double>(row, col) = extrinsics.at(k);
       calib2body.at<double>(row, col) = frame_change.at(k);
     }
-
     cv::Mat E_body = calib2body * E_calib; // Extrinsics in body frame
-
     // restore back to vector form
     std::vector<double> extrinsics_body;
     for (int k = 0; k < 16; k++) {
@@ -276,7 +274,7 @@ bool RosbagDataProvider::spin() {
     // and builds StereoImuSyncPacket
     // (Think of this as the spin of the other parser/data-providers)
     Timestamp timestamp_frame_k = rosbag_data_.timestamps_.at(k);
-    LOG(INFO) << k << " with timestamp: " << timestamp_frame_k;
+    // LOG(INFO) << k << " with timestamp: " << timestamp_frame_k;
 
     if (timestamp_frame_k > timestamp_last_frame) {
       ImuMeasurements imu_meas;
@@ -286,9 +284,6 @@ bool RosbagDataProvider::spin() {
             timestamp_frame_k,
             &imu_meas.timestamps_,
             &imu_meas.measurements_);
-      std::cout << "begin timestamp: " << timestamp_last_frame << std::endl; 
-      std::cout << "end timestamp: " << timestamp_frame_k << std::endl;
-      // std::cout << "imu buffer: " << rosbag_data_.imu_data_.imu_buffer_.values_ << std::endl; 
       CHECK(imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable)
           << "Make sure queried timestamp does not lie before the first IMU sample in the buffer";
 
