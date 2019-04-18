@@ -1,13 +1,13 @@
 <launch>
-	<arg name="dataset_name" value="EuRoC" />
-	<!-- Each dataset has its own set of parameter files -->
+  <arg name="dataset_name" value="EuRoC"/>
+  <!-- Each dataset has its own set of parameter files -->
 
-	<arg name="data" />
+  <arg name="data"/>
 
-	<arg name="rate" default="1.0" />
+  <arg name="rate" default="1.0"/>
 
-	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml" />
-	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml" />
+  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
+  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml"/>
 
 	<!-- More parameter arguments -->
 	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
@@ -23,9 +23,9 @@
 	<arg name="OUTPUT_PATH" default="$(find spark_vio_ros)/results" />
 	<arg name="VISUALIZE" default="True" /> <!-- Note that this is duplicated from the flags file -->
 
-	<!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
-	<!-- Note that it is necessary that the autoInitialize = 1 in regularVioParameters if you don't match dummy data to your rosbag -->
-	<arg name="DUMMY_DATASET_PATH" value="$(find spark_vio_ros)/temp/dummy_eth_data" />
+  <!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
+  <!-- Note that it is necessary that the autoInitialize = 1 in regularVioParameters if you don't match dummy data to your rosbag -->
+  <arg name="DUMMY_DATASET_PATH" value="$(find spark_vio_ros)/temp/dummy_eth_data"/>
 
 	<!-- Launch main node  -->
 	<node name="stereo_vio_ros_offline" pkg="spark_vio_ros" type="stereo_vio_ros_offline" output="screen" 
