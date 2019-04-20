@@ -71,6 +71,7 @@ private:
   ImuData imuData_; // store IMU data from last frame
   ImuParams imuParams_;
   Timestamp last_time_stamp_; // Timestamp correponding to last frame
+  Timestamp last_imu_time_stamp_; // Timestamp corresponding to last imu meas
   int frame_count_; // Keep track of number of frames processed
 
   StereoBuffer stereo_buffer_;

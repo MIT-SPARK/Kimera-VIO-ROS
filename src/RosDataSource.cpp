@@ -15,7 +15,10 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   it_(nh_cam_),
   left_img_subscriber_(it_, left_camera_topic, 1), // Image subscriber (left)
   right_img_subscriber_(it_, right_camera_topic, 1), // Image subscriber (right)
-  sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_)
+  sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_), 
+  last_time_stamp_(0), // initialize last timestamp (img) to be 0
+  last_imu_time_stamp_(0), // initialize last timestamp (imu) to be 0 
+  frame_count_(0) // keep track of number of frames processed)
 {
 
   ROS_INFO(">>>>>>> Initializing Spark-VIO <<<<<<<");
@@ -26,12 +29,6 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 
   // print parameters for check
   print();
-
-  // Set frame count to 0 (Keeping track of number of frames processed)
-  frame_count_ = 0;
-
-  // Initialize last timestamp to be 0
-  last_time_stamp_ = 0;
 
   ////// Define IMU Subscriber
 
@@ -243,18 +240,19 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
   imu_accgyr(3) = msgIMU->angular_velocity.x;
   imu_accgyr(4) = msgIMU->angular_velocity.y;
   imu_accgyr(5) = msgIMU->angular_velocity.z;
-
-  long double sec = (long double) msgIMU->header.stamp.sec;
-  long double nsec = (long double) msgIMU->header.stamp.nsec;
-  Timestamp timestamp = (long int) (sec * 1e9 + nsec);
+  Timestamp timestamp = msgIMU->header.stamp.toNSec();
   // ROS_INFO("Recieved message at time %ld", timestamp);
 
-  if (last_time_stamp_ == 0) { // initialize first time stamp
+  // add measurement to buffer
+  if (timestamp > last_imu_time_stamp_) { // time strictly increasing
+    imuData_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
+  }
+
+  if (last_time_stamp_ == 0) { // initialize first img time stamp
     last_time_stamp_ = timestamp;
   }
 
-  // add measurement to buffer (CHECK if this is OK, need to manually delete old data?)
-  imuData_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
+  last_imu_time_stamp_ = timestamp;
 }
 
 // Callback for stereo images and main spin
