@@ -18,7 +18,7 @@
 	<arg name="REGULAR_BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/RegularVioBackEnd.flags" />
 	<arg name="VISUALIZER_FLAGS" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Visualizer3D.flags" />
 	<arg name="VERBOSITY" default="0" />
-	<arg name="BACKEND_TYPE" default="1" /> <!-- For regular VIO -->
+	<arg name="BACKEND_TYPE" default="1" /> <!-- 1 For regular VIO -->
 	<arg name="LOG_OUTPUT" default="False" />
 	<arg name="OUTPUT_PATH" default="./" />
 	<arg name="VISUALIZE" default="True" /> <!-- Note that this is duplicated from the flags file -->
@@ -48,7 +48,4 @@
   					  --rosbag_path=$(arg data)
   					  --output_path=$(arg OUTPUT_PATH)
   					  --visualize=$(arg VISUALIZE)" />
-
-  	<!-- Launch rosbag -->
-  	<node pkg="rosbag" type="play" name="player" args="--clock $(arg data) --rate $(arg rate)"/>
 </launch>
