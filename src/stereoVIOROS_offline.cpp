@@ -3,6 +3,8 @@
  * @author Yun Chang based off stereoVIOEuroc.cpp(in spark-VIO repo)
  */
 
+#include <future>
+
 // Still need gflags for parameters in VIO
 #include <gflags/gflags.h>
 #include <glog/logging.h>
@@ -11,13 +13,11 @@
 #include <ros/ros.h>
 
 // Dependencies from VIO
-#include "utils/Timer.h"
-#include "LoggerMatlab.h"
+#include <utils/Timer.h>
+#include <LoggerMatlab.h>
 
 // Dependencies from this repository 
 #include "RosbagDataSource.h"
-
-#include <future>
 
 DEFINE_string(rosbag_path, "rosbag", "Path to rosbag");
 
