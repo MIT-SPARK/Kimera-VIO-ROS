@@ -62,7 +62,7 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   ros::AsyncSpinner async_spinner_cam(0, &cam_queue);
   async_spinner_cam.start();
 
-  // start odometry publisher
+  // Start odometry publisher
   std::string odom_topic_name;
   nh_.getParam("odometry_topic_name", odom_topic_name);
   odom_publisher = nh_.advertise<nav_msgs::Odometry>(odom_topic_name, 10);
@@ -305,7 +305,7 @@ bool RosDataProvider::spin() {
 			  // Stereo matching parameters
 			  const StereoMatchingParams& stereo_matching_params = frontend_params_.getStereoMatchingParams();
 
-			  vio_callback_(StereoImuSyncPacket(
+			  SpinOutputContainer vio_output_ = vio_callback_(StereoImuSyncPacket(
 					                StereoFrame(frame_count_, 
 					               	timestamp,
 					                left_image,
@@ -319,13 +319,15 @@ bool RosDataProvider::spin() {
 
 			  // ROS_INFO("StereoImuSyncPacket %d sent", frame_count_);
 
+        // Publish Output
+        publishOutput(vio_output_.W_Pose_Blkf_,
+                      vio_output_.W_Vel_Blkf_,
+                      vio_output_.timestamp_kf_);
+
+        // publishOutput(vio_output_);
+
 			  last_time_stamp_ = timestamp;
 			  frame_count_++; 
-
-			  // // publish pipeline output 
-			  // gtsam::Pose3 estimated_pose = vio_pipeline_.get_estimated_pose();
-			  // gtsam::Vector3 estimated_velocity = vio_pipeline_.get_estimated_velocity();
-			  // publishOutput(estimated_pose, estimated_velocity, timestamp); 
 
 			} else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
 				ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
@@ -338,19 +340,24 @@ bool RosDataProvider::spin() {
 
 		// spin loop
 		ros::spinOnce();
-		// rate.sleep();
 
 	}
 
-  // Dataset spin has finished, shutdown VIO.
-  // vio_pipeline_.shutdown();
   ROS_INFO("Done.");
   return true;
 }
 
+/*void RosDataProvider::publishOutput(const SpinOutputContainer& vio_output_) const {
+  
+  gtsam::Pose pose = vio_output_.W_Pose_Blkf_;
+  gtsam::Vector3 velocity = vio_output_.W_Vel_Blkf_;
+  Timestamp ts = vio_output_.timestamp_kf_;
+*/
+
 void RosDataProvider::publishOutput(const gtsam::Pose3& pose,
                                     const gtsam::Vector3& velocity,
                                     const Timestamp& ts) const {
+
   // First publish odometry estimate
   nav_msgs::Odometry odometry_msg;
 
