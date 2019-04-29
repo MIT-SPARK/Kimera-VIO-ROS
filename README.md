@@ -33,3 +33,9 @@ Check Issues and Projects tabs.
 One possible source of confusion is the DUMMY_DATASET_PATH argument. This is needed because of the way the SparkVio architecture is currently setup. More precisely, it requires the ETH Parser to be passed into the pipeline, so the quick way around it is to give it a dummy eth dataset (placed in the temp folder), that it doesn't really use. 
 
 Another thing to note is that in regularVioParameters.yaml, autoinitialize needs to be set to 1, otherwise the pipeline will initialize according to the ground truth in the dummy data. 
+
+# Resources 
+
+## Kitti data
+[My forked version of pykitti](https://github.com/yunzc/pykitti)
+[My forked version of kitti2bag](https://github.com/yunzc/kitti2bag)
