@@ -113,22 +113,31 @@ bool RosbagDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     CHECK(nh_.getParam(camera_name + "distortion_coefficients", d_coeff));
     cv::Mat distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
 
-    switch (d_coeff.size()) { // Currently have only come across two cases
+    ROS_INFO("DCOEFF SIZE: %d", int(d_coeff.size()));
+
+    switch (d_coeff.size()) {
+      case(1): // for FOV coefficient
+        distortion_coeff.at<double>(0, 0) = d_coeff.at(0); // w
+        ROS_INFO("Using FOV distortion model");
+        break;
+
       case(4): // if given 4 coefficients
         distortion_coeff.at<double>(0, 0) = d_coeff.at(0); // k1
         distortion_coeff.at<double>(0, 1) = d_coeff.at(1); // k2
         distortion_coeff.at<double>(0, 3) = d_coeff.at(2); // p1
         distortion_coeff.at<double>(0, 4) = d_coeff.at(3); // p2
+        ROS_INFO("Using radtan distortion model");
         break;
 
       case(5): // if given 5 coefficients
         for (int k = 0; k < 5; k++) {
           distortion_coeff.at<double>(0, k) = d_coeff.at(k); // k1, k2, k3, p1, p2
         }
+        ROS_INFO("Using radtan distortion model");
         break;
 
       default: // otherwise
-        ROS_FATAL("Unsupported distortion format");
+        ROS_FATAL("Unsupported distortion format.. why?");
     }
 
     camera_param_i.distortion_coeff_ = distortion_coeff;

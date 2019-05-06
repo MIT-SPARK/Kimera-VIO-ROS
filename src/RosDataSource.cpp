@@ -9,7 +9,8 @@ namespace VIO {
 
 RosDataProvider::RosDataProvider(std::string left_camera_topic,
                                  std::string right_camera_topic,
-                                 std::string imu_topic):
+                                 std::string imu_topic,
+                                 std::string reinit_topic = "/SparkVIO/reinit"):
   stereo_calib_(),
   DataProvider(),
   it_(nh_cam_),
@@ -66,6 +67,21 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   std::string odom_topic_name;
   nh_.getParam("odometry_topic_name", odom_topic_name);
   odom_publisher = nh_.advertise<nav_msgs::Odometry>(odom_topic_name, 10);
+
+
+  ////// Define Reinitializer Subscriber
+  reinit_topic_ = reinit_topic;
+
+  // Start reinitializer subscriber
+  reinit_subscriber_ = nh_reinit_.subscribe(reinit_topic, 10,
+                                      &RosDataProvider::callbackReinit, this);
+
+  // Define Callback Queue for Reinit Data
+  ros::CallbackQueue reinit_queue;
+  nh_reinit_.setCallbackQueue(&reinit_queue);
+
+  ros::AsyncSpinner async_spinner_reinit(0, &reinit_queue);
+  async_spinner_reinit.start();
 
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
 }
@@ -136,6 +152,7 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
       calib2body.at<double>(row, col) = frame_change[k];
     }
 
+    // TODO: Check frames convention!
     cv::Mat E_body = calib2body * E_calib; // Extrinsics in body frame
 
     // restore back to vector form
@@ -148,13 +165,24 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
 
     camera_param_i.body_Pose_cam_ = UtilsOpenCV::Vec2pose(extrinsics_body, 4, 4);
 
+    // Distortion model
+    std::string distortion_model;
+    nh_.getParam("distortion_model", distortion_model);
+    camera_param_i.distortion_model_ = distortion_model;
+
     // Parse distortion
     std::vector<double> d_coeff;
     nh_.getParam(camera_name + "distortion_coefficients", d_coeff);
     cv::Mat distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
 
-    switch (d_coeff.size()) { // Currently have only come across two cases
+    switch (d_coeff.size()) {
+      case(1): // for fov
+        ROS_INFO("using FOV distortion model for camera %d", i);
+        distortion_coeff.at<double>(0,0) = d_coeff[0]; // w
+        break;
+      
       case(4): // if given 4 coefficients
+        ROS_INFO("using radtan distortion model (4 coefficients) for camera %d", i);
         distortion_coeff.at<double>(0,0) = d_coeff[0]; // k1
         distortion_coeff.at<double>(0,1) = d_coeff[1]; // k2
         distortion_coeff.at<double>(0,3) = d_coeff[2]; // p1
@@ -162,6 +190,7 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
         break;
 
       case(5): // if given 5 coefficients
+        ROS_INFO("using radtan distortion model (5 coefficients) for camera %d", i);
         for (int k = 0; k < 5; k++) {
           distortion_coeff.at<double>(0, k) = d_coeff[k]; // k1, k2, k3, p1, p2
         }
@@ -255,6 +284,20 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU){
   last_imu_time_stamp_ = timestamp;
 }
 
+// Reinitialization callback
+void RosDataProvider::callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag) {
+// TODO: Do we want to reinitialize at specific pose or just at origin?
+//void RosDataProvider::callbackReinit(const nav_msgs::Odometry::ConstPtr& msgReinit) {
+
+  // Set reinitialization to "true"
+  reinit_flag_ = true;
+
+  if (getReinitFlag()) {
+    ROS_INFO("Reinitialization flag received!\n");
+  }
+
+}
+
 // Callback for stereo images and main spin
 void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
                                                   const sensor_msgs::ImageConstPtr& msgRight){
@@ -299,12 +342,10 @@ bool RosDataProvider::spin() {
 				cv::Mat left_image = readRosImage(left_ros_img);
 				cv::Mat right_image = readRosImage(right_ros_img);
 
-				// Call VIO Pipeline.
-			  // ROS_INFO("Processing frame %d with timestamp: %ld", frame_count_, timestamp);
-
 			  // Stereo matching parameters
 			  const StereoMatchingParams& stereo_matching_params = frontend_params_.getStereoMatchingParams();
 
+        // TODO: Add option for re-initialization here!
 			  SpinOutputContainer vio_output_ = vio_callback_(StereoImuSyncPacket(
 					                StereoFrame(frame_count_, 
 					               	timestamp,
@@ -315,14 +356,17 @@ bool RosDataProvider::spin() {
 					                stereo_calib_.camL_Pose_camR_,
 					                stereo_matching_params),
 					                imu_meas.timestamps_,
-					                imu_meas.measurements_));
-
-			  // ROS_INFO("StereoImuSyncPacket %d sent", frame_count_);
+					                imu_meas.measurements_,
+                          ReinitPacket(getReinitFlag()))); 
+                          // TODO: Modify if we don't want to use the trivial reinit pose
+        resetReinitFlag();
 
         // Publish Output
-        publishOutput(vio_output_.W_Pose_Blkf_,
-                      vio_output_.W_Vel_Blkf_,
-                      vio_output_.timestamp_kf_);
+        publishOutput(vio_output_.getEstimatedPose(),
+                      vio_output_.getEstimatedVelocity(),
+                      vio_output_.getTimestamp(),
+                      vio_output_.getEstimatedPoseCov(),
+                      vio_output_.getEstimatedVelCov());
 
         // publishOutput(vio_output_);
 
@@ -356,7 +400,10 @@ bool RosDataProvider::spin() {
 
 void RosDataProvider::publishOutput(const gtsam::Pose3& pose,
                                     const gtsam::Vector3& velocity,
-                                    const Timestamp& ts) const {
+                                    const Timestamp& ts,
+                                    const gtsam::Matrix6& pose_cov,
+                                    const gtsam::Matrix3& vel_cov,
+                                    const gtsam::Matrix6& bias_cov) const {
 
   // First publish odometry estimate
   nav_msgs::Odometry odometry_msg;
@@ -385,6 +432,27 @@ void RosDataProvider::publishOutput(const gtsam::Pose3& pose,
   odometry_msg.twist.twist.linear.y = velocity(1);
   odometry_msg.twist.twist.linear.z = velocity(2);
 
+  // pose covariance (published with GTSAM convention)
+  // TODO: Check if this convention is the same for ROS
+  CHECK_EQ(pose_cov.rows()*pose_cov.cols(),odometry_msg.pose.covariance.size());
+  for (int i=0; i<pose_cov.rows(); i++) {
+    for (int j=0; j<pose_cov.cols(); j++) {
+        odometry_msg.pose.covariance[i*pose_cov.cols()+j] = pose_cov(i,j);
+    }
+  }
+
+  // linear velocity covariance
+  // TODO: Write better way of filling in values in array (clarify convention with JPL)
+  CHECK_EQ(vel_cov.rows(),3);
+  CHECK_EQ(vel_cov.cols(),3);
+  CHECK_EQ(odometry_msg.twist.covariance.size(),36);
+  for (int i=0; i<vel_cov.rows(); i++) {
+    for (int j=0; j<vel_cov.cols(); j++) {
+        odometry_msg.twist.covariance[i*int(sqrt(odometry_msg.twist.covariance.size()))+j] = vel_cov(i,j);
+    }
+  }
+
+  // Publish message
   odom_publisher.publish(odometry_msg);
 }
 
