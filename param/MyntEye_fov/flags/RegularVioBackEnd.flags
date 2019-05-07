@@ -11,4 +11,3 @@
 --min_num_of_plane_constraints_to_avoid_seg_fault=10
 --prior_noise_sigma_normal=0.1
 --prior_noise_sigma_distance=0.1
---compute_state_covariance: true
