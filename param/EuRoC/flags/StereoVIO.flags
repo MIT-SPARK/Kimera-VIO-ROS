@@ -18,4 +18,3 @@
 --viz_type=4
 --min_num_obs_for_mesher_points=3
 --extract_planes_from_the_scene=false
---compute_state_covariance=false
