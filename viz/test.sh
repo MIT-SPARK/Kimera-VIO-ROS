@@ -2,9 +2,14 @@
 # Sandro Berchier - 7th May 2019 - MIT
 SESSION="SparkVIO_Testing_MIT"
 
+if [ "$#" -gt 0 ]; then
+	SENSOR=$1
+else
+	SENSOR="MyntEye"
+	#SENSOR="RealSense"
+fi
+
 #################### SETTINGS
-SENSOR="MyntEye"
-#SENSOR="RealSense"
 DEBUG_IMAGE=true
 DEBUG_RVIZ=true
 DEBUG_PLOT=false # Need to fix dependency issue with RQT Multiplot
