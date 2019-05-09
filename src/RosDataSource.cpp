@@ -10,7 +10,7 @@ namespace VIO {
 RosDataProvider::RosDataProvider(std::string left_camera_topic,
                                  std::string right_camera_topic,
                                  std::string imu_topic,
-                                 std::string reinit_topic = "/SparkVIO/reinit"):
+                                 std::string reinit_topic = "/sparkvio/reinit"):
   stereo_calib_(),
   DataProvider(),
   it_(nh_cam_),
@@ -19,7 +19,8 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_), 
   last_time_stamp_(0), // initialize last timestamp (img) to be 0
   last_imu_time_stamp_(0), // initialize last timestamp (imu) to be 0 
-  frame_count_(0) // keep track of number of frames processed)
+  frame_count_(0), // keep track of number of frames processed)
+  vio_output_() // default constructor
 {
 
   ROS_INFO(">>>>>>> Initializing Spark-VIO <<<<<<<");
@@ -66,8 +67,12 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   // Start odometry publisher
   std::string odom_topic_name;
   nh_.getParam("odometry_topic_name", odom_topic_name);
-  odom_publisher = nh_.advertise<nav_msgs::Odometry>(odom_topic_name, 10);
+  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_name, 10);
 
+  // Start resiliency publisher
+  std::string resil_topic_name;
+  nh_.getParam("resiliency_topic_name", resil_topic_name);
+  resil_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(resil_topic_name, 10);
 
   ////// Define Reinitializer Subscriber
   reinit_topic_ = reinit_topic;
@@ -345,8 +350,8 @@ bool RosDataProvider::spin() {
 			  // Stereo matching parameters
 			  const StereoMatchingParams& stereo_matching_params = frontend_params_.getStereoMatchingParams();
 
-        // TODO: Add option for re-initialization here!
-			  SpinOutputContainer vio_output_ = vio_callback_(StereoImuSyncPacket(
+        // TODO: Modify if we don't want to use the trivial reinit pose
+			  vio_output_ = vio_callback_(StereoImuSyncPacket(
 					                StereoFrame(frame_count_, 
 					               	timestamp,
 					                left_image,
@@ -358,17 +363,15 @@ bool RosDataProvider::spin() {
 					                imu_meas.timestamps_,
 					                imu_meas.measurements_,
                           ReinitPacket(getReinitFlag()))); 
-                          // TODO: Modify if we don't want to use the trivial reinit pose
+        
+        // Reset reinit flag
         resetReinitFlag();
 
         // Publish Output
-        publishOutput(vio_output_.getEstimatedPose(),
-                      vio_output_.getEstimatedVelocity(),
-                      vio_output_.getTimestamp(),
-                      vio_output_.getEstimatedPoseCov(),
-                      vio_output_.getEstimatedVelCov());
+        publishOutput();
 
-        // publishOutput(vio_output_);
+        // Publish Resiliency
+        publishResiliency();
 
 			  last_time_stamp_ = timestamp;
 			  frame_count_++; 
@@ -398,12 +401,14 @@ bool RosDataProvider::spin() {
   Timestamp ts = vio_output_.timestamp_kf_;
 */
 
-void RosDataProvider::publishOutput(const gtsam::Pose3& pose,
-                                    const gtsam::Vector3& velocity,
-                                    const Timestamp& ts,
-                                    const gtsam::Matrix6& pose_cov,
-                                    const gtsam::Matrix3& vel_cov,
-                                    const gtsam::Matrix6& bias_cov) const {
+void RosDataProvider::publishOutput() {
+
+  // Get latest estimates for odometry
+  gtsam::Pose3 pose = vio_output_.getEstimatedPose();
+  gtsam::Vector3 velocity = vio_output_.getEstimatedVelocity();
+  Timestamp ts = vio_output_.getTimestamp();
+  gtsam::Matrix6 pose_cov = vio_output_.getEstimatedPoseCov();
+  gtsam::Matrix3 vel_cov = vio_output_.getEstimatedVelCov();
 
   // First publish odometry estimate
   nav_msgs::Odometry odometry_msg;
@@ -453,7 +458,41 @@ void RosDataProvider::publishOutput(const gtsam::Pose3& pose,
   }
 
   // Publish message
-  odom_publisher.publish(odometry_msg);
+  odom_publisher_.publish(odometry_msg);
+}
+
+void RosDataProvider::publishResiliency() {
+
+  // Get frontend data for resiliency output
+  DebugTrackerInfo debug_tracker_info = vio_output_.getTrackerInfo();
+
+  // Create message type
+  std_msgs::Float64MultiArray resiliency_msg;
+
+  // Build Message Layout
+  resiliency_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());  
+  resiliency_msg.layout.dim[0].size = 13;
+  resiliency_msg.layout.dim[0].stride = 1;
+  resiliency_msg.layout.dim[0].label = 
+    "FrontEnd: nrDetFeat, nrTrackFeat, nrMoIn, nrMoPu, nrStIn, nrStPu, moRaIt, stRaIt, nrVaRKP, nrNoLRKP, nrNoRRKP, nrNoDRKP nrFaARKP";
+
+  // Get FrontEnd Statistics to Publish
+  resiliency_msg.data.push_back(debug_tracker_info.nrDetectedFeatures_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrTrackerFeatures_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrMonoInliers_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrMonoPutatives_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrStereoInliers_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrStereoPutatives_);
+  resiliency_msg.data.push_back(debug_tracker_info.monoRansacIters_);
+  resiliency_msg.data.push_back(debug_tracker_info.stereoRansacIters_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrValidRKP_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrNoLeftRectRKP_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrNoRightRectRKP_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrNoDepthRKP_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrFailedArunRKP_);
+
+  // Publish Message
+  resil_publisher_.publish(resiliency_msg);
 }
 
 void RosDataProvider::print() const {

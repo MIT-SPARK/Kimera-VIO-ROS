@@ -52,11 +52,11 @@ fi
 
 
 #################### INPUT TOPICS
-REINIT_TOPIC="/SparkVIO/reinit"
+REINIT_TOPIC="/sparkvio/reinit"
 
 
 #################### OUTPUT TOPICS
-OUTPUT_TOPIC="/SparkVIO/GTSAM/odometry"
+OUTPUT_TOPIC="/sparkvio/odometry"
 
 
 ############################## PANES #########################################
@@ -148,7 +148,7 @@ fi
 
 # Open Chance to Reinit Pipeline
 if $TEST_REINIT; then
-	tmux send-keys -t 10 "rostopic pub /SparkVIO/reinit std_msgs/Bool '{data: true}'"
+	tmux send-keys -t 10 "rostopic pub $REINIT_TOPIC std_msgs/Bool '{data: true}'"
 	tmux select-pane -t 10
 else
 	tmux select-pane -t 0

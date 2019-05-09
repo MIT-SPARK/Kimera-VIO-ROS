@@ -1,8 +1,9 @@
 # EuRoC ROS config file 
 # Store topic names 
 
-left_camera_topic: /mynteye/left/image_raw
-right_camera_topic: /mynteye/right/image_raw
-imu_topic: /mynteye/imu/data_raw
-odometry_topic_name: /SparkVIO/GTSAM/odometry
-reinit_topic: /SparkVIO/reinit
+left_camera_topic: /cam0/image_raw
+right_camera_topic: /cam1/image_raw
+imu_topic: /imu0
+odometry_topic_name: /sparkvio/odometry
+reinit_topic: /sparkvio/reinit
+resiliency_topic_name: /sparkvio/resiliency

@@ -24,6 +24,7 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
 
@@ -116,12 +117,9 @@ private:
   void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
                                    const sensor_msgs::ImageConstPtr& msgRight);
 
-  void publishOutput(const gtsam::Pose3& pose,
-                     const gtsam::Vector3& velocity,
-                     const Timestamp& ts,
-                     const gtsam::Matrix6& pose_cov = gtsam::zeros(6,6),
-                     const gtsam::Matrix3& vel_cov = gtsam::zeros(3,3),
-                     const gtsam::Matrix6& bias_cov = gtsam::zeros(6,6)) const;
+  void publishOutput();
+
+  void publishResiliency();
 
   // Message filters and to sync stereo images
   ImageSubscriber left_img_subscriber_;
@@ -141,7 +139,10 @@ private:
   ros::Subscriber reinit_subscriber_;
 
   // Define publisher to publish odometry
-  ros::Publisher odom_publisher;
+  ros::Publisher odom_publisher_;
+
+  // Define publisher to publish resiliency
+  ros::Publisher resil_publisher_;
 
   // Define imu topic since might need to wait
   std::string imu_topic_;
@@ -155,6 +156,7 @@ private:
 private:
   VioFrontEndParams frontend_params_;
   StereoCalibration stereo_calib_;
+  SpinOutputContainer vio_output_;
 };
 
 } // End of VIO Namespace

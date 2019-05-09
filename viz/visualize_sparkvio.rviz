@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Pose1
         - /Odometry1
         - /Odometry2
         - /Odometry2/Shape1
@@ -52,21 +51,6 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.100000001
-      Class: rviz/Pose
-      Color: 255; 25; 0
-      Enabled: false
-      Head Length: 0.300000012
-      Head Radius: 0.100000001
-      Name: Pose
-      Shaft Length: 1
-      Shaft Radius: 0.0500000007
-      Shape: Axes
-      Topic: /SparkVIO/GTSAM/pose
-      Unreliable: false
-      Value: false
     - Angle Tolerance: 0.100000001
       Class: rviz/Odometry
       Covariance:
@@ -98,7 +82,7 @@ Visualization Manager:
         Shaft Length: 1
         Shaft Radius: 0.0500000007
         Value: Axes
-      Topic: /SparkVIO/GTSAM/odometry
+      Topic: /sparkvio/odometry
       Unreliable: false
       Value: true
     - Angle Tolerance: 0.100000001
@@ -132,7 +116,7 @@ Visualization Manager:
         Shaft Length: 0.00999999978
         Shaft Radius: 0.0500000007
         Value: Arrow
-      Topic: /SparkVIO/GTSAM/odometry
+      Topic: /sparkvio/odometry
       Unreliable: false
       Value: true
   Enabled: true

@@ -1,0 +1,46 @@
+<launch>
+  <arg name="dataset_name" value="RealSense_IR"/>
+
+  <!-- Each dataset has its own set of parameter files -->
+  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
+  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml"/>
+
+	<!-- More parameter arguments -->
+	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
+	<arg name="TRACKER_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/trackerParameters.yaml" />
+	<arg name="VIO_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/StereoVIO.flags" />
+	<arg name="MESHER_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Mesher.flags" />
+	<arg name="BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/VioBackEnd.flags" />
+	<arg name="REGULAR_BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/RegularVioBackEnd.flags" />
+	<arg name="VISUALIZER_FLAGS" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Visualizer3D.flags" />
+	<arg name="VERBOSITY" default="0" />
+	<arg name="BACKEND_TYPE" default="1" /> <!-- For regular VIO -->
+	<arg name="LOG_OUTPUT" default="False" />
+	<arg name="OUTPUT_PATH" default="./" />
+	<arg name="VISUALIZE" default="False" /> <!-- Note that this is duplicated from the flags file -->
+
+  <!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
+  <!-- Note that it is necessary that the autoInitialize = 1 in regularVioParameters if you don't match dummy data to your rosbag -->
+  <arg name="DUMMY_DATASET_PATH" value="$(find spark_vio_ros)/temp/dummy_eth_data"/>
+
+	<!-- Launch main node  -->
+	<node name="stereo_vio_ros" pkg="spark_vio_ros" type="stereo_vio_ros" output="screen" 
+				args="--logtostderr=1
+  					  --colorlogtostderr=1 
+  					  --log_prefix=1 
+  					  --vio_params_path=$(arg VIO_PARAMS_PATH) 
+  					  --dataset_path=$(arg DUMMY_DATASET_PATH)
+  					  --initial_k=10 
+  					  --final_k=100 
+  					  --tracker_params_path=$(arg TRACKER_PARAMS_PATH) 
+  					  --flagfile=$(arg VIO_FLAGS_PATH) 
+  					  --flagfile=$(arg MESHER_FLAGS_PATH)
+  					  --flagfile=$(arg BACKEND_FLAGS_PATH)
+  					  --flagfile=$(arg REGULAR_BACKEND_FLAGS_PATH)
+  					  --flagfile=$(arg VISUALIZER_FLAGS)
+  					  --v=$(arg VERBOSITY)
+  					  --backend_type=$(arg BACKEND_TYPE)
+  					  --log_output=$(arg LOG_OUTPUT)
+  					  --output_path=$(arg OUTPUT_PATH)
+  					  --visualize=$(arg VISUALIZE)" />
+</launch>
