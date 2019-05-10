@@ -178,24 +178,21 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     // Parse distortion
     std::vector<double> d_coeff;
     nh_.getParam(camera_name + "distortion_coefficients", d_coeff);
-    cv::Mat distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
+    cv::Mat distortion_coeff;
 
-    switch (d_coeff.size()) {
-      case(1): // for fov
-        ROS_INFO("using FOV distortion model for camera %d", i);
-        distortion_coeff.at<double>(0,0) = d_coeff[0]; // w
-        break;
-      
+    switch (d_coeff.size()) {      
       case(4): // if given 4 coefficients
-        ROS_INFO("using radtan distortion model (4 coefficients) for camera %d", i);
+        ROS_INFO("using radtan or equidistant distortion model (4 coefficients) for camera %d", i);
+        distortion_coeff = cv::Mat::zeros(1, 4, CV_64F);
         distortion_coeff.at<double>(0,0) = d_coeff[0]; // k1
         distortion_coeff.at<double>(0,1) = d_coeff[1]; // k2
-        distortion_coeff.at<double>(0,3) = d_coeff[2]; // p1
-        distortion_coeff.at<double>(0,4) = d_coeff[3]; // p2
+        distortion_coeff.at<double>(0,3) = d_coeff[2]; // p1 or k3
+        distortion_coeff.at<double>(0,4) = d_coeff[3]; // p2 or k4
         break;
 
       case(5): // if given 5 coefficients
         ROS_INFO("using radtan distortion model (5 coefficients) for camera %d", i);
+        distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
         for (int k = 0; k < 5; k++) {
           distortion_coeff.at<double>(0, k) = d_coeff[k]; // k1, k2, k3, p1, p2
         }

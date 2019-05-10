@@ -46,7 +46,8 @@ else
 	IMU0_TOPIC="/mynteye/imu/data_raw"
 
 	#################### ALGORITHM
-	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_mynteye_MIT.launch"
+	#COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_mynteye_MIT.launch"
+	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_mynteye_equi.launch"
 
 fi
 
