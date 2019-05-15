@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" value="MyntEye"/>
+  <arg name="dataset_name" value="MyntEye_JPL_radtan"/>
   <!-- Each dataset has its own set of parameter files -->
 
   <arg name="data"/>
