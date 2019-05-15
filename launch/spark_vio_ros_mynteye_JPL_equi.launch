@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" value="MyntEye_equi"/>
+  <arg name="dataset_name" value="MyntEye_JPL_equi"/>
 
   <!-- Each dataset has its own set of parameter files -->
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>

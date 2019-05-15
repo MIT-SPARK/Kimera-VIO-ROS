@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" value="MyntEye"/>
+  <arg name="dataset_name" value="MyntEye_MIT_radtan"/>
 
   <!-- Each dataset has its own set of parameter files -->
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>

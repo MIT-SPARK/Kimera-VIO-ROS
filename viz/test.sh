@@ -6,13 +6,12 @@ if [ "$#" -gt 0 ]; then
 	SENSOR=$1
 else
 	SENSOR="MyntEye"
-	#SENSOR="RealSense"
 fi
 
 #################### SETTINGS
 DEBUG_IMAGE=true
 DEBUG_RVIZ=true
-DEBUG_PLOT=false # Need to fix dependency issue with RQT Multiplot
+DEBUG_PLOT=true
 TEST_REINIT=true
 
 DEVEL_FOLDER_ALGO="~/MIT/catkin_ws/devel/setup.bash"
@@ -35,7 +34,7 @@ if [ $SENSOR == "RealSense" ]; then
 	#################### ALGORITHM
 	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_realsense_IR.launch"
 	
-else
+elif [ $SENSOR == "MyntEye" ]; then
 
 	#################### SENSOR
 	COMMAND_CAMERA="source $DEVEL_FOLDER_MYNT; roslaunch mynt_eye_ros_wrapper mynteye_MIT.launch"
@@ -46,8 +45,21 @@ else
 	IMU0_TOPIC="/mynteye/imu/data_raw"
 
 	#################### ALGORITHM
-	#COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_mynteye_MIT.launch"
-	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_mynteye_equi.launch"
+	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_mynteye_MIT_radtan.launch"
+	#COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_mynteye_MIT_equi.launch"
+
+else 
+
+	#################### SENSOR
+	COMMAND_CAMERA="rosbag play -r 1 ~/Dataset/EuRoC/MH_01_easy.bag"
+
+	#################### SENSOR TOPICS
+	CAM0_TOPIC="/cam0/image_raw"
+	CAM1_TOPIC="/cam1/image_raw"
+	IMU0_TOPIC="/imu0/data_raw"
+
+	#################### ALGORITHM
+	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_euroc.launch"
 
 fi
 
@@ -136,7 +148,7 @@ fi
 
 # Exec RQT Multiplot
 if $DEBUG_PLOT; then
-	tmux send-keys -t 8 "rosrun rqt_multiplot rqt_multiplot --multiplot-config $DEBUG_FOLDER/rqt_multiplot_simulation.xml & rosrun quat2eul quat2eul.py" C-m
+	tmux send-keys -t 8 "source $DEVEL_FOLDER_ALGO; rosrun rqt_multiplot rqt_multiplot --force-discover --multiplot-config $DEBUG_FOLDER/rqt_multiplot_diagnostics.xml & rosrun quat2eul quat2eul.py" C-m
 fi
 
 # Exec RVIZ
