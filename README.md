@@ -33,3 +33,12 @@ Check Issues and Projects tabs.
 One possible source of confusion is the DUMMY_DATASET_PATH argument. This is needed because of the way the SparkVio architecture is currently setup. More precisely, it requires the ETH Parser to be passed into the pipeline, so the quick way around it is to give it a dummy eth dataset (placed in the temp folder), that it doesn't really use. 
 
 Another thing to note is that in regularVioParameters.yaml, autoinitialize needs to be set to 1, otherwise the pipeline will initialize according to the ground truth in the dummy data. 
+
+# For SubT
+For the MyntEyes used in SubT: (online)
+```
+roslaunch spark_vio_ros spark_vio_ros_mynteye.launch camera:=JPL distortion:=equidistant
+```
+Options for camera are ```MIT``` and ```JPL```. Options for distortion are ```equidistant``` and ```radtan```.
+
+Same goes for use offline, using the ```spark_vio_ros_mynteye_offline.launch``` file and an additional ```data``` argument with path to bagfile.
