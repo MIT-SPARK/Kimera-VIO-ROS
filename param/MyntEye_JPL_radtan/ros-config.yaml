@@ -2,7 +2,7 @@
 # Store topic names 
 
 left_camera_topic: /mynteye/left/image_raw
-right_camera_topic: /mynteye/left/image_raw
+right_camera_topic: /mynteye/right/image_raw
 imu_topic: /mynteye/imu/data_raw
 odometry_topic_name: /sparkvio/odometry
 reinit_topic: /sparkvio/reinit
