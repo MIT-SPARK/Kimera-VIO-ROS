@@ -2,7 +2,7 @@
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
 # Installation
-Note that this is to be used with the `feature/parallelization/kitti_dataset` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
+Note that this is to be used with the `feature/parallelization/jpl` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
 ```
 git clone git@github.mit.edu:SPARK/spark_vio_ros.git
 cd ..
@@ -39,3 +39,12 @@ Another thing to note is that in regularVioParameters.yaml, autoinitialize needs
 ## Kitti data
 [My forked version of pykitti](https://github.com/yunzc/pykitti)
 [My forked version of kitti2bag](https://github.com/yunzc/kitti2bag)
+
+# For SubT
+For the MyntEyes used in SubT: (online)
+```
+roslaunch spark_vio_ros spark_vio_ros_mynteye.launch camera:=JPL distortion:=equidistant
+```
+Options for camera are ```MIT``` and ```JPL```. Options for distortion are ```equidistant``` and ```radtan```.
+
+Same goes for use offline, using the ```spark_vio_ros_mynteye_offline.launch``` file and an additional ```data``` argument with path to bagfile.
