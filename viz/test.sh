@@ -4,8 +4,12 @@ SESSION="SparkVIO_Testing_MIT"
 
 if [ "$#" -gt 0 ]; then
 	SENSOR=$1
+	CAMERA=$2
+	DISTORTION=$3
 else
 	SENSOR="MyntEye"
+	CAMERA="MIT"
+	DISTORTION="radtan"
 fi
 
 #################### SETTINGS
@@ -45,8 +49,7 @@ elif [ $SENSOR == "MyntEye" ]; then
 	IMU0_TOPIC="/mynteye/imu/data_raw"
 
 	#################### ALGORITHM
-	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_mynteye_MIT_radtan.launch"
-	#COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_mynteye_MIT_equi.launch"
+	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_mynteye.launch camera:=$CAMERA distortion:=$DISTORTION"
 
 else 
 

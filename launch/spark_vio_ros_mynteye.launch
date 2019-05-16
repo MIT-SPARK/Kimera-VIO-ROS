@@ -1,8 +1,10 @@
 <launch>
-  <arg name="dataset_name" value="MyntEye_JPL_equi"/>
+  <arg name="dataset_name" value="MyntEye"/>
+  <arg name="camera" default="JPL"/>
+  <arg name="distortion" default="radtan"/>
 
   <!-- Each dataset has its own set of parameter files -->
-  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
+  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration/calibration_$(arg camera)_$(arg distortion).yaml"/>
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml"/>
 
 	<!-- More parameter arguments -->
