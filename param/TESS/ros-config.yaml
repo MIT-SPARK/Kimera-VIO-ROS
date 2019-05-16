@@ -1,0 +1,7 @@
+# TESS ROS config file
+# Store topic names
+
+left_camera_topic: /observation/left_image
+right_camera_topic: /observation/right_image
+imu_topic: /observation/imu
+odometry_topic_name: /SparkVIO/GTSAM/odometry
