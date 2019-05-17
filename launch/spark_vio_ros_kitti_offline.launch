@@ -7,15 +7,9 @@
 	<arg name="rate" default="1.0" />
 
   	<!-- Remap subscriber topics -->
-  	<remap from="/cam0/image_raw" to="/kitti/camera_gray_left/image_raw"/>
-  	<remap from="/cam1/image_raw" to="//kitti/camera_gray_right/image_raw"/>
-  	<remap from="/imu0" to="/kitti/oxts/imu"/>
-  	<!-- remap from="/sparkvio/reinit" to="/sparkvio/reinit"/ -->
-
-  	<!-- Remap publisher topics -->
-  	<!-- remap from="/sparkvio/odometry" to="/sparkvio/odometry"/ -->
-  	<!-- remap from="/sparkvio/resiliency" to="/sparkvio/resiliency"/ -->
-  	<!-- remap from="/sparkvio/imu_bias" to="/sparkvio/imu_bias"/ -->
+  	<arg name="cam0" value="/kitti/camera_gray_left/image_raw"/>
+  	<arg name="cam1" value="/kitti/camera_gray_right/image_raw"/>
+  	<arg name="imu0" value="/kitti/oxts/imu"/>
 
 	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml" />
 	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml" />
@@ -39,7 +33,7 @@
 	<arg name="DUMMY_DATASET_PATH" value="$(find spark_vio_ros)/temp/dummy_eth_data" />
 
 	<!-- Launch main node  -->
-	<node name="stereo_vio_ros" pkg="spark_vio_ros" type="stereo_vio_ros" output="screen" 
+	<node name="stereo_vio_ros_offline" pkg="spark_vio_ros" type="stereo_vio_ros_offline" output="screen" 
 				args="--logtostderr=1
   					  --colorlogtostderr=1 
   					  --log_prefix=1 
@@ -47,6 +41,9 @@
   					  --dataset_path=$(arg DUMMY_DATASET_PATH)
   					  --initial_k=10 
   					  --final_k=100
+					  --left_camera_topic=$(arg cam0)
+					  --right_camera_topic=$(arg cam1)
+					  --imu_topic=$(arg imu0)  
   					  --tracker_params_path=$(arg TRACKER_PARAMS_PATH) 
   					  --flagfile=$(arg VIO_FLAGS_PATH) 
   					  --flagfile=$(arg MESHER_FLAGS_PATH)
