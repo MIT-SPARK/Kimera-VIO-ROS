@@ -118,8 +118,12 @@ private:
                                    const sensor_msgs::ImageConstPtr& msgRight);
 
   void publishOutput();
+  
+  void publishState();
 
   void publishResiliency();
+
+  void publishImuBias();
 
   // Message filters and to sync stereo images
   ImageSubscriber left_img_subscriber_;
@@ -143,6 +147,9 @@ private:
 
   // Define publisher to publish resiliency
   ros::Publisher resil_publisher_;
+
+  // Define publisher to publish imu bias
+  ros::Publisher bias_publisher_;
 
   // Define imu topic since might need to wait
   std::string imu_topic_;

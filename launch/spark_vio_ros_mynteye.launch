@@ -3,9 +3,19 @@
   <arg name="camera" default="JPL"/>
   <arg name="distortion" default="radtan"/>
 
+  <!-- Remap subscriber topics -->
+  <remap from="/cam0/image_raw" to="/mynteye/left/image_raw"/>
+  <remap from="/cam1/image_raw" to="/mynteye/right/image_raw"/>
+  <remap from="/imu0" to="/mynteye/imu/data_raw"/>
+  <!-- remap from="/sparkvio/reinit" to="/sparkvio/reinit"/ -->
+
+  <!-- Remap publisher topics -->
+  <!-- remap from="/sparkvio/odometry" to="/sparkvio/odometry"/ -->
+  <!-- remap from="/sparkvio/resiliency" to="/sparkvio/resiliency"/ -->
+  <!-- remap from="/sparkvio/imu_bias" to="/sparkvio/imu_bias"/ -->
+
   <!-- Each dataset has its own set of parameter files -->
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration/calibration_$(arg camera)_$(arg distortion).yaml"/>
-  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml"/>
 
 	<!-- More parameter arguments -->
 	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />

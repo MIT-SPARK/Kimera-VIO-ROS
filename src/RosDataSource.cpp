@@ -65,14 +65,16 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   async_spinner_cam.start();
 
   // Start odometry publisher
-  std::string odom_topic_name;
-  nh_.getParam("odometry_topic_name", odom_topic_name);
-  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_name, 10);
+  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(
+            "/sparkvio/odometry", 10);
 
   // Start resiliency publisher
-  std::string resil_topic_name;
-  nh_.getParam("resiliency_topic_name", resil_topic_name);
-  resil_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(resil_topic_name, 10);
+  resil_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(
+            "/sparkvio/resiliency", 10);
+
+  // Start imu bias publisher
+  bias_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(
+            "/sparkvio/imu_bias", 10);
 
   ////// Define Reinitializer Subscriber
   reinit_topic_ = reinit_topic;
@@ -364,11 +366,8 @@ bool RosDataProvider::spin() {
         // Reset reinit flag
         resetReinitFlag();
 
-        // Publish Output
+        // Publish all outputs
         publishOutput();
-
-        // Publish Resiliency
-        publishResiliency();
 
 			  last_time_stamp_ = timestamp;
 			  frame_count_++; 
@@ -399,6 +398,19 @@ bool RosDataProvider::spin() {
 */
 
 void RosDataProvider::publishOutput() {
+
+  // Publish Output
+  publishState();
+
+  // Publish Resiliency
+  publishResiliency();
+
+  // Publish imu bias
+  publishImuBias();
+
+}
+
+void RosDataProvider::publishState() {
 
   // Get latest estimates for odometry
   gtsam::Pose3 pose = vio_output_.getEstimatedPose();
@@ -490,6 +502,36 @@ void RosDataProvider::publishResiliency() {
 
   // Publish Message
   resil_publisher_.publish(resiliency_msg);
+}
+
+void RosDataProvider::publishImuBias() {
+
+  // Get imu bias to output
+  ImuBias imu_bias = vio_output_.getEstimatedBias();
+  Vector3 accel_bias = imu_bias.accelerometer();
+  Vector3 gyro_bias = imu_bias.gyroscope(); 
+
+  // Create message type
+  std_msgs::Float64MultiArray imu_bias_msg;
+
+  // Build Message Layout
+  imu_bias_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());  
+  imu_bias_msg.layout.dim[0].size = 6;
+  imu_bias_msg.layout.dim[0].stride = 1;
+  imu_bias_msg.layout.dim[0].label = 
+    "Gyro Bias: x,y,z. Accel Bias: x,y,z";
+
+  // Get Imu Bias to Publish
+  imu_bias_msg.data.push_back(gyro_bias[0]);
+  imu_bias_msg.data.push_back(gyro_bias[1]);
+  imu_bias_msg.data.push_back(gyro_bias[2]);
+  imu_bias_msg.data.push_back(accel_bias[0]);
+  imu_bias_msg.data.push_back(accel_bias[1]);
+  imu_bias_msg.data.push_back(accel_bias[2]);
+
+  // Publish Message
+  bias_publisher_.publish(imu_bias_msg);
+
 }
 
 void RosDataProvider::print() const {

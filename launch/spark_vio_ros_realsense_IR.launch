@@ -5,6 +5,17 @@
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml"/>
 
+  <!-- Remap subscriber topics -->
+  <remap from="/cam0/image_raw" to="/realsense/infra1/image_rect_raw"/>
+  <remap from="/cam1/image_raw" to="/realsense/infra2/image_rect_raw"/>
+  <remap from="/imu0" to="/realsense/imu"/>
+  <!-- remap from="/sparkvio/reinit" to="/sparkvio/reinit"/ -->
+
+  <!-- Remap publisher topics -->
+  <!-- remap from="/sparkvio/odometry" to="/sparkvio/odometry"/ -->
+  <!-- remap from="/sparkvio/resiliency" to="/sparkvio/resiliency"/ -->
+  <!-- remap from="/sparkvio/imu_bias" to="/sparkvio/imu_bias"/ -->
+
 	<!-- More parameter arguments -->
 	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
 	<arg name="TRACKER_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/trackerParameters.yaml" />
