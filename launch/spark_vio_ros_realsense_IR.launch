@@ -3,7 +3,6 @@
 
   <!-- Each dataset has its own set of parameter files -->
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
-  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml"/>
 
   <!-- Remap subscriber topics -->
   <remap from="/cam0/image_raw" to="/realsense/infra1/image_rect_raw"/>

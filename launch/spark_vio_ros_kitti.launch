@@ -2,10 +2,6 @@
 	<arg name="dataset_name" value="Kitti" />
 	<!-- Each dataset has its own set of parameter files -->
 
-	<arg name="data" />
-
-	<arg name="rate" default="1.0" />
-
   	<!-- Remap subscriber topics -->
   	<remap from="/cam0/image_raw" to="/kitti/camera_gray_left/image_raw"/>
   	<remap from="/cam1/image_raw" to="//kitti/camera_gray_right/image_raw"/>
@@ -56,7 +52,6 @@
   					  --v=$(arg VERBOSITY)
   					  --backend_type=$(arg BACKEND_TYPE)
   					  --log_output=$(arg LOG_OUTPUT)
-  					  --rosbag_path=$(arg data)
   					  --output_path=$(arg OUTPUT_PATH)
   					  --visualize=$(arg VISUALIZE)" />
 </launch>
