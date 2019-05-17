@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
                                    imu_topic,
                                    reinit_topic);
 
-  VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams());
+  VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams(), true);
 
   // Register callback to vio_pipeline.
   ros_wrapper.registerVioCallback(

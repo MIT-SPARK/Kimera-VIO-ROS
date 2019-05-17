@@ -29,6 +29,11 @@ RosbagDataProvider::RosbagDataProvider(const std::string &left_camera_topic,
   ROS_INFO(">>>>>>> Parsed rosbag data");
   // print parameters for check
   print();
+
+  // Start odometry publisher
+  std::string odom_topic_name;
+  nh_.getParam("odometry_topic_name", odom_topic_name);
+  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_name, 10);
 }
 
 RosbagDataProvider::~RosbagDataProvider() {}
@@ -308,16 +313,19 @@ bool RosbagDataProvider::spin() {
 
         timestamp_last_frame = timestamp_frame_k;
 
-        vio_callback_(StereoImuSyncPacket(
-                        StereoFrame(k, timestamp_frame_k,
-                                    readRosImage(rosbag_data_.left_imgs_.at(k)),
-                                    stereo_calib_.left_camera_info_,
-                                    readRosImage(rosbag_data_.right_imgs_.at(k)),
-                                    stereo_calib_.right_camera_info_,
-                                    stereo_calib_.camL_Pose_camR_,
-                                    stereo_matching_params),
-                        imu_meas.timestamps_,
-                        imu_meas.measurements_));
+        vio_output_ = vio_callback_(StereoImuSyncPacket(
+                          StereoFrame(k, timestamp_frame_k,
+                          readRosImage(rosbag_data_.left_imgs_.at(k)),
+                          stereo_calib_.left_camera_info_,
+                          readRosImage(rosbag_data_.right_imgs_.at(k)),
+                          stereo_calib_.right_camera_info_,
+                          stereo_calib_.camL_Pose_camR_,
+                          stereo_matching_params),
+                          imu_meas.timestamps_,
+                          imu_meas.measurements_));
+
+        // Publish Output
+        publishOutput();
 
         VLOG(10) << "Finished VIO processing for frame k = " << k;
       } else {
@@ -347,6 +355,66 @@ void RosbagDataProvider::print() const {
   std::cout << "number of stereo frames: " << rosbag_data_.getNumberOfImages() << std::endl;
   std::cout << std::endl;
   std::cout << "========================================" << std::endl;
+}
+
+void RosbagDataProvider::publishOutput() {
+
+  // Get latest estimates for odometry
+  gtsam::Pose3 pose = vio_output_.getEstimatedPose();
+  gtsam::Vector3 velocity = vio_output_.getEstimatedVelocity();
+  Timestamp ts = vio_output_.getTimestamp();
+  gtsam::Matrix6 pose_cov = vio_output_.getEstimatedPoseCov();
+  gtsam::Matrix3 vel_cov = vio_output_.getEstimatedVelCov();
+
+  // First publish odometry estimate
+  nav_msgs::Odometry odometry_msg;
+
+  long int sec = ts / 1e9;
+  long int nsec = ts - sec * 1e9;
+
+  // create header
+  odometry_msg.header.stamp.sec = sec;
+  odometry_msg.header.stamp.nsec = nsec;
+  odometry_msg.header.frame_id = "base_link";
+
+  // position
+  odometry_msg.pose.pose.position.x = pose.x();
+  odometry_msg.pose.pose.position.y = pose.y();
+  odometry_msg.pose.pose.position.z = pose.z();
+
+  // orientation
+  odometry_msg.pose.pose.orientation.w = pose.rotation().toQuaternion().w();
+  odometry_msg.pose.pose.orientation.x = pose.rotation().toQuaternion().x();
+  odometry_msg.pose.pose.orientation.y = pose.rotation().toQuaternion().y();
+  odometry_msg.pose.pose.orientation.z = pose.rotation().toQuaternion().z();
+
+  // linear velocity
+  odometry_msg.twist.twist.linear.x = velocity(0);
+  odometry_msg.twist.twist.linear.y = velocity(1);
+  odometry_msg.twist.twist.linear.z = velocity(2);
+
+  // pose covariance (published with GTSAM convention)
+  // TODO: Check if this convention is the same for ROS
+  CHECK_EQ(pose_cov.rows()*pose_cov.cols(),odometry_msg.pose.covariance.size());
+  for (int i=0; i<pose_cov.rows(); i++) {
+    for (int j=0; j<pose_cov.cols(); j++) {
+        odometry_msg.pose.covariance[i*pose_cov.cols()+j] = pose_cov(i,j);
+    }
+  }
+
+  // linear velocity covariance
+  // TODO: Write better way of filling in values in array (clarify convention with JPL)
+  CHECK_EQ(vel_cov.rows(),3);
+  CHECK_EQ(vel_cov.cols(),3);
+  CHECK_EQ(odometry_msg.twist.covariance.size(),36);
+  for (int i=0; i<vel_cov.rows(); i++) {
+    for (int j=0; j<vel_cov.cols(); j++) {
+        odometry_msg.twist.covariance[i*int(sqrt(odometry_msg.twist.covariance.size()))+j] = vel_cov(i,j);
+    }
+  }
+
+  // Publish message
+  odom_publisher_.publish(odometry_msg);
 }
 
 } // End of VIO namespace
