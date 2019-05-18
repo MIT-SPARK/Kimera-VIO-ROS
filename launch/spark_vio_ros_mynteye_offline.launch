@@ -1,13 +1,15 @@
 <launch>
-	<arg name="dataset_name" value="Kitti" />
-	<!-- Each dataset has its own set of parameter files -->
+  <arg name="dataset_name" value="MyntEye"/>
+  <arg name="camera" default="JPL"/>
+  <arg name="distortion" default="radtan"/>
+  <!-- Each dataset has its own set of parameter files -->
 
-	<arg name="data" />
+  <arg name="data"/>
 
-	<arg name="rate" default="1.0" />
+  <arg name="rate" default="1.0"/>
 
-	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml" />
-	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml" />
+  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration/calibration_$(arg camera)_$(arg distortion).yaml"/>
+  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml"/>
 
 	<!-- More parameter arguments -->
 	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
@@ -17,18 +19,18 @@
 	<arg name="BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/VioBackEnd.flags" />
 	<arg name="REGULAR_BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/RegularVioBackEnd.flags" />
 	<arg name="VISUALIZER_FLAGS" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Visualizer3D.flags" />
-	<arg name="VERBOSITY" default="0" />
-	<arg name="BACKEND_TYPE" default="1" /> <!-- 1 For regular VIO -->
+	<arg name="VERBOSITY" value="0" />
+	<arg name="BACKEND_TYPE" value="1" /> <!-- For regular VIO -->
 	<arg name="LOG_OUTPUT" default="False" />
-	<arg name="OUTPUT_PATH" default="./" />
-	<arg name="VISUALIZE" default="False" /> <!-- Note that this is duplicated from the flags file -->
+	<arg name="OUTPUT_PATH" default="./"/>
+	<arg name="VISUALIZE" default="True" /> <!-- Note that this is duplicated from the flags file -->
 
-	<!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
-	<!-- Note that it is necessary that the autoInitialize = 1 in regularVioParameters if you don't match dummy data to your rosbag -->
-	<arg name="DUMMY_DATASET_PATH" value="$(find spark_vio_ros)/temp/dummy_eth_data" />
+  <!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
+  <!-- Note that it is necessary that the autoInitialize = 1 in regularVioParameters if you don't match dummy data to your rosbag -->
+  <arg name="DUMMY_DATASET_PATH" value="$(find spark_vio_ros)/temp/dummy_eth_data"/>
 
 	<!-- Launch main node  -->
-	<node name="stereo_vio_ros" pkg="spark_vio_ros" type="stereo_vio_ros_offline" output="screen" 
+	<node name="stereo_vio_ros_offline" pkg="spark_vio_ros" type="stereo_vio_ros_offline" output="screen" 
 				args="--logtostderr=1
   					  --colorlogtostderr=1 
   					  --log_prefix=1 
@@ -49,6 +51,4 @@
   					  --output_path=$(arg OUTPUT_PATH)
   					  --visualize=$(arg VISUALIZE)" />
 
-  <!-- launch rviz  -->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find spark_vio_ros)/viz/visualize_sparkvio.rviz" />
 </launch>

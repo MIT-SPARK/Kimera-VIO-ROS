@@ -4,4 +4,6 @@
 left_camera_topic: /kitti/camera_gray_left/image_raw
 right_camera_topic: /kitti/camera_gray_right/image_raw
 imu_topic: /kitti/oxts/imu
-odometry_topic_name: /SparkVIO/GTSAM/odometry
+odometry_topic_name: /sparkvio/odometry
+reinit_topic: /sparkvio/reinit
+resiliency_topic_name: /sparkvio/resiliency

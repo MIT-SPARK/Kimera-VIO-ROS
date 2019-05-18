@@ -16,6 +16,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/Imu.h>
+#include <nav_msgs/Odometry.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 
@@ -88,10 +89,16 @@ private:
   // Print the parameters
   void print() const;
 
+  void publishOutput();
+
+  // Define publisher to publish odometry
+  ros::Publisher odom_publisher_;
+
 private:
   VioFrontEndParams frontend_params_;
   StereoCalibration stereo_calib_;
   RosbagData rosbag_data_;
+  SpinOutputContainer vio_output_;
 };
 
 } // End of VIO Namespace

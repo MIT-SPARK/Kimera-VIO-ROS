@@ -23,6 +23,8 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <nav_msgs/Odometry.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
 
@@ -45,13 +47,19 @@ class RosDataProvider: public DataProvider {
 public:
   RosDataProvider(std::string left_camera_topic,
                   std::string right_camera_topic,
-                  std::string imu_topic);
+                  std::string imu_topic,
+                  std::string reinit_topic);
   virtual ~RosDataProvider();
   virtual bool spin();
 
   inline ImuParams getImuParams() const {
     return imuParams_;
   }
+
+  // Checks the current status of reinitialization flag
+  inline bool getReinitFlag() const { return reinit_flag_;}
+  // Resets the current status of reinitialization flag
+  void resetReinitFlag() { reinit_flag_ = false;}
 
 private:
 
@@ -60,6 +68,9 @@ private:
 
   // Define Node Handler for IMU Callback (and Queue)
   ros::NodeHandle nh_imu_;
+
+  // Define Node Handler for Reinit Callback (and Queue)
+  ros::NodeHandle nh_reinit_;
 
   // Define Node Handler for Cam Callback (and Queue)
   ros::NodeHandle nh_cam_;
@@ -75,6 +86,10 @@ private:
   int frame_count_; // Keep track of number of frames processed
 
   StereoBuffer stereo_buffer_;
+
+  // Reinitialization flag and packet (pose, vel, bias)
+  bool reinit_flag_ = false;
+  ReinitPacket reinit_packet_;
 
   // Stereo info
   struct StereoCalibration{
@@ -95,13 +110,16 @@ private:
   // IMU callback
   void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
 
+  // Reinitialization callback
+  void callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag);
+
   // Callback for stereo images and main spin
   void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
                                    const sensor_msgs::ImageConstPtr& msgRight);
 
-  void publishOutput(const gtsam::Pose3& pose,
-                     const gtsam::Vector3& velocity,
-                     const Timestamp& ts) const;
+  void publishOutput();
+
+  void publishResiliency();
 
   // Message filters and to sync stereo images
   ImageSubscriber left_img_subscriber_;
@@ -117,11 +135,20 @@ private:
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;
 
+  // Define subscriber for Reinit data
+  ros::Subscriber reinit_subscriber_;
+
   // Define publisher to publish odometry
-  ros::Publisher odom_publisher;
+  ros::Publisher odom_publisher_;
+
+  // Define publisher to publish resiliency
+  ros::Publisher resil_publisher_;
 
   // Define imu topic since might need to wait
   std::string imu_topic_;
+
+  // Define reinitialization topic
+  std::string reinit_topic_;
 
   // Print the parameters
   void print() const;
@@ -129,6 +156,7 @@ private:
 private:
   VioFrontEndParams frontend_params_;
   StereoCalibration stereo_calib_;
+  SpinOutputContainer vio_output_;
 };
 
 } // End of VIO Namespace

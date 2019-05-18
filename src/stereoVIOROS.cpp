@@ -33,18 +33,20 @@ int main(int argc, char *argv[]) {
 
   // Parse topic names from parameter server
   ros::NodeHandle nh;
-  std::string left_camera_topic, right_camera_topic, imu_topic;
+  std::string left_camera_topic, right_camera_topic, imu_topic, reinit_topic;
   CHECK(nh.getParam("left_camera_topic", left_camera_topic));
   CHECK(nh.getParam("right_camera_topic", right_camera_topic));
   CHECK(nh.getParam("imu_topic", imu_topic));
+  CHECK(nh.getParam("reinit_topic", reinit_topic));
 
   // Dummy ETH data (Since need this in pipeline)
   VIO::ETHDatasetParser eth_dataset_parser;
   VIO::RosDataProvider ros_wrapper(left_camera_topic,
                                    right_camera_topic,
-                                   imu_topic);
+                                   imu_topic,
+                                   reinit_topic);
 
-  VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams());
+  VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams(), true);
 
   // Register callback to vio_pipeline.
   ros_wrapper.registerVioCallback(
