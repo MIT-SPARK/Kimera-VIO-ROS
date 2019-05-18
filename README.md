@@ -4,9 +4,32 @@ ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 # Installation
 Note that this is to be used with the `feature/parallelization/kitti_dataset` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
 ```
+# Setup catkin workspace
+mkdir -p ~/catkin_ws/src
+cd ~/catkin_ws/
+catkin init
+
+# Add workspace to bashrc.
+echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
+
+cd src
+# Clone repo
 git clone git@github.mit.edu:SPARK/spark_vio_ros.git
+
+# Install dependencies from rosinstall file using wstool
+wstool init
+wstool merge spark_vio_ros/install/spark_vio.rosinstall
+wstool update
+cd ../
+
+# Install required libraries.
+rosdep install --from-paths src --ignore-src --rosdistro melodic -y
+
 cd ..
 catkin build
+
+# Refresh workspace
+source ~/.bashrc
 ```
 
 # Usage
