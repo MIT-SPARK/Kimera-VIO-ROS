@@ -16,6 +16,7 @@
 
 	<!-- More parameter arguments -->
 	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
+	<param name="vio_params_filepath" value="$(arg VIO_PARAMS_PATH)" />
 	<arg name="TRACKER_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/trackerParameters.yaml" />
 	<arg name="VIO_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/StereoVIO.flags" />
 	<arg name="MESHER_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Mesher.flags" />

@@ -66,15 +66,15 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
 
   // Start odometry publisher
   odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(
-            "/sparkvio/odometry", 10);
+            "sparkvio/odometry", 10);
 
   // Start resiliency publisher
   resil_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(
-            "/sparkvio/resiliency", 10);
+            "sparkvio/resiliency", 10);
 
   // Start imu bias publisher
   bias_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(
-            "/sparkvio/imu_bias", 10);
+            "sparkvio/imu_bias", 10);
 
   ////// Define Reinitializer Subscriber
   reinit_topic_ = reinit_topic;
@@ -246,14 +246,25 @@ bool RosDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
   CHECK(nh_.getParam("accelerometer_random_walk", acc_walk));
   CHECK(nh_.getParam("imu_extrinsics", extrinsics));
 
+  // TODO: Do we need these parameters??
   imudata->nominal_imu_rate_ = 1.0 / rate;
   imudata->imu_rate_ = 1.0 / rate;
   imudata->imu_rate_std_ = 0.00500009; // set to 0 for now
   imudata->imu_rate_maxMismatch_ = 0.00500019; // set to 0 for now
+
+  // Gyroscope and accelerometer noise parameters
   imuparams->gyro_noise_ = gyro_noise;
   imuparams->gyro_walk_ = gyro_walk;
   imuparams->acc_noise_ = acc_noise;
   imuparams->acc_walk_ = acc_walk;
+
+  // Value parsed from vioBackend
+  std::string vio_params_path;
+  CHECK(nh_.getParam("vio_params_filepath", vio_params_path));
+  VioBackEndParams backend_params;
+  backend_params.parseYAML(vio_params_path);
+  imuparams->imu_integration_sigma_ = backend_params.imuIntegrationSigma_;
+  imuparams->n_gravity_ = backend_params.n_gravity_;
 
   // Expects imu frame to be aligned with body frame
 
@@ -441,22 +452,30 @@ void RosDataProvider::publishState() {
   odometry_msg.pose.pose.orientation.y = pose.rotation().toQuaternion().y();
   odometry_msg.pose.pose.orientation.z = pose.rotation().toQuaternion().z();
 
+  // Remap covariance from GTSAM convention to odometry convention and fill in covariance
+  std::vector<int> remapping{3,4,5,0,1,2};
+  CHECK_EQ(pose_cov.rows(),remapping.size());
+  CHECK_EQ(pose_cov.rows()*pose_cov.cols(),odometry_msg.pose.covariance.size());
+  for (int i=0; i<pose_cov.rows(); i++) {
+    for (int j=0; j<pose_cov.cols(); j++) {
+        odometry_msg.pose.covariance[remapping[i]*pose_cov.cols()+remapping[j]] = pose_cov(i,j);
+    }
+  }
+
   // linear velocity
+  // TODO: Adapt to body velocities --> Just rotate velocity
+  // TODO: Check coordinate convention
+  //Vector3 velocity_body = pose.rotation().inverse()*velocity;
+  //odometry_msg.twist.twist.linear.x = velocity_body(0);
+  //odometry_msg.twist.twist.linear.y = velocity_body(1);
+  //odometry_msg.twist.twist.linear.z = velocity_body(2);
   odometry_msg.twist.twist.linear.x = velocity(0);
   odometry_msg.twist.twist.linear.y = velocity(1);
   odometry_msg.twist.twist.linear.z = velocity(2);
 
-  // pose covariance (published with GTSAM convention)
-  // TODO: Check if this convention is the same for ROS
-  CHECK_EQ(pose_cov.rows()*pose_cov.cols(),odometry_msg.pose.covariance.size());
-  for (int i=0; i<pose_cov.rows(); i++) {
-    for (int j=0; j<pose_cov.cols(); j++) {
-        odometry_msg.pose.covariance[i*pose_cov.cols()+j] = pose_cov(i,j);
-    }
-  }
-
   // linear velocity covariance
   // TODO: Write better way of filling in values in array (clarify convention with JPL)
+  // First linear, then angular
   CHECK_EQ(vel_cov.rows(),3);
   CHECK_EQ(vel_cov.cols(),3);
   CHECK_EQ(odometry_msg.twist.covariance.size(),36);
