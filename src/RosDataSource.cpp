@@ -454,6 +454,7 @@ void RosDataProvider::publishState() {
 
   // Remap covariance from GTSAM convention to odometry convention and fill in covariance
   std::vector<int> remapping{3,4,5,0,1,2};
+  // Position covariance first, angular covariance after
   CHECK_EQ(pose_cov.rows(),remapping.size());
   CHECK_EQ(pose_cov.rows()*pose_cov.cols(),odometry_msg.pose.covariance.size());
   for (int i=0; i<pose_cov.rows(); i++) {
@@ -462,26 +463,20 @@ void RosDataProvider::publishState() {
     }
   }
 
-  // linear velocity
-  // TODO: Adapt to body velocities --> Just rotate velocity
-  // TODO: Check coordinate convention
-  //Vector3 velocity_body = pose.rotation().inverse()*velocity;
-  //odometry_msg.twist.twist.linear.x = velocity_body(0);
-  //odometry_msg.twist.twist.linear.y = velocity_body(1);
-  //odometry_msg.twist.twist.linear.z = velocity_body(2);
-  odometry_msg.twist.twist.linear.x = velocity(0);
-  odometry_msg.twist.twist.linear.y = velocity(1);
-  odometry_msg.twist.twist.linear.z = velocity(2);
+  // Linear velocities, trivial values for angular
+  Vector3 velocity_body = pose.rotation().transpose()*velocity;
+  odometry_msg.twist.twist.linear.x = velocity_body(0);
+  odometry_msg.twist.twist.linear.y = velocity_body(1);
+  odometry_msg.twist.twist.linear.z = velocity_body(2);
 
-  // linear velocity covariance
-  // TODO: Write better way of filling in values in array (clarify convention with JPL)
-  // First linear, then angular
-  CHECK_EQ(vel_cov.rows(),3);
-  CHECK_EQ(vel_cov.cols(),3);
+  // Velocity covariance: first linear and then angular (trivial values for angular)
+  gtsam::Matrix3 vel_cov_body = pose.rotation().transpose().matrix()*vel_cov*pose.rotation().matrix();
+  CHECK_EQ(vel_cov_body.rows(),3);
+  CHECK_EQ(vel_cov_body.cols(),3);
   CHECK_EQ(odometry_msg.twist.covariance.size(),36);
-  for (int i=0; i<vel_cov.rows(); i++) {
-    for (int j=0; j<vel_cov.cols(); j++) {
-        odometry_msg.twist.covariance[i*int(sqrt(odometry_msg.twist.covariance.size()))+j] = vel_cov(i,j);
+  for (int i=0; i<vel_cov_body.rows(); i++) {
+    for (int j=0; j<vel_cov_body.cols(); j++) {
+        odometry_msg.twist.covariance[i*int(sqrt(odometry_msg.twist.covariance.size()))+j] = vel_cov_body(i,j);
     }
   }
 
