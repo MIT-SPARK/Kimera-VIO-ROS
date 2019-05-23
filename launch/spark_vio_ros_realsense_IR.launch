@@ -1,8 +1,7 @@
 <launch>
   <arg name="dataset_name" value="RealSense_IR"/>
-
-  <!-- Each dataset has its own set of parameter files -->
-  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
+  <arg name="camera" default="MIT"/>
+  <arg name="distortion" default="radtan"/>
 
   <!-- Remap subscriber topics -->
   <remap from="cam0/image_raw" to="/realsense/infra1/image_rect_raw"/>
@@ -14,6 +13,9 @@
   <!-- remap from="sparkvio/odometry" to="/sparkvio/odometry"/ -->
   <!-- remap from="sparkvio/resiliency" to="/sparkvio/resiliency"/ -->
   <!-- remap from="sparkvio/imu_bias" to="/sparkvio/imu_bias"/ -->
+
+  <!-- Each dataset has its own set of parameter files -->
+  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration/calibration_$(arg camera)_$(arg distortion).yaml"/>
 
 	<!-- More parameter arguments -->
 	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
