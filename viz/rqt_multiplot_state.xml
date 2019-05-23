@@ -16,7 +16,7 @@
                                 <title_visible>true</title_visible>
                             </x_axis>
                             <y_axis>
-                                <custom_title>Nr of Features []</custom_title>
+                                <custom_title>Position [m]</custom_title>
                                 <title_type>1</title_type>
                                 <title_visible>true</title_visible>
                             </y_axis>
@@ -35,11 +35,11 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
-                                    <field>data/0</field>
+                                    <field>pose/pose/position/x</field>
                                     <field_type>0</field_type>
                                     <scale>
                                         <absolute_maximum>1000</absolute_maximum>
@@ -48,12 +48,12 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
                             <color>
-                                <custom_color>#aaff00</custom_color>
+                                <custom_color>#ff0000</custom_color>
                                 <type>1</type>
                             </color>
                             <data>
@@ -72,7 +72,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>nrDetectedFeatures</title>
+                            <title>p_x</title>
                         </curve_0>
                         <curve_1>
                             <axes>
@@ -86,11 +86,11 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
-                                    <field>data/1</field>
+                                    <field>pose/pose/position/y</field>
                                     <field_type>0</field_type>
                                     <scale>
                                         <absolute_maximum>1000</absolute_maximum>
@@ -99,12 +99,12 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
                             <color>
-                                <custom_color>#ff007f</custom_color>
+                                <custom_color>#55ff00</custom_color>
                                 <type>1</type>
                             </color>
                             <data>
@@ -123,384 +123,7 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>nrTrackerFeatures</title>
-                        </curve_1>
-                    </curves>
-                    <legend>
-                        <visible>true</visible>
-                    </legend>
-                    <plot_rate>30</plot_rate>
-                    <title>Feature Detection</title>
-                </column_0>
-                <column_1>
-                    <axes>
-                        <axes>
-                            <x_axis>
-                                <custom_title>Time [s]</custom_title>
-                                <title_type>1</title_type>
-                                <title_visible>true</title_visible>
-                            </x_axis>
-                            <y_axis>
-                                <custom_title>Nr of Features []</custom_title>
-                                <title_type>1</title_type>
-                                <title_visible>true</title_visible>
-                            </y_axis>
-                        </axes>
-                    </axes>
-                    <curves>
-                        <curve_0>
-                            <axes>
-                                <x_axis>
-                                    <field></field>
-                                    <field_type>1</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </x_axis>
-                                <y_axis>
-                                    <field>data/2</field>
-                                    <field_type>0</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </y_axis>
-                            </axes>
-                            <color>
-                                <custom_color>#ffaa00</custom_color>
-                                <type>1</type>
-                            </color>
-                            <data>
-                                <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
-                            </data>
-                            <style>
-                                <lines_interpolate>false</lines_interpolate>
-                                <pen_style>1</pen_style>
-                                <pen_width>3</pen_width>
-                                <render_antialias>false</render_antialias>
-                                <steps_invert>false</steps_invert>
-                                <sticks_baseline>0</sticks_baseline>
-                                <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
-                            </style>
-                            <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>nrMonoInliers</title>
-                        </curve_0>
-                        <curve_1>
-                            <axes>
-                                <x_axis>
-                                    <field></field>
-                                    <field_type>1</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </x_axis>
-                                <y_axis>
-                                    <field>data/3</field>
-                                    <field_type>0</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </y_axis>
-                            </axes>
-                            <color>
-                                <custom_color>#55ffff</custom_color>
-                                <type>1</type>
-                            </color>
-                            <data>
-                                <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
-                            </data>
-                            <style>
-                                <lines_interpolate>false</lines_interpolate>
-                                <pen_style>1</pen_style>
-                                <pen_width>3</pen_width>
-                                <render_antialias>false</render_antialias>
-                                <steps_invert>false</steps_invert>
-                                <sticks_baseline>0</sticks_baseline>
-                                <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
-                            </style>
-                            <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>nrMonoPutatives</title>
-                        </curve_1>
-                    </curves>
-                    <legend>
-                        <visible>true</visible>
-                    </legend>
-                    <plot_rate>30</plot_rate>
-                    <title>Mono RANSAC</title>
-                </column_1>
-            </row_0>
-            <row_1>
-                <column_0>
-                    <axes>
-                        <axes>
-                            <x_axis>
-                                <custom_title>Time [s]</custom_title>
-                                <title_type>1</title_type>
-                                <title_visible>true</title_visible>
-                            </x_axis>
-                            <y_axis>
-                                <custom_title>Nr of Features []</custom_title>
-                                <title_type>1</title_type>
-                                <title_visible>true</title_visible>
-                            </y_axis>
-                        </axes>
-                    </axes>
-                    <curves>
-                        <curve_0>
-                            <axes>
-                                <x_axis>
-                                    <field></field>
-                                    <field_type>1</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </x_axis>
-                                <y_axis>
-                                    <field>data/4</field>
-                                    <field_type>0</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </y_axis>
-                            </axes>
-                            <color>
-                                <custom_color>#ffaa00</custom_color>
-                                <type>1</type>
-                            </color>
-                            <data>
-                                <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
-                            </data>
-                            <style>
-                                <lines_interpolate>false</lines_interpolate>
-                                <pen_style>1</pen_style>
-                                <pen_width>3</pen_width>
-                                <render_antialias>false</render_antialias>
-                                <steps_invert>false</steps_invert>
-                                <sticks_baseline>0</sticks_baseline>
-                                <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
-                            </style>
-                            <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>nrStereoInliers</title>
-                        </curve_0>
-                        <curve_1>
-                            <axes>
-                                <x_axis>
-                                    <field></field>
-                                    <field_type>1</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </x_axis>
-                                <y_axis>
-                                    <field>data/5</field>
-                                    <field_type>0</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </y_axis>
-                            </axes>
-                            <color>
-                                <custom_color>#55ffff</custom_color>
-                                <type>1</type>
-                            </color>
-                            <data>
-                                <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
-                            </data>
-                            <style>
-                                <lines_interpolate>false</lines_interpolate>
-                                <pen_style>1</pen_style>
-                                <pen_width>3</pen_width>
-                                <render_antialias>false</render_antialias>
-                                <steps_invert>false</steps_invert>
-                                <sticks_baseline>0</sticks_baseline>
-                                <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
-                            </style>
-                            <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>nrStereoPutatives</title>
-                        </curve_1>
-                    </curves>
-                    <legend>
-                        <visible>true</visible>
-                    </legend>
-                    <plot_rate>30</plot_rate>
-                    <title>Stereo RANSAC</title>
-                </column_0>
-                <column_1>
-                    <axes>
-                        <axes>
-                            <x_axis>
-                                <custom_title>Time [s]</custom_title>
-                                <title_type>1</title_type>
-                                <title_visible>true</title_visible>
-                            </x_axis>
-                            <y_axis>
-                                <custom_title>Nr of Features []</custom_title>
-                                <title_type>1</title_type>
-                                <title_visible>true</title_visible>
-                            </y_axis>
-                        </axes>
-                    </axes>
-                    <curves>
-                        <curve_0>
-                            <axes>
-                                <x_axis>
-                                    <field></field>
-                                    <field_type>1</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </x_axis>
-                                <y_axis>
-                                    <field>data/8</field>
-                                    <field_type>0</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </y_axis>
-                            </axes>
-                            <color>
-                                <custom_color>#ff007f</custom_color>
-                                <type>1</type>
-                            </color>
-                            <data>
-                                <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
-                            </data>
-                            <style>
-                                <lines_interpolate>false</lines_interpolate>
-                                <pen_style>1</pen_style>
-                                <pen_width>3</pen_width>
-                                <render_antialias>false</render_antialias>
-                                <steps_invert>false</steps_invert>
-                                <sticks_baseline>0</sticks_baseline>
-                                <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
-                            </style>
-                            <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>NrValidRKP</title>
-                        </curve_0>
-                        <curve_1>
-                            <axes>
-                                <x_axis>
-                                    <field></field>
-                                    <field_type>1</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </x_axis>
-                                <y_axis>
-                                    <field>data/9</field>
-                                    <field_type>0</field_type>
-                                    <scale>
-                                        <absolute_maximum>1000</absolute_maximum>
-                                        <absolute_minimum>0</absolute_minimum>
-                                        <relative_maximum>0</relative_maximum>
-                                        <relative_minimum>-1000</relative_minimum>
-                                        <type>0</type>
-                                    </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
-                                </y_axis>
-                            </axes>
-                            <color>
-                                <custom_color>#ffaaff</custom_color>
-                                <type>1</type>
-                            </color>
-                            <data>
-                                <circular_buffer_capacity>1000</circular_buffer_capacity>
-                                <time_frame_length>10</time_frame_length>
-                                <type>0</type>
-                            </data>
-                            <style>
-                                <lines_interpolate>false</lines_interpolate>
-                                <pen_style>1</pen_style>
-                                <pen_width>3</pen_width>
-                                <render_antialias>false</render_antialias>
-                                <steps_invert>false</steps_invert>
-                                <sticks_baseline>0</sticks_baseline>
-                                <sticks_orientation>2</sticks_orientation>
-                                <type>0</type>
-                            </style>
-                            <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>NrNoLeftRectRKP</title>
+                            <title>p_y</title>
                         </curve_1>
                         <curve_2>
                             <axes>
@@ -514,11 +137,11 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
-                                    <field>data/10</field>
+                                    <field>pose/pose/position/z</field>
                                     <field_type>0</field_type>
                                     <scale>
                                         <absolute_maximum>1000</absolute_maximum>
@@ -527,12 +150,12 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
                             <color>
-                                <custom_color>#aaff00</custom_color>
+                                <custom_color>#55aaff</custom_color>
                                 <type>1</type>
                             </color>
                             <data>
@@ -551,9 +174,32 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>NrNoRightRKP</title>
+                            <title>p_z</title>
                         </curve_2>
-                        <curve_3>
+                    </curves>
+                    <legend>
+                        <visible>true</visible>
+                    </legend>
+                    <plot_rate>30</plot_rate>
+                    <title>Position</title>
+                </column_0>
+                <column_1>
+                    <axes>
+                        <axes>
+                            <x_axis>
+                                <custom_title>Time [s]</custom_title>
+                                <title_type>1</title_type>
+                                <title_visible>true</title_visible>
+                            </x_axis>
+                            <y_axis>
+                                <custom_title>Velocity [m/s]</custom_title>
+                                <title_type>1</title_type>
+                                <title_visible>true</title_visible>
+                            </y_axis>
+                        </axes>
+                    </axes>
+                    <curves>
+                        <curve_0>
                             <axes>
                                 <x_axis>
                                     <field></field>
@@ -565,11 +211,11 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
-                                    <field>data/11</field>
+                                    <field>twist/twist/linear/x</field>
                                     <field_type>0</field_type>
                                     <scale>
                                         <absolute_maximum>1000</absolute_maximum>
@@ -578,12 +224,12 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/resiliency</topic>
-                                    <type>std_msgs/Float64MultiArray</type>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
                             <color>
-                                <custom_color>#ffff00</custom_color>
+                                <custom_color>#ff0000</custom_color>
                                 <type>1</type>
                             </color>
                             <data>
@@ -602,17 +248,119 @@
                                 <type>0</type>
                             </style>
                             <subscriber_queue_size>100</subscriber_queue_size>
-                            <title>NrNoDepthRKP</title>
-                        </curve_3>
+                            <title>v_x</title>
+                        </curve_0>
+                        <curve_1>
+                            <axes>
+                                <x_axis>
+                                    <field></field>
+                                    <field_type>1</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
+                                </x_axis>
+                                <y_axis>
+                                    <field>twist/twist/linear/y</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
+                                </y_axis>
+                            </axes>
+                            <color>
+                                <custom_color>#55ff00</custom_color>
+                                <type>1</type>
+                            </color>
+                            <data>
+                                <circular_buffer_capacity>1000</circular_buffer_capacity>
+                                <time_frame_length>10</time_frame_length>
+                                <type>0</type>
+                            </data>
+                            <style>
+                                <lines_interpolate>false</lines_interpolate>
+                                <pen_style>1</pen_style>
+                                <pen_width>3</pen_width>
+                                <render_antialias>false</render_antialias>
+                                <steps_invert>false</steps_invert>
+                                <sticks_baseline>0</sticks_baseline>
+                                <sticks_orientation>2</sticks_orientation>
+                                <type>0</type>
+                            </style>
+                            <subscriber_queue_size>100</subscriber_queue_size>
+                            <title>v_y</title>
+                        </curve_1>
+                        <curve_2>
+                            <axes>
+                                <x_axis>
+                                    <field></field>
+                                    <field_type>1</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
+                                </x_axis>
+                                <y_axis>
+                                    <field>twist/twist/linear/z</field>
+                                    <field_type>0</field_type>
+                                    <scale>
+                                        <absolute_maximum>1000</absolute_maximum>
+                                        <absolute_minimum>0</absolute_minimum>
+                                        <relative_maximum>0</relative_maximum>
+                                        <relative_minimum>-1000</relative_minimum>
+                                        <type>0</type>
+                                    </scale>
+                                    <topic>/sparkvio/odometry</topic>
+                                    <type>nav_msgs/Odometry</type>
+                                </y_axis>
+                            </axes>
+                            <color>
+                                <custom_color>#55aaff</custom_color>
+                                <type>1</type>
+                            </color>
+                            <data>
+                                <circular_buffer_capacity>1000</circular_buffer_capacity>
+                                <time_frame_length>10</time_frame_length>
+                                <type>0</type>
+                            </data>
+                            <style>
+                                <lines_interpolate>false</lines_interpolate>
+                                <pen_style>1</pen_style>
+                                <pen_width>3</pen_width>
+                                <render_antialias>false</render_antialias>
+                                <steps_invert>false</steps_invert>
+                                <sticks_baseline>0</sticks_baseline>
+                                <sticks_orientation>2</sticks_orientation>
+                                <type>0</type>
+                            </style>
+                            <subscriber_queue_size>100</subscriber_queue_size>
+                            <title>v_z</title>
+                        </curve_2>
                     </curves>
                     <legend>
                         <visible>true</visible>
                     </legend>
                     <plot_rate>30</plot_rate>
-                    <title>RKP</title>
+                    <title>Velocity</title>
                 </column_1>
-            </row_1>
-            <row_2>
+            </row_0>
+            <row_1>
                 <column_0>
                     <axes>
                         <axes>
@@ -965,8 +713,8 @@
                     <plot_rate>30</plot_rate>
                     <title>Velocity Covariance</title>
                 </column_1>
-            </row_2>
-            <row_3>
+            </row_1>
+            <row_2>
                 <column_0>
                     <axes>
                         <axes>
@@ -1319,7 +1067,7 @@
                     <plot_rate>30</plot_rate>
                     <title>Accelerometer Bias</title>
                 </column_1>
-            </row_3>
+            </row_2>
         </plots>
         <track_points>false</track_points>
     </table>
