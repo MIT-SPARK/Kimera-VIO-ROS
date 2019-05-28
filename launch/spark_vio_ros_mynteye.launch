@@ -15,6 +15,12 @@
   <!-- remap from="sparkvio/resiliency" to="/sparkvio/resiliency"/ -->
   <!-- remap from="sparkvio/imu_bias" to="/sparkvio/imu_bias"/ -->
 
+  <!-- Resiliency Thresholds -->
+  <param name="velocity_det_threshold" value="0.1" />
+  <param name="position_det_threshold" value="0.3" />
+  <param name="stereo_ransac_threshold" value="20" />
+  <param name="mono_ransac_threshold" value="30" />
+
   <!-- Frame IDs for Odometry -->
   <param name="odom_base_frame_id" value="base_link" />
   <param name="odom_child_frame_id" value="robot" />

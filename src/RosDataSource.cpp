@@ -612,14 +612,11 @@ void RosDataProvider::publishResiliency() {
 
   // Build Message Layout
   resiliency_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());  
-  resiliency_msg.layout.dim[0].size = 4;
-  //resiliency_msg.layout.dim[0].size = 12;
+  resiliency_msg.layout.dim[0].size = 8;
   resiliency_msg.layout.dim[0].stride = 1;
   // Publishing extra information: cov_v_det and nrStIn should be the most relevant!
   resiliency_msg.layout.dim[0].label = 
-    "FrontEnd: cbrtPDet, cbrtVDet, nrStIn, nrMoIn";
-  //resiliency_msg.layout.dim[0].label = 
-  //  "FrontEnd: cbrtPDet, cbrtVDet, nrStIn, nrMoIn, cov_p_eig1, cov_p_eig2, cov_p_eig3, cov_v_eig1, cov_v_eig2, cov_v_eig3, nrTrackFeat, shMoIn, shStIn";
+    "Values: cbrtPDet, cbrtVDet, nrStIn, nrMoIn. Thresholds: cbrtPDet, cbrtVDet, nrStIn, nrMoIn.";
 
   CHECK_EQ(pose_cov.size(), 36);
   gtsam::Matrix3 position_cov = gtsam::sub(pose_cov,3,6,3,6);
@@ -644,25 +641,18 @@ void RosDataProvider::publishResiliency() {
                     cov_v_eigv(1)*cov_v_eigv(2)));
   resiliency_msg.data.push_back(debug_tracker_info.nrStereoInliers_);
   resiliency_msg.data.push_back(debug_tracker_info.nrMonoInliers_);
-  /*resiliency_msg.data.push_back(cov_p_eigv(0));
-  resiliency_msg.data.push_back(cov_p_eigv(1));
-  resiliency_msg.data.push_back(cov_p_eigv(2));
-  resiliency_msg.data.push_back(cov_v_eigv(0));
-  resiliency_msg.data.push_back(cov_v_eigv(1));
-  resiliency_msg.data.push_back(cov_v_eigv(2));
-  resiliency_msg.data.push_back(debug_tracker_info.nrTrackerFeatures_);
-  if (debug_tracker_info.nrMonoPutatives_ != 0) {
-    resiliency_msg.data.push_back(float(debug_tracker_info.nrMonoInliers_)
-                          /float(debug_tracker_info.nrMonoPutatives_));
-  } else {
-    resiliency_msg.data.push_back(0.0);
-  }
-  if (debug_tracker_info.nrStereoPutatives_ != 0) {
-    resiliency_msg.data.push_back(float(debug_tracker_info.nrStereoInliers_)
-                          /float(debug_tracker_info.nrStereoPutatives_));
-  } else {
-    resiliency_msg.data.push_back(0.0);
-  } */
+
+  // Publish thresholds for statistics
+  float pos_det_threshold, vel_det_threshold;
+  int mono_ransac_theshold, stereo_ransac_threshold;
+  CHECK(nh_.getParam("velocity_det_threshold", vel_det_threshold));
+  CHECK(nh_.getParam("position_det_threshold", pos_det_threshold));
+  CHECK(nh_.getParam("stereo_ransac_threshold", stereo_ransac_threshold));
+  CHECK(nh_.getParam("mono_ransac_threshold", mono_ransac_theshold));\
+  resiliency_msg.data.push_back(pos_det_threshold);
+  resiliency_msg.data.push_back(vel_det_threshold);
+  resiliency_msg.data.push_back(stereo_ransac_threshold);
+  resiliency_msg.data.push_back(mono_ransac_theshold);
 
   // Publish Message
   resil_publisher_.publish(resiliency_msg);
