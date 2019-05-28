@@ -25,6 +25,7 @@
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <sensor_msgs/image_encodings.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
 
@@ -48,7 +49,8 @@ public:
   RosDataProvider(std::string left_camera_topic,
                   std::string right_camera_topic,
                   std::string imu_topic,
-                  std::string reinit_topic);
+                  std::string reinit_flag_topic,
+                  std::string reinit_pose_topic);
   virtual ~RosDataProvider();
   virtual bool spin();
 
@@ -59,7 +61,7 @@ public:
   // Checks the current status of reinitialization flag
   inline bool getReinitFlag() const { return reinit_flag_;}
   // Resets the current status of reinitialization flag
-  void resetReinitFlag() { reinit_flag_ = false;}
+  void resetReinitFlag() { reinit_packet_.resetReinitFlag();}
 
 private:
 
@@ -89,7 +91,7 @@ private:
 
   // Reinitialization flag and packet (pose, vel, bias)
   bool reinit_flag_ = false;
-  ReinitPacket reinit_packet_;
+  ReinitPacket reinit_packet_ = ReinitPacket();
 
   // Stereo info
   struct StereoCalibration{
@@ -100,6 +102,10 @@ private:
 
 private:
   cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg);
+
+  cv::Mat readRosRGBImage(const sensor_msgs::ImageConstPtr& img_msg);
+
+  cv::Mat readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg);
 
   // Parse camera calibration info (from param server)
   bool parseCameraData(StereoCalibration* stereo_calib);
@@ -113,16 +119,26 @@ private:
   // Reinitialization callback
   void callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag);
 
+  // Reinitialization pose
+  void callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose);
+
   // Callback for stereo images and main spin
   void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
                                    const sensor_msgs::ImageConstPtr& msgRight);
 
+  // Publish all outputs by calling individual functions below
   void publishOutput();
   
+  // Publish current state estimate
   void publishState();
 
+  // Publish frontend statistics
+  void publishFrontendStats();
+
+  // Publish resiliency statistics
   void publishResiliency();
 
+  // Publish IMU bias
   void publishImuBias();
 
   // Message filters and to sync stereo images
@@ -140,7 +156,8 @@ private:
   ros::Subscriber imu_subscriber_;
 
   // Define subscriber for Reinit data
-  ros::Subscriber reinit_subscriber_;
+  ros::Subscriber reinit_flag_subscriber_;
+  ros::Subscriber reinit_pose_subscriber_;
 
   // Define publisher to publish odometry
   ros::Publisher odom_publisher_;
@@ -148,14 +165,22 @@ private:
   // Define publisher to publish resiliency
   ros::Publisher resil_publisher_;
 
+  // Define frontend statistics publisher
+  ros::Publisher frontend_stats_publisher_;
+
   // Define publisher to publish imu bias
   ros::Publisher bias_publisher_;
+
+  // Define frame ids for odometry message
+  std::string odom_base_frame_id_;
+  std::string odom_child_frame_id_;
 
   // Define imu topic since might need to wait
   std::string imu_topic_;
 
   // Define reinitialization topic
-  std::string reinit_topic_;
+  std::string reinit_flag_topic_;
+  std::string reinit_pose_topic_;
 
   // Print the parameters
   void print() const;

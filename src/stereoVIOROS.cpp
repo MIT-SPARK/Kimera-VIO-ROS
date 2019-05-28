@@ -36,14 +36,16 @@ int main(int argc, char *argv[]) {
   std::string left_camera_topic = "cam0/image_raw";
   std::string right_camera_topic = "cam1/image_raw";
   std::string imu_topic = "imu0";
-  std::string reinit_topic = "sparkvio/reinit";
+  std::string reinit_flag_topic = "sparkvio/reinit_flag";
+  std::string reinit_pose_topic = "sparkvio/reinit_pose";
 
   // Dummy ETH data (Since need this in pipeline)
   VIO::ETHDatasetParser eth_dataset_parser;
   VIO::RosDataProvider ros_wrapper(left_camera_topic,
                                    right_camera_topic,
                                    imu_topic,
-                                   reinit_topic);
+                                   reinit_flag_topic,
+                                   reinit_pose_topic);
 
   VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams());
 

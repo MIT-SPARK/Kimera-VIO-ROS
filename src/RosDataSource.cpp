@@ -10,7 +10,8 @@ namespace VIO {
 RosDataProvider::RosDataProvider(std::string left_camera_topic,
                                  std::string right_camera_topic,
                                  std::string imu_topic,
-                                 std::string reinit_topic = "/sparkvio/reinit"):
+                                 std::string reinit_flag_topic = "/sparkvio/reinit_flag",
+                                 std::string reinit_pose_topic = "/sparkvio/reinit_pose"):
   stereo_calib_(),
   DataProvider(),
   it_(nh_cam_),
@@ -65,8 +66,14 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   async_spinner_cam.start();
 
   // Start odometry publisher
+  CHECK(nh_.getParam("odom_base_frame_id", odom_base_frame_id_));
+  CHECK(nh_.getParam("odom_child_frame_id", odom_child_frame_id_));
   odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(
             "sparkvio/odometry", 10);
+
+  // Start frontend stats publisher
+  frontend_stats_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(
+            "sparkvio/frontend_stats", 10);
 
   // Start resiliency publisher
   resil_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(
@@ -77,11 +84,16 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
             "sparkvio/imu_bias", 10);
 
   ////// Define Reinitializer Subscriber
-  reinit_topic_ = reinit_topic;
+  reinit_flag_topic_ = reinit_flag_topic;
+  reinit_pose_topic_ = reinit_pose_topic;
 
   // Start reinitializer subscriber
-  reinit_subscriber_ = nh_reinit_.subscribe(reinit_topic, 10,
+  reinit_flag_subscriber_ = nh_reinit_.subscribe(reinit_flag_topic, 10,
                                       &RosDataProvider::callbackReinit, this);
+
+  // Start reinitializer pose subscriber
+  reinit_pose_subscriber_ = nh_reinit_.subscribe(reinit_pose_topic, 10,
+                                      &RosDataProvider::callbackReinitPose, this);
 
   // Define Callback Queue for Reinit Data
   ros::CallbackQueue reinit_queue;
@@ -105,6 +117,28 @@ cv::Mat RosDataProvider::readRosImage(const sensor_msgs::ImageConstPtr& img_msg)
     ros::shutdown();
   }
   return cv_ptr->image; // Return cv::Mat
+}
+
+cv::Mat RosDataProvider::readRosRGBImage(const sensor_msgs::ImageConstPtr& img_msg) {
+  // Use cv_bridge to read ros image to cv::Mat
+  cv::Mat img_rgb = RosDataProvider::readRosImage(img_msg);
+  cv::cvtColor(img_rgb, img_rgb, cv::COLOR_BGR2GRAY); //CV_RGB2GRAY);
+  return img_rgb; // Return cv::Mat
+}
+
+cv::Mat RosDataProvider::readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg) {
+  // Use cv_bridge to read ros image to cv::Mat
+  cv_bridge::CvImagePtr cv_ptr;
+  try{
+    cv_ptr = cv_bridge::toCvCopy(img_msg,sensor_msgs::image_encodings::TYPE_16UC1);
+  } catch(cv_bridge::Exception& exception) {
+    ROS_FATAL("cv_bridge exception: %s", exception.what());
+    ros::shutdown();
+  }
+  cv::Mat img_depth = cv_ptr->image;
+  if(img_depth.type()!=CV_16UC1)
+        img_depth.convertTo(img_depth,CV_16UC1); // mDepthMapFactor);
+  return img_depth; // Return cv::Mat
 }
 
 bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
@@ -313,6 +347,22 @@ void RosDataProvider::callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag)
 
 }
 
+// Getting re-initialization pose
+void RosDataProvider::callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose) {
+
+  // Set reinitialization pose
+  gtsam::Rot3 rotation(gtsam::Quaternion(reinitPose.pose.orientation.w, 
+                          reinitPose.pose.orientation.x,
+                          reinitPose.pose.orientation.y,
+                          reinitPose.pose.orientation.z));
+  gtsam::Point3 position(reinitPose.pose.position.x,
+                          reinitPose.pose.position.y,
+                          reinitPose.pose.position.z);
+  gtsam::Pose3 pose = gtsam::Pose3(rotation, position);
+  reinit_packet_.setReinitPose(pose);
+
+}
+
 // Callback for stereo images and main spin
 void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
                                                   const sensor_msgs::ImageConstPtr& msgRight){
@@ -322,12 +372,13 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 }
 
 bool RosDataProvider::spin() {
+
 	// ros::Rate rate(60);
 	while (ros::ok()){
 		// Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
 		// (Think of this as the spin of the other parser/data-providers)
 
-		Timestamp timestamp = stereo_buffer_.getEarliestTimestamp(); 
+		Timestamp timestamp = stereo_buffer_.getEarliestTimestamp();
 
 		if (stereo_buffer_.getEarliestTimestamp() <= last_time_stamp_) {
 			if (stereo_buffer_.size() != 0) {
@@ -353,12 +404,38 @@ bool RosDataProvider::spin() {
 				sensor_msgs::ImageConstPtr left_ros_img, right_ros_img; 
 				stereo_buffer_.extractLatestImages(left_ros_img, right_ros_img);
 
-				// read to cv type 
-				cv::Mat left_image = readRosImage(left_ros_img);
-				cv::Mat right_image = readRosImage(right_ros_img);
+        // TODO: Move this to a different place, not in the loop?
+        // Stereo matching parameters
+        std::string tracker_params_path;
+        CHECK(nh_.getParam("tracker_params_filepath", tracker_params_path));
+        VioFrontEndParams frontend_params;
+        frontend_params.parseYAML(tracker_params_path);
+	      const StereoMatchingParams& stereo_matching_params = frontend_params.getStereoMatchingParams();
 
-			  // Stereo matching parameters
-			  const StereoMatchingParams& stereo_matching_params = frontend_params_.getStereoMatchingParams();
+        // Read ROS images to cv type
+        cv::Mat left_image, right_image;
+
+        switch(stereo_matching_params.vision_sensor_type_){
+          case VisionSensorType::STEREO :
+              // no conversion 
+				      left_image = readRosImage(left_ros_img);
+				      right_image = readRosImage(right_ros_img);
+              break;
+          case VisionSensorType::RGBD : // just use depth to "fake right pixel matches"
+              // apply conversion 
+				      left_image = readRosRGBImage(left_ros_img);
+				      right_image = readRosDepthImage(right_ros_img);
+              break;
+            break;
+          default: 
+            LOG(FATAL) << "vision sensor type not recognised."; 
+            break;
+        }
+
+        std::string img_name_left = "/home/sb/Desktop/debugging/pinhole_rgbd/left.png"; // TODO: Remove after testing
+        cv::imwrite(img_name_left, left_image);
+        std::string img_name_right = "/home/sb/Desktop/debugging/pinhole_rgbd/right.png"; // TODO: Remove after testing
+        cv::imwrite(img_name_right, right_image);
 
         // TODO: Modify if we don't want to use the trivial reinit pose
 			  vio_output_ = vio_callback_(StereoImuSyncPacket(
@@ -372,9 +449,9 @@ bool RosDataProvider::spin() {
 					                stereo_matching_params),
 					                imu_meas.timestamps_,
 					                imu_meas.measurements_,
-                          ReinitPacket(getReinitFlag()))); 
+                          reinit_packet_)); 
         
-        // Reset reinit flag
+        // Reset reinit flag for reinit packet
         resetReinitFlag();
 
         // Publish all outputs
@@ -413,6 +490,9 @@ void RosDataProvider::publishOutput() {
   // Publish Output
   publishState();
 
+  // Publish Frontend Stats
+  publishFrontendStats();
+
   // Publish Resiliency
   publishResiliency();
 
@@ -439,7 +519,8 @@ void RosDataProvider::publishState() {
   // create header
   odometry_msg.header.stamp.sec = sec;
   odometry_msg.header.stamp.nsec = nsec;
-  odometry_msg.header.frame_id = "base_link";
+  odometry_msg.header.frame_id = odom_base_frame_id_;
+  odometry_msg.child_frame_id = odom_child_frame_id_;
 
   // position
   odometry_msg.pose.pose.position.x = pose.x();
@@ -482,37 +563,106 @@ void RosDataProvider::publishState() {
 
   // Publish message
   odom_publisher_.publish(odometry_msg);
+
 }
 
-void RosDataProvider::publishResiliency() {
+void RosDataProvider::publishFrontendStats() {
 
   // Get frontend data for resiliency output
   DebugTrackerInfo debug_tracker_info = vio_output_.getTrackerInfo();
 
   // Create message type
+  std_msgs::Float64MultiArray frontend_stats_msg;
+
+  // Build Message Layout
+  frontend_stats_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());  
+  frontend_stats_msg.layout.dim[0].size = 13;
+  frontend_stats_msg.layout.dim[0].stride = 1;
+  frontend_stats_msg.layout.dim[0].label = 
+    "FrontEnd: nrDetFeat, nrTrackFeat, nrMoIn, nrMoPu, nrStIn, nrStPu, moRaIt, stRaIt, nrVaRKP, nrNoLRKP, nrNoRRKP, nrNoDRKP nrFaARKP";
+
+  // Get FrontEnd Statistics to Publish
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrDetectedFeatures_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrTrackerFeatures_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrMonoInliers_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrMonoPutatives_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrStereoInliers_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrStereoPutatives_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.monoRansacIters_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.stereoRansacIters_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrValidRKP_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrNoLeftRectRKP_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrNoRightRectRKP_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrNoDepthRKP_);
+  frontend_stats_msg.data.push_back(debug_tracker_info.nrFailedArunRKP_);
+
+  // Publish Message
+  frontend_stats_publisher_.publish(frontend_stats_msg);
+}
+
+void RosDataProvider::publishResiliency() {
+
+  // Get frontend and velocity covariance data for resiliency output
+  DebugTrackerInfo debug_tracker_info = vio_output_.getTrackerInfo();
+  gtsam::Matrix3 vel_cov = vio_output_.getEstimatedVelCov();
+  gtsam::Matrix6 pose_cov = vio_output_.getEstimatedPoseCov();
+
+  // Create message type for quality of SparkVIO
   std_msgs::Float64MultiArray resiliency_msg;
 
   // Build Message Layout
   resiliency_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());  
-  resiliency_msg.layout.dim[0].size = 13;
+  resiliency_msg.layout.dim[0].size = 4;
+  //resiliency_msg.layout.dim[0].size = 12;
   resiliency_msg.layout.dim[0].stride = 1;
+  // Publishing extra information: cov_v_det and nrStIn should be the most relevant!
   resiliency_msg.layout.dim[0].label = 
-    "FrontEnd: nrDetFeat, nrTrackFeat, nrMoIn, nrMoPu, nrStIn, nrStPu, moRaIt, stRaIt, nrVaRKP, nrNoLRKP, nrNoRRKP, nrNoDRKP nrFaARKP";
+    "FrontEnd: cbrtPDet, cbrtVDet, nrStIn, nrMoIn";
+  //resiliency_msg.layout.dim[0].label = 
+  //  "FrontEnd: cbrtPDet, cbrtVDet, nrStIn, nrMoIn, cov_p_eig1, cov_p_eig2, cov_p_eig3, cov_v_eig1, cov_v_eig2, cov_v_eig3, nrTrackFeat, shMoIn, shStIn";
 
-  // Get FrontEnd Statistics to Publish
-  resiliency_msg.data.push_back(debug_tracker_info.nrDetectedFeatures_);
-  resiliency_msg.data.push_back(debug_tracker_info.nrTrackerFeatures_);
-  resiliency_msg.data.push_back(debug_tracker_info.nrMonoInliers_);
-  resiliency_msg.data.push_back(debug_tracker_info.nrMonoPutatives_);
+  CHECK_EQ(pose_cov.size(), 36);
+  gtsam::Matrix3 position_cov = gtsam::sub(pose_cov,3,6,3,6);
+  CHECK_EQ(position_cov.size(), 9);
+
+  // Compute eigenvalues and determinant of velocity covariance
+  gtsam::Matrix U;
+  gtsam::Matrix V;
+  gtsam::Vector cov_v_eigv;
+  gtsam::svd(vel_cov, U, cov_v_eigv, V);
+  CHECK_EQ(cov_v_eigv.size(), 3);
+
+  // Compute eigenvalues and determinant of position covariance
+  gtsam::Vector cov_p_eigv;
+  gtsam::svd(position_cov, U, cov_p_eigv, V);
+  CHECK_EQ(cov_p_eigv.size(), 3);
+
+  // Quality statistics to publish
+  resiliency_msg.data.push_back(std::cbrt(cov_p_eigv(0)*
+                    cov_p_eigv(1)*cov_p_eigv(2)));
+  resiliency_msg.data.push_back(std::cbrt(cov_v_eigv(0)*
+                    cov_v_eigv(1)*cov_v_eigv(2)));
   resiliency_msg.data.push_back(debug_tracker_info.nrStereoInliers_);
-  resiliency_msg.data.push_back(debug_tracker_info.nrStereoPutatives_);
-  resiliency_msg.data.push_back(debug_tracker_info.monoRansacIters_);
-  resiliency_msg.data.push_back(debug_tracker_info.stereoRansacIters_);
-  resiliency_msg.data.push_back(debug_tracker_info.nrValidRKP_);
-  resiliency_msg.data.push_back(debug_tracker_info.nrNoLeftRectRKP_);
-  resiliency_msg.data.push_back(debug_tracker_info.nrNoRightRectRKP_);
-  resiliency_msg.data.push_back(debug_tracker_info.nrNoDepthRKP_);
-  resiliency_msg.data.push_back(debug_tracker_info.nrFailedArunRKP_);
+  resiliency_msg.data.push_back(debug_tracker_info.nrMonoInliers_);
+  /*resiliency_msg.data.push_back(cov_p_eigv(0));
+  resiliency_msg.data.push_back(cov_p_eigv(1));
+  resiliency_msg.data.push_back(cov_p_eigv(2));
+  resiliency_msg.data.push_back(cov_v_eigv(0));
+  resiliency_msg.data.push_back(cov_v_eigv(1));
+  resiliency_msg.data.push_back(cov_v_eigv(2));
+  resiliency_msg.data.push_back(debug_tracker_info.nrTrackerFeatures_);
+  if (debug_tracker_info.nrMonoPutatives_ != 0) {
+    resiliency_msg.data.push_back(float(debug_tracker_info.nrMonoInliers_)
+                          /float(debug_tracker_info.nrMonoPutatives_));
+  } else {
+    resiliency_msg.data.push_back(0.0);
+  }
+  if (debug_tracker_info.nrStereoPutatives_ != 0) {
+    resiliency_msg.data.push_back(float(debug_tracker_info.nrStereoInliers_)
+                          /float(debug_tracker_info.nrStereoPutatives_));
+  } else {
+    resiliency_msg.data.push_back(0.0);
+  } */
 
   // Publish Message
   resil_publisher_.publish(resiliency_msg);
