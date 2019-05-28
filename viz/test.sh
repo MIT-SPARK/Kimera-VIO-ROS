@@ -69,6 +69,19 @@ if [ $SENSOR == "RealSense" ]; then
 
 	#################### ALGORITHM
 	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_realsense_IR.launch"
+
+elif [ $SENSOR == "RealSense_rgbd" ]; then
+
+	#################### SENSOR
+	COMMAND_CAMERA="source $DEVEL_FOLDER_RS; roslaunch realsense2_camera rs_D435i_MIT.launch"
+	
+	#################### SENSOR TOPICS
+	CAM0_TOPIC="/realsense/color/image_raw"
+	CAM1_TOPIC="/realsense/aligned_depth_to_color/image_raw"
+	IMU0_TOPIC="/realsense/imu"
+
+	#################### ALGORITHM
+	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_realsense_rgbd.launch"
 	
 elif [ $SENSOR == "MyntEye" ]; then
 
