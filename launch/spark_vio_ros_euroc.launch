@@ -1,17 +1,35 @@
 <launch>
   <arg name="dataset_name" value="EuRoC"/>
 
-  <arg name="data"/>
-
-  <arg name="rate" default="1.0"/>
+  <arg name="parallel" default="True" />
 
   <!-- Each dataset has its own set of parameter files -->
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
-  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml"/>
+
+  <!-- Remap subscriber topics -->
+  <!-- remap from="sparkvio/reinit_flag" to="/sparkvio/reinit_flag"/ -->
+  <!-- remap from="sparkvio/reinit_pose" to="/sparkvio/reinit_pose"/ -->
+
+  <!-- Remap publisher topics -->
+  <!-- remap from="sparkvio/odometry" to="/sparkvio/odometry"/ -->
+  <!-- remap from="sparkvio/resiliency" to="/sparkvio/resiliency"/ -->
+  <!-- remap from="sparkvio/imu_bias" to="/sparkvio/imu_bias"/ -->
+
+  <!-- Resiliency Thresholds -->
+  <param name="velocity_det_threshold" value="0.1" />
+  <param name="position_det_threshold" value="0.3" />
+  <param name="stereo_ransac_threshold" value="20" />
+  <param name="mono_ransac_threshold" value="30" />
+
+  <!-- Frame IDs for Odometry -->
+  <param name="odom_base_frame_id" value="base_link" />
+  <param name="odom_child_frame_id" value="robot" />
 
 	<!-- More parameter arguments -->
 	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
+	<param name="vio_params_filepath" value="$(arg VIO_PARAMS_PATH)" />
 	<arg name="TRACKER_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/trackerParameters.yaml" />
+	<param name="tracker_params_filepath" value="$(arg TRACKER_PARAMS_PATH)" />
 	<arg name="VIO_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/StereoVIO.flags" />
 	<arg name="MESHER_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Mesher.flags" />
 	<arg name="BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/VioBackEnd.flags" />
@@ -21,7 +39,7 @@
 	<arg name="BACKEND_TYPE" default="1" /> <!-- For regular VIO -->
 	<arg name="LOG_OUTPUT" default="False" />
 	<arg name="OUTPUT_PATH" default="./" />
-	<arg name="VISUALIZE" default="True" /> <!-- Note that this is duplicated from the flags file -->
+	<arg name="VISUALIZE" default="False" /> <!-- Note that this is duplicated from the flags file -->
 
   <!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
   <!-- Note that it is necessary that the autoInitialize = 1 in regularVioParameters if you don't match dummy data to your rosbag -->
@@ -46,8 +64,7 @@
   					  --backend_type=$(arg BACKEND_TYPE)
   					  --log_output=$(arg LOG_OUTPUT)
   					  --output_path=$(arg OUTPUT_PATH)
-  					  --visualize=$(arg VISUALIZE)" />
+  					  --visualize=$(arg VISUALIZE)
+              --parallel_run=$(arg parallel)"/>
 
-  <!-- Launch rosbag -->
-  <node pkg="rosbag" type="play" name="player" args="--clock $(arg data) --rate $(arg rate)"/>
 </launch>

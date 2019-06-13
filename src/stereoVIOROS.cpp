@@ -19,6 +19,8 @@
 // Dependencies from this repository
 #include "RosDataSource.h"
 
+DEFINE_bool(parallel_run, true, "Run VIO parralel or sequential");
+
 ////////////////////////////////////////////////////////////////////////////////
 // stereoVIOexample using ROS wrapper example
 ////////////////////////////////////////////////////////////////////////////////
@@ -33,32 +35,48 @@ int main(int argc, char *argv[]) {
 
   // Parse topic names from parameter server
   ros::NodeHandle nh;
-  std::string left_camera_topic, right_camera_topic, imu_topic, reinit_topic;
-  CHECK(nh.getParam("left_camera_topic", left_camera_topic));
-  CHECK(nh.getParam("right_camera_topic", right_camera_topic));
-  CHECK(nh.getParam("imu_topic", imu_topic));
-  CHECK(nh.getParam("reinit_topic", reinit_topic));
+  std::string left_camera_topic = "cam0/image_raw";
+  std::string right_camera_topic = "cam1/image_raw";
+  std::string imu_topic = "imu0";
+  std::string reinit_flag_topic = "sparkvio/reinit_flag";
+  std::string reinit_pose_topic = "sparkvio/reinit_pose";
 
   // Dummy ETH data (Since need this in pipeline)
   VIO::ETHDatasetParser eth_dataset_parser;
   VIO::RosDataProvider ros_wrapper(left_camera_topic,
                                    right_camera_topic,
                                    imu_topic,
-                                   reinit_topic);
+                                   reinit_flag_topic,
+                                   reinit_pose_topic);
 
-  VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams(), true);
+  bool is_pipeline_successful = false;
 
-  // Register callback to vio_pipeline.
-  ros_wrapper.registerVioCallback(
-        std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
-
-  // Spin dataset.
   auto tic = VIO::utils::Timer::tic();
-  auto handle = std::async(std::launch::async,
-                           &VIO::RosDataProvider::spin, &ros_wrapper);
 
-  vio_pipeline.spinViz();
-  const bool is_pipeline_successful = handle.get();
+  if (!FLAGS_parallel_run) {
+    VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams(), false); // run sequential
+
+    // Register callback to vio_pipeline.
+    ros_wrapper.registerVioCallback(
+        std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1)); 
+
+    // Spin dataset and handle threads
+    is_pipeline_successful = ros_wrapper.spin();
+
+  } else {
+    VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams(), true);
+
+    // Register callback to vio_pipeline.
+    ros_wrapper.registerVioCallback(
+          std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
+
+    // Spin dataset.
+    auto handle = std::async(std::launch::async,
+                             &VIO::RosDataProvider::spin, &ros_wrapper);
+
+    vio_pipeline.spinViz();
+    is_pipeline_successful = handle.get();
+  }
 
   auto spin_duration = VIO::utils::Timer::toc(tic);
 

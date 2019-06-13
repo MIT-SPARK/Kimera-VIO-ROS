@@ -1,21 +1,53 @@
 #!/bin/bash
-# Sandro Berchier - 7th May 2019 - MIT
+#
+# /* ----------------------------------------------------------------------------
+# * Copyright 2019, Massachusetts Institute of Technology,
+# * Cambridge, MA 02139
+# * All Rights Reserved
+# * Authors: Luca Carlone, et al. (see THANKS for the full author list)
+# * See LICENSE for the license information
+# * -------------------------------------------------------------------------- */
+#
+# /**
+# * @file   test.sh
+# * @brief  test SparkVIO ROS wrapper
+# * @author Sandro Berchier
+# */
+#
+##################################################################################################
+##################################################################################################
+#
+# Usage    : ./test.sh flags
+# 	arg1 	--> sensor used, options: RealSense, MyntEye, EuRoC
+#	arg2 	--> specific camera used, options: MIT, JPL
+#	arg3	--> distortion model to be used, options: radtan, equidistant
+#	arg4	--> plot type used to debug, options: state, diagnostics
+#
+# Example:
+# 	./test.sh RealSense MIT radtan diagnostics
+#	./test.sh RealSense MIT radtan state
+#	./test.sh MyntEye JPL equidistant diagnostics
+#
+##################################################################################################
+##################################################################################################
+
 SESSION="SparkVIO_Testing_MIT"
 
 if [ "$#" -gt 0 ]; then
 	SENSOR=$1
 	CAMERA=$2
 	DISTORTION=$3
+	DEBUG_PLOT=$4
 else
 	SENSOR="MyntEye"
 	CAMERA="MIT"
 	DISTORTION="radtan"
+	DEBUG_PLOT="diagnostics"
 fi
 
 #################### SETTINGS
 DEBUG_IMAGE=true
 DEBUG_RVIZ=true
-DEBUG_PLOT=true
 TEST_REINIT=true
 
 DEVEL_FOLDER_ALGO="~/MIT/catkin_ws/devel/setup.bash"
@@ -37,6 +69,19 @@ if [ $SENSOR == "RealSense" ]; then
 
 	#################### ALGORITHM
 	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_realsense_IR.launch"
+
+elif [ $SENSOR == "RealSense_rgbd" ]; then
+
+	#################### SENSOR
+	COMMAND_CAMERA="source $DEVEL_FOLDER_RS; roslaunch realsense2_camera rs_D435i_MIT.launch"
+	
+	#################### SENSOR TOPICS
+	CAM0_TOPIC="/realsense/color/image_raw"
+	CAM1_TOPIC="/realsense/aligned_depth_to_color/image_raw"
+	IMU0_TOPIC="/realsense/imu"
+
+	#################### ALGORITHM
+	COMMAND_ALGORITHM="source $DEVEL_FOLDER_ALGO; roslaunch spark_vio_ros spark_vio_ros_realsense_rgbd.launch"
 	
 elif [ $SENSOR == "MyntEye" ]; then
 
@@ -54,7 +99,7 @@ elif [ $SENSOR == "MyntEye" ]; then
 else 
 
 	#################### SENSOR
-	COMMAND_CAMERA="rosbag play -r 1 ~/Dataset/EuRoC/MH_01_easy.bag"
+	COMMAND_CAMERA="rosbag play -r 1 -s 22 ~/Dataset/EuRoC/MH_01_easy.bag"
 
 	#################### SENSOR TOPICS
 	CAM0_TOPIC="/cam0/image_raw"
@@ -150,9 +195,13 @@ if $DEBUG_IMAGE; then
 fi
 
 # Exec RQT Multiplot
-if $DEBUG_PLOT; then
-	tmux send-keys -t 8 "source $DEVEL_FOLDER_ALGO; rosrun rqt_multiplot rqt_multiplot --force-discover --multiplot-config $DEBUG_FOLDER/rqt_multiplot_diagnostics.xml & rosrun quat2eul quat2eul.py" C-m
+if [ $DEBUG_PLOT == "diagnostics" ]; then
+	tmux send-keys -t 8 "source $DEVEL_FOLDER_ALGO; rosrun rqt_multiplot rqt_multiplot --force-discover --multiplot-config $DEBUG_FOLDER/rqt_multiplot_diagnostics.xml" C-m
+else
+	tmux send-keys -t 8 "source $DEVEL_FOLDER_ALGO; rosrun rqt_multiplot rqt_multiplot --force-discover --multiplot-config $DEBUG_FOLDER/rqt_multiplot_state.xml" C-m
 fi
+
+#tmux send-keys -t 8 "source $DEVEL_FOLDER_ALGO; rosrun rqt_multiplot rqt_multiplot --force-discover --multiplot-config $DEBUG_FOLDER/rqt_multiplot_diagnostics.xml & rosrun quat2eul quat2eul.py" C-m
 
 # Exec RVIZ
 if $DEBUG_RVIZ; then

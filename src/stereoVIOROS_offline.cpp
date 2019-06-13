@@ -20,6 +20,10 @@
 #include "RosbagDataSource.h"
 
 DEFINE_string(rosbag_path, "rosbag", "Path to rosbag");
+DEFINE_string(left_camera_topic, "/cam0/image_raw", "Left camera topic name");
+DEFINE_string(right_camera_topic, "/cam1/image_raw", "Right camera topic name");
+DEFINE_string(imu_topic, "/imu0", "IMU topic name");
+DEFINE_bool(parallel_run, false, "Run VIO parralel or sequential");
 
 ////////////////////////////////////////////////////////////////////////////////
 // stereoVIOexample using ROS wrapper example
@@ -35,25 +39,39 @@ int main(int argc, char *argv[]) {
 
   // Parse topic names from parameter server
   ros::NodeHandle nh; 
-  std::string left_camera_topic, right_camera_topic, imu_topic; 
-  nh.getParam("left_camera_topic", left_camera_topic);
-  nh.getParam("right_camera_topic", right_camera_topic); 
-  nh.getParam("imu_topic", imu_topic); 
 
   VIO::ETHDatasetParser eth_dataset_parser; // Dummy ETH data (Since need this in pipeline)
-  VIO::RosbagDataProvider rosbag_parser(left_camera_topic, right_camera_topic, imu_topic, FLAGS_rosbag_path);
-
-  VIO::Pipeline vio_pipeline (&eth_dataset_parser, rosbag_parser.getImuParams(), false); // run sequential
-
-  // Register callback to vio_pipeline.
-  rosbag_parser.registerVioCallback(
-      std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1)); 
-
-  // Spin dataset and handle threads
-  auto tic = VIO::utils::Timer::tic();
+  VIO::RosbagDataProvider rosbag_parser(FLAGS_left_camera_topic, FLAGS_right_camera_topic, 
+                      FLAGS_imu_topic, FLAGS_rosbag_path);
 
   bool is_pipeline_successful = false;
-  is_pipeline_successful = rosbag_parser.spin();
+
+  auto tic = VIO::utils::Timer::tic();
+
+  if (!FLAGS_parallel_run) {
+    VIO::Pipeline vio_pipeline (&eth_dataset_parser, rosbag_parser.getImuParams(), false); // run sequential
+
+    // Register callback to vio_pipeline.
+    rosbag_parser.registerVioCallback(
+        std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1)); 
+
+    // Spin dataset and handle threads
+    is_pipeline_successful = rosbag_parser.spin();
+
+  } else {
+    VIO::Pipeline vio_pipeline (&eth_dataset_parser, rosbag_parser.getImuParams(), true);
+
+    // Register callback to vio_pipeline.
+    rosbag_parser.registerVioCallback(
+          std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
+
+    // Spin dataset.
+    auto handle = std::async(std::launch::async,
+                             &VIO::RosbagDataProvider::spin, &rosbag_parser);
+
+    vio_pipeline.spinViz();
+    is_pipeline_successful = handle.get();
+  }
 
   auto spin_duration = VIO::utils::Timer::toc(tic);
 

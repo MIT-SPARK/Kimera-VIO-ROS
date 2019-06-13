@@ -32,8 +32,7 @@ RosbagDataProvider::RosbagDataProvider(const std::string &left_camera_topic,
 
   // Start odometry publisher
   std::string odom_topic_name;
-  nh_.getParam("odometry_topic_name", odom_topic_name);
-  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_name, 10);
+  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>("sparkvio/odometry", 10);
 }
 
 RosbagDataProvider::~RosbagDataProvider() {}
@@ -189,16 +188,29 @@ bool RosbagDataProvider::parseImuData(RosbagData* rosbag_data,
   CHECK(nh_.getParam("gyroscope_random_walk", gyro_walk));
   CHECK(nh_.getParam("accelerometer_noise_density", acc_noise));
   CHECK(nh_.getParam("accelerometer_random_walk", acc_walk));
+
+  // TODO: We should probably remove this! This is not parsed in anyway to the pipeline!!
   CHECK(nh_.getParam("imu_extrinsics", extrinsics));
 
+  // TODO: Do we need these parameters??
   rosbag_data->imu_data_.nominal_imu_rate_ = 1.0 / rate;
   rosbag_data->imu_data_.imu_rate_ = 1.0 / rate;
   rosbag_data->imu_data_.imu_rate_std_ = 0.00500009; // set to 0 for now
   rosbag_data->imu_data_.imu_rate_maxMismatch_ = 0.00500019; // set to 0 for now
+
+  // Gyroscope and accelerometer noise parameters
   imuparams->gyro_noise_ = gyro_noise;
   imuparams->gyro_walk_ = gyro_walk;
   imuparams->acc_noise_ = acc_noise;
   imuparams->acc_walk_ = acc_walk;
+
+  // Value parsed from vioBackend
+  std::string vio_params_path;
+  CHECK(nh_.getParam("vio_params_filepath", vio_params_path));
+  VioBackEndParams backend_params;
+  backend_params.parseYAML(vio_params_path);
+  imuparams->imu_integration_sigma_ = backend_params.imuIntegrationSigma_;
+  imuparams->n_gravity_ = backend_params.n_gravity_;
 
   // Expects imu frame to be aligned with body frame
 

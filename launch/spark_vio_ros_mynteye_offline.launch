@@ -8,11 +8,18 @@
 
   <arg name="rate" default="1.0"/>
 
+  <arg name="parallel" default="False" />
+
+  <!-- Remap subscriber topics -->
+  <arg name="cam0" value="/mynteye/left/image_raw"/>
+  <arg name="cam1" value="/mynteye/right/image_raw"/>
+  <arg name="imu0" value="/mynteye/imu/data_raw"/>
+
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration/calibration_$(arg camera)_$(arg distortion).yaml"/>
-  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/ros-config.yaml"/>
 
 	<!-- More parameter arguments -->
 	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
+	<param name="vio_params_filepath" value="$(arg VIO_PARAMS_PATH)" />
 	<arg name="TRACKER_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/trackerParameters.yaml" />
 	<arg name="VIO_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/StereoVIO.flags" />
 	<arg name="MESHER_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Mesher.flags" />
@@ -37,7 +44,10 @@
   					  --vio_params_path=$(arg VIO_PARAMS_PATH) 
   					  --dataset_path=$(arg DUMMY_DATASET_PATH)
   					  --initial_k=10 
-  					  --final_k=100 
+  					  --final_k=100
+					  --left_camera_topic=$(arg cam0)
+					  --right_camera_topic=$(arg cam1)
+					  --imu_topic=$(arg imu0) 
   					  --tracker_params_path=$(arg TRACKER_PARAMS_PATH) 
   					  --flagfile=$(arg VIO_FLAGS_PATH) 
   					  --flagfile=$(arg MESHER_FLAGS_PATH)
@@ -49,6 +59,7 @@
   					  --rosbag_path=$(arg data)
   					  --log_output=$(arg LOG_OUTPUT)
   					  --output_path=$(arg OUTPUT_PATH)
-  					  --visualize=$(arg VISUALIZE)" />
+  					  --visualize=$(arg VISUALIZE)
+              --parallel_run=$(arg parallel)"/>
 
 </launch>
