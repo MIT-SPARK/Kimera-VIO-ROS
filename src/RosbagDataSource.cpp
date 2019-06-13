@@ -296,55 +296,59 @@ bool RosbagDataProvider::spin() {
       frontend_params_.getStereoMatchingParams();
 
   for (size_t k = 0; k < rosbag_data_.getNumberOfImages(); k++) {
-    // Main spin of the data provider: Interpolates IMU data
-    // and builds StereoImuSyncPacket
-    // (Think of this as the spin of the other parser/data-providers)
-    Timestamp timestamp_frame_k = rosbag_data_.timestamps_.at(k);
-    // LOG(INFO) << k << " with timestamp: " << timestamp_frame_k;
+    if (ros::ok()) {
+      // Main spin of the data provider: Interpolates IMU data
+      // and builds StereoImuSyncPacket
+      // (Think of this as the spin of the other parser/data-providers)
+      Timestamp timestamp_frame_k = rosbag_data_.timestamps_.at(k);
+      // LOG(INFO) << k << " with timestamp: " << timestamp_frame_k;
 
-    if (timestamp_frame_k > timestamp_last_frame) {
-      ImuMeasurements imu_meas;
-      utils::ThreadsafeImuBuffer::QueryResult imu_query =
-          rosbag_data_.imu_data_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-            timestamp_last_frame,
-            timestamp_frame_k,
-            &imu_meas.timestamps_,
-            &imu_meas.measurements_);
-      if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
+      if (timestamp_frame_k > timestamp_last_frame) {
+        ImuMeasurements imu_meas;
+        utils::ThreadsafeImuBuffer::QueryResult imu_query =
+            rosbag_data_.imu_data_.imu_buffer_.getImuDataInterpolatedUpperBorder(
+              timestamp_last_frame,
+              timestamp_frame_k,
+              &imu_meas.timestamps_,
+              &imu_meas.measurements_);
+        if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
 
-        // Call VIO Pipeline.
-        VLOG(10) << "Call VIO processing for frame k: " << k
-                 << " with timestamp: " << timestamp_frame_k << '\n'
-                 << "////////////////////////////////// Creating packet!\n"
-                 << "STAMPS IMU rows : \n" << imu_meas.timestamps_.rows() << '\n'
-                 << "STAMPS IMU cols : \n" << imu_meas.timestamps_.cols() << '\n'
-                 << "STAMPS IMU: \n" << imu_meas.timestamps_ << '\n'
-                 << "ACCGYR IMU rows : \n" << imu_meas.measurements_.rows() << '\n'
-                 << "ACCGYR IMU cols : \n" << imu_meas.measurements_.cols() << '\n'
-                 << "ACCGYR IMU: \n" << imu_meas.measurements_ << '\n';
+          // Call VIO Pipeline.
+          VLOG(10) << "Call VIO processing for frame k: " << k
+                   << " with timestamp: " << timestamp_frame_k << '\n'
+                   << "////////////////////////////////// Creating packet!\n"
+                   << "STAMPS IMU rows : \n" << imu_meas.timestamps_.rows() << '\n'
+                   << "STAMPS IMU cols : \n" << imu_meas.timestamps_.cols() << '\n'
+                   << "STAMPS IMU: \n" << imu_meas.timestamps_ << '\n'
+                   << "ACCGYR IMU rows : \n" << imu_meas.measurements_.rows() << '\n'
+                   << "ACCGYR IMU cols : \n" << imu_meas.measurements_.cols() << '\n'
+                   << "ACCGYR IMU: \n" << imu_meas.measurements_ << '\n';
 
-        timestamp_last_frame = timestamp_frame_k;
+          timestamp_last_frame = timestamp_frame_k;
 
-        vio_output_ = vio_callback_(StereoImuSyncPacket(
-                          StereoFrame(k, timestamp_frame_k,
-                          readRosImage(rosbag_data_.left_imgs_.at(k)),
-                          stereo_calib_.left_camera_info_,
-                          readRosImage(rosbag_data_.right_imgs_.at(k)),
-                          stereo_calib_.right_camera_info_,
-                          stereo_calib_.camL_Pose_camR_,
-                          stereo_matching_params),
-                          imu_meas.timestamps_,
-                          imu_meas.measurements_));
+          vio_output_ = vio_callback_(StereoImuSyncPacket(
+                            StereoFrame(k, timestamp_frame_k,
+                            readRosImage(rosbag_data_.left_imgs_.at(k)),
+                            stereo_calib_.left_camera_info_,
+                            readRosImage(rosbag_data_.right_imgs_.at(k)),
+                            stereo_calib_.right_camera_info_,
+                            stereo_calib_.camL_Pose_camR_,
+                            stereo_matching_params),
+                            imu_meas.timestamps_,
+                            imu_meas.measurements_));
 
-        // Publish Output
-        publishOutput();
+          // Publish Output
+          publishOutput();
 
-        VLOG(10) << "Finished VIO processing for frame k = " << k;
+          VLOG(10) << "Finished VIO processing for frame k = " << k;
+        } else {
+          ROS_WARN("Skipping frame %d. No imu data available between current frame and last frame", static_cast<int>(k));
+        }
       } else {
-        ROS_WARN("Skipping frame %d. No imu data available between current frame and last frame", static_cast<int>(k));
+        ROS_WARN("Skipping frame %d. Frame timestamp less than or equal to last frame.", static_cast<int>(k));
       }
     } else {
-      ROS_WARN("Skipping frame %d. Frame timestamp less than or equal to last frame.", static_cast<int>(k));
+      break; 
     }
   }
 
