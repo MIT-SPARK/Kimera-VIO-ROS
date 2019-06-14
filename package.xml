@@ -10,8 +10,7 @@
   <buildtool_depend>catkin</buildtool_depend>
   <buildtool_depend>catkin_simple</buildtool_depend>
 
-  <build_depend>SparkVio</build_depend>
-
+  <depend>SparkVio</depend>
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
@@ -19,5 +18,6 @@
   <depend>image_transport</depend>
   <depend>rosbag</depend>
   <depend>cv_bridge</depend>
+  <depend>tf</depend>
 
 </package>

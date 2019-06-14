@@ -28,6 +28,7 @@
 #include <sensor_msgs/image_encodings.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
+#include <tf/transform_broadcaster.h>
 
 #include <common/vio_types.h>
 #include <datasource/DataSource.h>
@@ -128,7 +129,7 @@ private:
 
   // Publish all outputs by calling individual functions below
   void publishOutput();
-  
+
   // Publish current state estimate
   void publishState();
 
@@ -170,6 +171,9 @@ private:
 
   // Define publisher to publish imu bias
   ros::Publisher bias_publisher_;
+
+  // Define tf broadcaster for world to base_link (IMU).
+  tf::TransformBroadcaster odom_broadcaster_;
 
   // Define frame ids for odometry message
   std::string odom_base_frame_id_;

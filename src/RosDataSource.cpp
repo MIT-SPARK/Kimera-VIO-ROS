@@ -3,7 +3,10 @@
  * @brief  ROS wrapper
  * @author Yun Chang
  */
+
 #include "RosDataSource.h"
+
+#include <geometry_msgs/TransformStamped.h>
 
 namespace VIO {
 
@@ -17,9 +20,9 @@ RosDataProvider::RosDataProvider(std::string left_camera_topic,
   it_(nh_cam_),
   left_img_subscriber_(it_, left_camera_topic, 1), // Image subscriber (left)
   right_img_subscriber_(it_, right_camera_topic, 1), // Image subscriber (right)
-  sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_), 
+  sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_),
   last_time_stamp_(0), // initialize last timestamp (img) to be 0
-  last_imu_time_stamp_(0), // initialize last timestamp (imu) to be 0 
+  last_imu_time_stamp_(0), // initialize last timestamp (imu) to be 0
   frame_count_(0), // keep track of number of frames processed)
   vio_output_() // default constructor
 {
@@ -216,7 +219,7 @@ bool RosDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     nh_.getParam(camera_name + "distortion_coefficients", d_coeff);
     cv::Mat distortion_coeff;
 
-    switch (d_coeff.size()) {      
+    switch (d_coeff.size()) {
       case(4): // if given 4 coefficients
         ROS_INFO("using radtan or equidistant distortion model (4 coefficients) for camera %d", i);
         distortion_coeff = cv::Mat::zeros(1, 4, CV_64F);
@@ -351,7 +354,7 @@ void RosDataProvider::callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag)
 void RosDataProvider::callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose) {
 
   // Set reinitialization pose
-  gtsam::Rot3 rotation(gtsam::Quaternion(reinitPose.pose.orientation.w, 
+  gtsam::Rot3 rotation(gtsam::Quaternion(reinitPose.pose.orientation.w,
                           reinitPose.pose.orientation.x,
                           reinitPose.pose.orientation.y,
                           reinitPose.pose.orientation.z));
@@ -373,36 +376,36 @@ void RosDataProvider::callbackCamAndProcessStereo(const sensor_msgs::ImageConstP
 
 bool RosDataProvider::spin() {
 
-	// ros::Rate rate(60);
-	while (ros::ok()){
-		// Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
-		// (Think of this as the spin of the other parser/data-providers)
+    // ros::Rate rate(60);
+    while (ros::ok()){
+        // Main spin of the data provider: Interpolates IMU data and build StereoImuSyncPacket
+        // (Think of this as the spin of the other parser/data-providers)
 
-		Timestamp timestamp = stereo_buffer_.getEarliestTimestamp();
+        Timestamp timestamp = stereo_buffer_.getEarliestTimestamp();
 
-		if (stereo_buffer_.getEarliestTimestamp() <= last_time_stamp_) {
-			if (stereo_buffer_.size() != 0) {
-				ROS_WARN("Next frame in image buffer is from the same or earlier time than the last processed frame. Skip frame.");
-				// remove next frame (this would usually for the first frame)
-				stereo_buffer_.removeNext();
-			}
-			// else just waiting for next stereo frames
+        if (stereo_buffer_.getEarliestTimestamp() <= last_time_stamp_) {
+            if (stereo_buffer_.size() != 0) {
+                ROS_WARN("Next frame in image buffer is from the same or earlier time than the last processed frame. Skip frame.");
+                // remove next frame (this would usually for the first frame)
+                stereo_buffer_.removeNext();
+            }
+            // else just waiting for next stereo frames
 
-		} else {
-			// Test if IMU data available
-			ImuMeasurements imu_meas; 
+        } else {
+            // Test if IMU data available
+            ImuMeasurements imu_meas;
 
-			utils::ThreadsafeImuBuffer::QueryResult imu_query = 
-									imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-																			last_time_stamp_,
-																			timestamp, 
-																			&imu_meas.timestamps_, 
-																			&imu_meas.measurements_);
-			if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
+            utils::ThreadsafeImuBuffer::QueryResult imu_query =
+                                    imuData_.imu_buffer_.getImuDataInterpolatedUpperBorder(
+                                                                            last_time_stamp_,
+                                                                            timestamp,
+                                                                            &imu_meas.timestamps_,
+                                                                            &imu_meas.measurements_);
+            if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
 
-				// data available
-				sensor_msgs::ImageConstPtr left_ros_img, right_ros_img; 
-				stereo_buffer_.extractLatestImages(left_ros_img, right_ros_img);
+                // data available
+                sensor_msgs::ImageConstPtr left_ros_img, right_ros_img;
+                stereo_buffer_.extractLatestImages(left_ros_img, right_ros_img);
 
         // TODO: Move this to a different place, not in the loop?
         // Stereo matching parameters
@@ -410,25 +413,25 @@ bool RosDataProvider::spin() {
         CHECK(nh_.getParam("tracker_params_filepath", tracker_params_path));
         VioFrontEndParams frontend_params;
         frontend_params.parseYAML(tracker_params_path);
-	      const StereoMatchingParams& stereo_matching_params = frontend_params.getStereoMatchingParams();
+          const StereoMatchingParams& stereo_matching_params = frontend_params.getStereoMatchingParams();
 
         // Read ROS images to cv type
         cv::Mat left_image, right_image;
 
         switch(stereo_matching_params.vision_sensor_type_){
           case VisionSensorType::STEREO :
-              // no conversion 
-				      left_image = readRosImage(left_ros_img);
-				      right_image = readRosImage(right_ros_img);
+              // no conversion
+                      left_image = readRosImage(left_ros_img);
+                      right_image = readRosImage(right_ros_img);
               break;
           case VisionSensorType::RGBD : // just use depth to "fake right pixel matches"
-              // apply conversion 
-				      left_image = readRosRGBImage(left_ros_img);
-				      right_image = readRosDepthImage(right_ros_img);
+              // apply conversion
+                      left_image = readRosRGBImage(left_ros_img);
+                      right_image = readRosDepthImage(right_ros_img);
               break;
             break;
-          default: 
-            LOG(FATAL) << "vision sensor type not recognised."; 
+          default:
+            LOG(FATAL) << "vision sensor type not recognised.";
             break;
         }
 
@@ -438,48 +441,48 @@ bool RosDataProvider::spin() {
         cv::imwrite(img_name_right, right_image);
 
         // TODO: Modify if we don't want to use the trivial reinit pose
-			  vio_output_ = vio_callback_(StereoImuSyncPacket(
-					                StereoFrame(frame_count_, 
-					               	timestamp,
-					                left_image,
-					                stereo_calib_.left_camera_info_,
-					                right_image,
-					                stereo_calib_.right_camera_info_,
-					                stereo_calib_.camL_Pose_camR_,
-					                stereo_matching_params),
-					                imu_meas.timestamps_,
-					                imu_meas.measurements_,
-                          reinit_packet_)); 
-        
+              vio_output_ = vio_callback_(StereoImuSyncPacket(
+                                    StereoFrame(frame_count_,
+                                    timestamp,
+                                    left_image,
+                                    stereo_calib_.left_camera_info_,
+                                    right_image,
+                                    stereo_calib_.right_camera_info_,
+                                    stereo_calib_.camL_Pose_camR_,
+                                    stereo_matching_params),
+                                    imu_meas.timestamps_,
+                                    imu_meas.measurements_,
+                          reinit_packet_));
+
         // Reset reinit flag for reinit packet
         resetReinitFlag();
 
         // Publish all outputs
         publishOutput();
 
-			  last_time_stamp_ = timestamp;
-			  frame_count_++; 
+              last_time_stamp_ = timestamp;
+              frame_count_++;
 
-			} else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
-				ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
-				// remove next frame (this would usually for the first frame)
-				stereo_buffer_.removeNext();
-			}
+            } else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kTooFewMeasurementsAvailable) {
+                ROS_WARN("Too few IMU measurements between next frame and last frame. Skip frame.");
+                // remove next frame (this would usually for the first frame)
+                stereo_buffer_.removeNext();
+            }
 
-			// else it would be the kNotYetAvailable then just wait for next loop
-		}
+            // else it would be the kNotYetAvailable then just wait for next loop
+        }
 
-		// spin loop
-		ros::spinOnce();
+        // spin loop
+        ros::spinOnce();
 
-	}
+    }
 
   ROS_INFO("Done.");
   return true;
 }
 
 /*void RosDataProvider::publishOutput(const SpinOutputContainer& vio_output_) const {
-  
+
   gtsam::Pose pose = vio_output_.W_Pose_Blkf_;
   gtsam::Vector3 velocity = vio_output_.W_Vel_Blkf_;
   Timestamp ts = vio_output_.timestamp_kf_;
@@ -564,6 +567,16 @@ void RosDataProvider::publishState() {
   // Publish message
   odom_publisher_.publish(odometry_msg);
 
+  // Publish base_link TF.
+  geometry_msgs::TransformStamped odom_tf;
+  odom_tf.header = odometry_msg.header;
+  odom_tf.child_frame_id = odom_child_frame_id_;
+
+  odom_tf.transform.translation.x = pose.x();
+  odom_tf.transform.translation.y = pose.y();
+  odom_tf.transform.translation.z = pose.z();
+  odom_tf.transform.rotation = odometry_msg.pose.pose.orientation;
+  odom_broadcaster_.sendTransform(odom_tf);
 }
 
 void RosDataProvider::publishFrontendStats() {
@@ -575,10 +588,10 @@ void RosDataProvider::publishFrontendStats() {
   std_msgs::Float64MultiArray frontend_stats_msg;
 
   // Build Message Layout
-  frontend_stats_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());  
+  frontend_stats_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
   frontend_stats_msg.layout.dim[0].size = 13;
   frontend_stats_msg.layout.dim[0].stride = 1;
-  frontend_stats_msg.layout.dim[0].label = 
+  frontend_stats_msg.layout.dim[0].label =
     "FrontEnd: nrDetFeat, nrTrackFeat, nrMoIn, nrMoPu, nrStIn, nrStPu, moRaIt, stRaIt, nrVaRKP, nrNoLRKP, nrNoRRKP, nrNoDRKP nrFaARKP";
 
   // Get FrontEnd Statistics to Publish
@@ -611,11 +624,11 @@ void RosDataProvider::publishResiliency() {
   std_msgs::Float64MultiArray resiliency_msg;
 
   // Build Message Layout
-  resiliency_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());  
+  resiliency_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
   resiliency_msg.layout.dim[0].size = 8;
   resiliency_msg.layout.dim[0].stride = 1;
   // Publishing extra information: cov_v_det and nrStIn should be the most relevant!
-  resiliency_msg.layout.dim[0].label = 
+  resiliency_msg.layout.dim[0].label =
     "Values: cbrtPDet, cbrtVDet, nrStIn, nrMoIn. Thresholds: cbrtPDet, cbrtVDet, nrStIn, nrMoIn.";
 
   CHECK_EQ(pose_cov.size(), 36);
@@ -663,16 +676,16 @@ void RosDataProvider::publishImuBias() {
   // Get imu bias to output
   ImuBias imu_bias = vio_output_.getEstimatedBias();
   Vector3 accel_bias = imu_bias.accelerometer();
-  Vector3 gyro_bias = imu_bias.gyroscope(); 
+  Vector3 gyro_bias = imu_bias.gyroscope();
 
   // Create message type
   std_msgs::Float64MultiArray imu_bias_msg;
 
   // Build Message Layout
-  imu_bias_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());  
+  imu_bias_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
   imu_bias_msg.layout.dim[0].size = 6;
   imu_bias_msg.layout.dim[0].stride = 1;
-  imu_bias_msg.layout.dim[0].label = 
+  imu_bias_msg.layout.dim[0].label =
     "Gyro Bias: x,y,z. Accel Bias: x,y,z";
 
   // Get Imu Bias to Publish

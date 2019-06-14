@@ -22,8 +22,8 @@
   <param name="mono_ransac_threshold" value="30" />
 
   <!-- Frame IDs for Odometry -->
-  <param name="odom_base_frame_id" value="base_link" />
-  <param name="odom_child_frame_id" value="robot" />
+  <param name="odom_base_frame_id" value="world" />
+  <param name="odom_child_frame_id" value="base_link" />
 
 	<!-- More parameter arguments -->
 	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
