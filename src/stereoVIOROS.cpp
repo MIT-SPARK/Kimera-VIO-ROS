@@ -1,6 +1,6 @@
 /* @file   stereoVIOROS.cpp
  * @brief  ROS Wrapper for Spark-VIO
- * @author Yun Chang based off stereoVIOEuroc.cpp(in spark-VIO repo)
+ * @author Yun Chang 
  */
 
 #include <future>
@@ -17,9 +17,13 @@
 #include <LoggerMatlab.h>
 
 // Dependencies from this repository
+#include "RosBaseDataSource.h"
+#include "RosbagDataSource.h"
 #include "RosDataSource.h"
 
-DEFINE_bool(parallel_run, true, "Run VIO parralel or sequential");
+DEFINE_bool(parallel_run, true, "Run VIO parallel or sequential");
+DEFINE_bool(online_run, true, "Run Spark-VIO-ROS online or offline");
+DEFINE_string(rosbag_path, "rosbag", "Path to rosbag");
 
 ////////////////////////////////////////////////////////////////////////////////
 // stereoVIOexample using ROS wrapper example
@@ -33,51 +37,46 @@ int main(int argc, char *argv[]) {
   // Initialize ROS node
   ros::init(argc, argv, "spark_vio");
 
-  // Parse topic names from parameter server
-  ros::NodeHandle nh;
   std::string left_camera_topic = "cam0/image_raw";
   std::string right_camera_topic = "cam1/image_raw";
   std::string imu_topic = "imu0";
   std::string reinit_flag_topic = "sparkvio/reinit_flag";
   std::string reinit_pose_topic = "sparkvio/reinit_pose";
 
-  // Dummy ETH data (Since need this in pipeline)
-  VIO::ETHDatasetParser eth_dataset_parser;
-  VIO::RosDataProvider ros_wrapper(left_camera_topic,
-                                   right_camera_topic,
-                                   imu_topic,
-                                   reinit_flag_topic,
-                                   reinit_pose_topic);
+  VIO::RosBaseDataProvider* dataset_parser;
 
-  bool is_pipeline_successful = false;
-
-  auto tic = VIO::utils::Timer::tic();
-
-  if (!FLAGS_parallel_run) {
-    VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams(), false); // run sequential
-
-    // Register callback to vio_pipeline.
-    ros_wrapper.registerVioCallback(
-        std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1)); 
-
-    // Spin dataset and handle threads
-    is_pipeline_successful = ros_wrapper.spin();
-
+  if (FLAGS_online_run) {
+    dataset_parser = new VIO::RosDataProvider(
+        left_camera_topic, right_camera_topic, imu_topic,
+        reinit_flag_topic, reinit_pose_topic);
   } else {
-    VIO::Pipeline vio_pipeline (&eth_dataset_parser, ros_wrapper.getImuParams(), true);
-
-    // Register callback to vio_pipeline.
-    ros_wrapper.registerVioCallback(
-          std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
-
-    // Spin dataset.
-    auto handle = std::async(std::launch::async,
-                             &VIO::RosDataProvider::spin, &ros_wrapper);
-
-    vio_pipeline.spinViz();
-    is_pipeline_successful = handle.get();
+    dataset_parser = new VIO::RosbagDataProvider(
+        left_camera_topic, right_camera_topic, imu_topic, 
+        FLAGS_rosbag_path);
   }
 
+  VIO::Pipeline vio_pipeline(dataset_parser->getParams(),
+                             FLAGS_parallel_run);
+
+  // Register callback to vio_pipeline.
+  dataset_parser->registerVioCallback(
+      std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
+
+  //// Spin dataset.
+  auto tic = VIO::utils::Timer::tic();
+  bool is_pipeline_successful = false;
+  if (FLAGS_parallel_run) {
+    auto handle = std::async(std::launch::async, &VIO::DataProvider::spin,
+                             *dataset_parser);
+    auto handle_pipeline =
+        std::async(std::launch::async, &VIO::Pipeline::shutdownWhenFinished,
+                   &vio_pipeline);
+    vio_pipeline.spinViz();
+    is_pipeline_successful = handle.get();
+    handle_pipeline.get();
+  } else {
+    is_pipeline_successful = dataset_parser->spin();
+  }
   auto spin_duration = VIO::utils::Timer::toc(tic);
 
   LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
