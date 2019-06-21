@@ -166,9 +166,8 @@ bool RosDataProvider::spin() {
     // Main spin of the data provider: Interpolates IMU data and build
     // StereoImuSyncPacket (Think of this as the spin of the other
     // parser/data-providers)
-
     const Timestamp timestamp = stereo_buffer_.getEarliestTimestamp();
-
+    std::cout << timestamp << std::endl; 
     if (timestamp <= last_time_stamp_) {
       if (stereo_buffer_.size() != 0) {
         ROS_WARN("Next frame in image buffer is from the same or "
@@ -193,15 +192,8 @@ bool RosDataProvider::spin() {
         sensor_msgs::ImageConstPtr left_ros_img, right_ros_img;
         stereo_buffer_.extractLatestImages(left_ros_img, right_ros_img);
 
-        // TODO(Yun): Move this to a different place, not in the loop?
-        // Stereo matching parameters
-        std::string tracker_params_path;
-        CHECK(nh_.getParam("tracker_params_filepath", tracker_params_path));
-        VioFrontEndParams frontend_params;
-        frontend_params.parseYAML(tracker_params_path);
-
         const StereoMatchingParams &stereo_matching_params =
-            frontend_params.getStereoMatchingParams();
+            frontend_params_.getStereoMatchingParams();
 
         // Read ROS images to cv type
         cv::Mat left_image, right_image;
@@ -218,19 +210,18 @@ bool RosDataProvider::spin() {
           left_image = readRosRGBImage(left_ros_img);
           right_image = readRosDepthImage(right_ros_img);
           break;
-          break;
         default:
           LOG(FATAL) << "vision sensor type not recognised.";
           break;
         }
-
+        ROS_WARN("SENDING");
         vio_output_ = vio_callback_(StereoImuSyncPacket(
             StereoFrame(frame_count_, timestamp, left_image,
                         stereo_calib_.left_camera_info_, right_image,
                         stereo_calib_.right_camera_info_,
                         stereo_calib_.camL_Pose_camR_, stereo_matching_params),
-            imu_meas.timestamps_, imu_meas.measurements_, reinit_packet_));
-
+            imu_meas.timestamps_, imu_meas.measurements_));
+        ROS_WARN("SENT");
         // Reset reinit flag for reinit packet
         resetReinitFlag();
 

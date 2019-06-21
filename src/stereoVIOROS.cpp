@@ -43,40 +43,41 @@ int main(int argc, char *argv[]) {
   std::string reinit_flag_topic = "sparkvio/reinit_flag";
   std::string reinit_pose_topic = "sparkvio/reinit_pose";
 
-  VIO::RosBaseDataProvider* dataset_parser;
+  VIO::RosDataProvider ros_wrapper(left_camera_topic,
+                                   right_camera_topic,
+                                   imu_topic,
+                                   reinit_flag_topic,
+                                   reinit_pose_topic);
 
-  if (FLAGS_online_run) {
-    dataset_parser = new VIO::RosDataProvider(
-        left_camera_topic, right_camera_topic, imu_topic,
-        reinit_flag_topic, reinit_pose_topic);
-  } else {
-    dataset_parser = new VIO::RosbagDataProvider(
-        left_camera_topic, right_camera_topic, imu_topic, 
-        FLAGS_rosbag_path);
-  }
-
-  VIO::Pipeline vio_pipeline(dataset_parser->getParams(),
-                             FLAGS_parallel_run);
-
-  // Register callback to vio_pipeline.
-  dataset_parser->registerVioCallback(
-      std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
-
-  //// Spin dataset.
-  auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
-  if (FLAGS_parallel_run) {
-    auto handle = std::async(std::launch::async, &VIO::DataProvider::spin,
-                             *dataset_parser);
-    auto handle_pipeline =
-        std::async(std::launch::async, &VIO::Pipeline::shutdownWhenFinished,
-                   &vio_pipeline);
+
+  auto tic = VIO::utils::Timer::tic();
+
+  if (!FLAGS_parallel_run) {
+    VIO::Pipeline vio_pipeline (ros_wrapper.getParams(), false); // run sequential
+
+    // Register callback to vio_pipeline.
+    ros_wrapper.registerVioCallback(
+        std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1)); 
+
+    // Spin dataset and handle threads
+    is_pipeline_successful = ros_wrapper.spin();
+
+  } else {
+    VIO::Pipeline vio_pipeline (ros_wrapper.getParams(), true);
+
+    // Register callback to vio_pipeline.
+    ros_wrapper.registerVioCallback(
+          std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
+
+    // Spin dataset.
+    auto handle = std::async(std::launch::async,
+                             &VIO::RosDataProvider::spin, &ros_wrapper);
+
     vio_pipeline.spinViz();
     is_pipeline_successful = handle.get();
-    handle_pipeline.get();
-  } else {
-    is_pipeline_successful = dataset_parser->spin();
   }
+
   auto spin_duration = VIO::utils::Timer::toc(tic);
 
   LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";

@@ -8,6 +8,8 @@
 
   <arg name="parallel" default="False" />
 
+  <arg name="online" value="False" />
+
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
 
 	<!-- More parameter arguments -->
@@ -24,10 +26,6 @@
 	<arg name="LOG_OUTPUT" default="False" />
 	<arg name="OUTPUT_PATH" default="./"/>
 	<arg name="VISUALIZE" default="False" /> <!-- Note that this is duplicated from the flags file -->
-
-  <!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
-  <!-- Note that it is necessary that the autoInitialize = 1 in regularVioParameters if you don't match dummy data to your rosbag -->
-  <arg name="DUMMY_DATASET_PATH" value="$(find spark_vio_ros)/temp/dummy_eth_data"/>
 
 	<!-- Launch main node  -->
 	<node name="stereo_vio_ros_offline" pkg="spark_vio_ros" type="stereo_vio_ros_offline" output="screen" 
