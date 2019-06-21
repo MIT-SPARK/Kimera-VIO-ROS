@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   ros::init(argc, argv, "spark_vio");
 
   // Initialize Google's flags library.
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  google::ParseCommandLineFlags(&argc, &argv, true);
   // Initialize Google's logging library.
   google::InitGoogleLogging(argv[0]);
 
