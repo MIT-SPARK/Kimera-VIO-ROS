@@ -25,7 +25,6 @@
 #include "StereoFrame.h"
 #include "VioFrontEndParams.h"
 #include "ImuFrontEnd.h"
-#include "ETH_parser.h"
 #include "pipeline/Pipeline.h"
 
 namespace VIO {

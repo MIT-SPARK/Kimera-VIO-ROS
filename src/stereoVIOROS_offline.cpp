@@ -40,7 +40,6 @@ int main(int argc, char *argv[]) {
   // Parse topic names from parameter server
   ros::NodeHandle nh; 
 
-  VIO::ETHDatasetParser eth_dataset_parser; // Dummy ETH data (Since need this in pipeline)
   VIO::RosbagDataProvider rosbag_parser(FLAGS_left_camera_topic, FLAGS_right_camera_topic, 
                       FLAGS_imu_topic, FLAGS_rosbag_path);
 
@@ -49,7 +48,7 @@ int main(int argc, char *argv[]) {
   auto tic = VIO::utils::Timer::tic();
 
   if (!FLAGS_parallel_run) {
-    VIO::Pipeline vio_pipeline (&eth_dataset_parser, rosbag_parser.getImuParams(), false); // run sequential
+    VIO::Pipeline vio_pipeline (rosbag_parser.getParams(), false); // run sequential
 
     // Register callback to vio_pipeline.
     rosbag_parser.registerVioCallback(
@@ -59,7 +58,7 @@ int main(int argc, char *argv[]) {
     is_pipeline_successful = rosbag_parser.spin();
 
   } else {
-    VIO::Pipeline vio_pipeline (&eth_dataset_parser, rosbag_parser.getImuParams(), true);
+    VIO::Pipeline vio_pipeline (rosbag_parser.getParams(), true);
 
     // Register callback to vio_pipeline.
     rosbag_parser.registerVioCallback(
