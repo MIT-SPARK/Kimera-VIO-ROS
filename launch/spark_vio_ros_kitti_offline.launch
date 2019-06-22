@@ -9,11 +9,21 @@
 	<arg name="parallel" default="False" />
 
 	<!-- Remap subscriber topics -->
-	<arg name="cam0" value="/kitti/camera_gray_left/image_raw"/>
-	<arg name="cam1" value="/kitti/camera_gray_right/image_raw"/>
-	<arg name="imu0" value="/kitti/oxts/imu"/>
+	<arg name="left_camera_topic" value="/kitti/camera_gray_left/image_raw"/>
+	<arg name="right_camera_topic" value="/kitti/camera_gray_right/image_raw"/>
+	<arg name="imu_topic" value="/kitti/oxts/imu"/>
 
 	<rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml" />
+
+	<!-- Resiliency Thresholds -->
+	<param name="velocity_det_threshold" value="0.1" />
+	<param name="position_det_threshold" value="0.3" />
+	<param name="stereo_ransac_threshold" value="20" />
+	<param name="mono_ransac_threshold" value="30" />
+
+	<!-- Frame IDs for Odometry -->
+  	<param name="odom_base_frame_id" value="world" />
+  	<param name="odom_child_frame_id" value="base_link" />
 
 	<!-- More parameter arguments -->
 	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
@@ -30,23 +40,13 @@
 	<arg name="VISUALIZE" default="True" /> <!-- Note that this is duplicated from the flags file -->
 
 	<param name="vio_params_filepath" value="$(arg VIO_PARAMS_PATH)" />
-
-	<!-- Because of the current setup in spark vio this is neccessary (need to edit ETH parser) -->
-	<!-- Note that it is necessary that the autoInitialize = 1 in regularVioParameters if you don't match dummy data to your rosbag -->
-	<arg name="DUMMY_DATASET_PATH" value="$(find spark_vio_ros)/temp/dummy_eth_data" />
-
+	
 	<!-- Launch main node  -->
 	<node name="stereo_vio_ros_offline" pkg="spark_vio_ros" type="stereo_vio_ros_offline" output="screen" 
 				args="--logtostderr=1
   					  --colorlogtostderr=1 
   					  --log_prefix=1 
   					  --vio_params_path=$(arg VIO_PARAMS_PATH) 
-  					  --dataset_path=$(arg DUMMY_DATASET_PATH)
-  					  --initial_k=10 
-  					  --final_k=100
-					  	--left_camera_topic=$(arg cam0)
-					  	--right_camera_topic=$(arg cam1)
-					  	--imu_topic=$(arg imu0)  
   					  --tracker_params_path=$(arg TRACKER_PARAMS_PATH) 
   					  --flagfile=$(arg VIO_FLAGS_PATH) 
   					  --flagfile=$(arg MESHER_FLAGS_PATH)
@@ -57,6 +57,9 @@
   					  --backend_type=$(arg BACKEND_TYPE)
   					  --log_output=$(arg LOG_OUTPUT)
   					  --rosbag_path=$(arg data)
+  					  --left_camera_topic=$(arg left_camera_topic)
+					  --right_camera_topic=$(arg right_camera_topic)
+					  --imu_topic=$(arg imu_topic)
   					  --output_path=$(arg OUTPUT_PATH)
   					  --visualize=$(arg VISUALIZE) 
   					  --parallel_run=$(arg parallel)"/>

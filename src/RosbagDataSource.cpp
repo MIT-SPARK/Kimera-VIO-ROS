@@ -18,7 +18,7 @@ RosbagDataProvider::RosbagDataProvider(
 
   ROS_INFO("Starting SparkVIO wrapper for offline");
 
-  RosBaseDataProvider::parseImuData(&rosbag_data_, &imu_params_);
+  parseImuData(&rosbag_data_, &imu_params_);
 
   // parse data from rosbag
   parseRosbag(bag_input_path, left_camera_topic, right_camera_topic, imu_topic,
@@ -45,7 +45,6 @@ bool RosbagDataProvider::parseRosbag(std::string bag_path,
   topics.push_back(left_imgs_topic);
   topics.push_back(right_imgs_topic);
   topics.push_back(imu_topic);
-
   rosbag::View view(bag, rosbag::TopicQuery(topics));
 
   bool start_parsing_stereo = false; // Keep track of this since cannot process image before imu data

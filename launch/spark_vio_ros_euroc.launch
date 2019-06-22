@@ -6,6 +6,11 @@
   <!-- Each dataset has its own set of parameter files -->
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
 
+  <!-- Define subscriber topics -->
+  <remap from="cam0/image_raw" to="/cam0/image_raw"/>
+  <remap from="cam1/image_raw" to="/cam1/image_raw"/>
+  <remap from="imu0" to="/imu0"/>
+
   <!-- Remap subscriber topics -->
   <!-- remap from="sparkvio/reinit_flag" to="/sparkvio/reinit_flag"/ -->
   <!-- remap from="sparkvio/reinit_pose" to="/sparkvio/reinit_pose"/ -->
@@ -47,8 +52,6 @@
   					  --colorlogtostderr=1 
   					  --log_prefix=1 
   					  --vio_params_path=$(arg VIO_PARAMS_PATH) 
-  					  --initial_k=150 
-  					  --final_k=2000 
   					  --tracker_params_path=$(arg TRACKER_PARAMS_PATH) 
   					  --flagfile=$(arg VIO_FLAGS_PATH) 
   					  --flagfile=$(arg MESHER_FLAGS_PATH)
@@ -61,5 +64,4 @@
   					  --output_path=$(arg OUTPUT_PATH)
   					  --visualize=$(arg VISUALIZE)
               --parallel_run=$(arg parallel)" />
-
 </launch>

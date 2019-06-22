@@ -21,8 +21,11 @@
 #include "RosbagDataSource.h"
 #include "RosDataSource.h"
 
-DEFINE_bool(parallel_run, true, "Run VIO parallel or sequential");
+DEFINE_bool(parallel_run, true, "Run VIO parallel or sequential.");
 DEFINE_string(rosbag_path, "", "Path-to rosbag data.");
+DEFINE_string(left_camera_topic, "cam0/image_raw", "Left camera ROS topic.");
+DEFINE_string(right_camera_topic, "cam1/image_raw", "Right camera ROS topic.");
+DEFINE_string(imu_topic, "imu0", "IMU ROS topic.");
 
 ////////////////////////////////////////////////////////////////////////////////
 // stereoVIOexample using ROS wrapper example
@@ -36,12 +39,12 @@ int main(int argc, char *argv[]) {
   // Initialize ROS node
   ros::init(argc, argv, "spark_vio");
 
-  std::string left_camera_topic = "cam0/image_raw";
-  std::string right_camera_topic = "cam1/image_raw";
-  std::string imu_topic = "imu0";
+  std::string left_imgs_topic = FLAGS_left_camera_topic;
+  std::string right_imgs_topic = FLAGS_right_camera_topic;
+  std::string imu_topic = FLAGS_imu_topic; 
 
   VIO::RosbagDataProvider ros_wrapper(
-      left_camera_topic, right_camera_topic, imu_topic,
+      left_imgs_topic, right_imgs_topic, imu_topic,
       FLAGS_rosbag_path);
 
   bool is_pipeline_successful = false;
