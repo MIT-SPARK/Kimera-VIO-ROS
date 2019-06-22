@@ -214,14 +214,12 @@ bool RosDataProvider::spin() {
           LOG(FATAL) << "vision sensor type not recognised.";
           break;
         }
-        ROS_WARN("SENDING");
         vio_output_ = vio_callback_(StereoImuSyncPacket(
             StereoFrame(frame_count_, timestamp, left_image,
                         stereo_calib_.left_camera_info_, right_image,
                         stereo_calib_.right_camera_info_,
                         stereo_calib_.camL_Pose_camR_, stereo_matching_params),
             imu_meas.timestamps_, imu_meas.measurements_, reinit_packet_));
-        ROS_WARN("SENT");
         // Reset reinit flag for reinit packet
         resetReinitFlag();
 
