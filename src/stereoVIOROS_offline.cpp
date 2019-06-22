@@ -1,4 +1,4 @@
-/* @file   stereoVIOROS.cpp
+/* @file   stereoVIOROS_offline.cpp
  * @brief  ROS Wrapper for Spark-VIO
  * @author Yun Chang 
  */
@@ -22,6 +22,7 @@
 #include "RosDataSource.h"
 
 DEFINE_bool(parallel_run, true, "Run VIO parallel or sequential");
+DEFINE_string(rosbag_path, "", "Path-to rosbag data.");
 
 ////////////////////////////////////////////////////////////////////////////////
 // stereoVIOexample using ROS wrapper example
@@ -38,12 +39,10 @@ int main(int argc, char *argv[]) {
   std::string left_camera_topic = "cam0/image_raw";
   std::string right_camera_topic = "cam1/image_raw";
   std::string imu_topic = "imu0";
-  std::string reinit_flag_topic = "sparkvio/reinit_flag";
-  std::string reinit_pose_topic = "sparkvio/reinit_pose";
 
-  VIO::RosDataProvider ros_wrapper(
+  VIO::RosbagDataProvider ros_wrapper(
       left_camera_topic, right_camera_topic, imu_topic,
-      reinit_flag_topic, reinit_pose_topic);
+      FLAGS_rosbag_path);
 
   bool is_pipeline_successful = false;
 
@@ -62,7 +61,7 @@ int main(int argc, char *argv[]) {
   } else {
     // Spin dataset.
     auto handle = std::async(std::launch::async,
-                             &VIO::RosDataProvider::spin, &ros_wrapper);
+                             &VIO::RosbagDataProvider::spin, &ros_wrapper);
 
     vio_pipeline.spinViz();
     is_pipeline_successful = handle.get();

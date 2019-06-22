@@ -10,9 +10,14 @@ cs_add_executable(stereo_vio_ros
   src/stereoVIOROS.cpp
   src/RosBaseDataSource.cpp
   src/RosDataSource.cpp
-  src/RosbagDataSource.cpp
   src/StereoImageBuffer.cpp)
 target_link_libraries(stereo_vio_ros SparkVio)
+
+cs_add_executable(stereo_vio_ros_offline
+  src/stereoVIOROS_offline.cpp
+  src/RosBaseDataSource.cpp
+  src/RosbagDataSource.cpp)
+target_link_libraries(stereo_vio_ros_offline SparkVio)
 
 cs_install()
 

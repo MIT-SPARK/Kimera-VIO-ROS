@@ -18,6 +18,8 @@ RosbagDataProvider::RosbagDataProvider(
 
   ROS_INFO("Starting SparkVIO wrapper for offline");
 
+  RosBaseDataProvider::parseImuData(&rosbag_data_, &imu_params_);
+
   // parse data from rosbag
   parseRosbag(bag_input_path, left_camera_topic, right_camera_topic, imu_topic,
               &rosbag_data_);

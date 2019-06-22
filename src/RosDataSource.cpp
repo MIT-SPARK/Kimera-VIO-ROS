@@ -33,6 +33,7 @@ RosDataProvider::RosDataProvider(
 
   ROS_INFO("Starting SparkVIO wrapper for online");
 
+  parseImuData(&imu_data_, &imu_params_);
   // print parameters for check
   print();
 
@@ -167,7 +168,6 @@ bool RosDataProvider::spin() {
     // StereoImuSyncPacket (Think of this as the spin of the other
     // parser/data-providers)
     const Timestamp timestamp = stereo_buffer_.getEarliestTimestamp();
-    std::cout << timestamp << std::endl; 
     if (timestamp <= last_time_stamp_) {
       if (stereo_buffer_.size() != 0) {
         ROS_WARN("Next frame in image buffer is from the same or "
@@ -220,7 +220,7 @@ bool RosDataProvider::spin() {
                         stereo_calib_.left_camera_info_, right_image,
                         stereo_calib_.right_camera_info_,
                         stereo_calib_.camL_Pose_camR_, stereo_matching_params),
-            imu_meas.timestamps_, imu_meas.measurements_));
+            imu_meas.timestamps_, imu_meas.measurements_, reinit_packet_));
         ROS_WARN("SENT");
         // Reset reinit flag for reinit packet
         resetReinitFlag();
