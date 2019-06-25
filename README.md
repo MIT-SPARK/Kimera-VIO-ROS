@@ -2,7 +2,7 @@
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
 # Installation
-Note that this is to be used with the `feature/parallelization/jpl` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
+Note that this is to be used with the `feature/clean_code` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
 ```
 # Setup catkin workspace
 mkdir -p ~/catkin_ws/src
