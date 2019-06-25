@@ -3,6 +3,8 @@
 
   <arg name="parallel" default="True" />
 
+  <arg name="online" default="True" />
+
   <!-- Remap subscriber topics -->
 	<remap from="/cam0/image_raw" to="/kitti/camera_gray_left/image_raw"/>
 	<remap from="/cam1/image_raw" to="/kitti/camera_gray_right/image_raw"/>
@@ -63,6 +65,7 @@
   					  --log_output=$(arg LOG_OUTPUT)
   					  --output_path=$(arg OUTPUT_PATH)
   					  --visualize=$(arg VISUALIZE)
-              --parallel_run=$(arg parallel)" />
+              --parallel_run=$(arg parallel)
+              --online_run=$(arg online)" />
 
 </launch>

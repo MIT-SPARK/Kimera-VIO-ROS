@@ -8,6 +8,8 @@
 
   <arg name="parallel" default="False" />
 
+  <arg name="online" default="False" />
+
   <!-- Define subscriber topics -->
   <arg name="left_camera_topic" value="/cam0/image_raw"/>
   <arg name="right_camera_topic" value="/cam1/image_raw"/>
@@ -43,7 +45,7 @@
   <param name="vio_params_filepath" value="$(arg VIO_PARAMS_PATH)" />
   
   <!-- Launch main node  -->
-  <node name="stereo_vio_ros_offline" pkg="spark_vio_ros" type="stereo_vio_ros_offline" output="screen" 
+  <node name="stereo_vio_ros" pkg="spark_vio_ros" type="stereo_vio_ros" output="screen" 
         args="--logtostderr=1
               --colorlogtostderr=1 
               --log_prefix=1 
@@ -63,7 +65,8 @@
               --imu_topic=$(arg imu_topic)
               --output_path=$(arg OUTPUT_PATH)
               --visualize=$(arg VISUALIZE) 
-              --parallel_run=$(arg parallel)"/>
+              --parallel_run=$(arg parallel)
+              --online_run=$(arg online)"/>
 
   <!-- launch rviz  -->
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find spark_vio_ros)/viz/visualize_sparkvio.rviz" />

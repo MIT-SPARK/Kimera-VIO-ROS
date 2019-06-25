@@ -60,7 +60,6 @@ public:
                   std::string right_camera_topic,
                   std::string imu_topic);
   virtual ~RosBaseDataProvider();
-  virtual bool spin();
 
 protected:
 

@@ -3,6 +3,8 @@
 
   <arg name="parallel" default="True" />
 
+  <arg name="online" default="True" />
+
   <!-- Each dataset has its own set of parameter files -->
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
 
@@ -63,5 +65,6 @@
   					  --log_output=$(arg LOG_OUTPUT)
   					  --output_path=$(arg OUTPUT_PATH)
   					  --visualize=$(arg VISUALIZE)
-              --parallel_run=$(arg parallel)" />
+              --parallel_run=$(arg parallel)
+              --online_run=$(arg online)" />
 </launch>

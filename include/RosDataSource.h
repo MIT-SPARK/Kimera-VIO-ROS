@@ -55,7 +55,7 @@ private:
   bool reinit_flag_ = false;
   ReinitPacket reinit_packet_ = ReinitPacket();
 
-protected:
+private:
   // IMU callback
   void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
 

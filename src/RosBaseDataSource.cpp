@@ -236,6 +236,7 @@ bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
   CHECK(nh_.getParam("accelerometer_noise_density", acc_noise));
   CHECK(nh_.getParam("accelerometer_random_walk", acc_walk));
   CHECK(nh_.getParam("imu_extrinsics", extrinsics));
+  nh_.getParam("imu_shift", imu_shift);
 
   // TODO(Sandro): Do we need these parameters??
   imudata->nominal_imu_rate_ = 1.0 / rate;
@@ -248,6 +249,8 @@ bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
   imuparams->gyro_walk_ = gyro_walk;
   imuparams->acc_noise_ = acc_noise;
   imuparams->acc_walk_ = acc_walk;
+  imuparams->imu_shift_ =
+      imu_shift; // Defined as t_imu = t_cam + imu_shift (see: Kalibr)
 
   ROS_INFO("Parsed IMU calibration");
   return true;
@@ -503,11 +506,6 @@ void RosBaseDataProvider::publishImuBias() {
 
   // Publish Message
   bias_publisher_.publish(imu_bias_msg);
-}
-
-bool RosBaseDataProvider::spin() {
-  return true; 
-  // nothing here since only base class
 }
 
 } // namespace VIO
