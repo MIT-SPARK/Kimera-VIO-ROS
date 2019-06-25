@@ -28,8 +28,9 @@ RosDataProvider::RosDataProvider(
       last_time_stamp_(0),
       // initialize last timestamp (imu) to be 0
       last_imu_time_stamp_(0),
+      
       // keep track of number of frames processed)
-      frame_count_(0) {
+      frame_count_(1) {
 
   ROS_INFO("Starting SparkVIO wrapper for online");
 

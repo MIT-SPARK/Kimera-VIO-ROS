@@ -236,7 +236,7 @@ bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
   CHECK(nh_.getParam("accelerometer_noise_density", acc_noise));
   CHECK(nh_.getParam("accelerometer_random_walk", acc_walk));
   CHECK(nh_.getParam("imu_extrinsics", extrinsics));
-  nh_.getParam("imu_shift", imu_shift);
+  CHECK(nh_.getParam("imu_shift", imu_shift));
 
   // TODO(Sandro): Do we need these parameters??
   imudata->nominal_imu_rate_ = 1.0 / rate;
