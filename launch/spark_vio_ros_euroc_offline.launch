@@ -6,7 +6,7 @@
 
   <arg name="rate" default="1.0" />
 
-  <arg name="parallel" default="False" />
+  <arg name="parallel" default="True" />
 
   <arg name="online" default="False" />
 
