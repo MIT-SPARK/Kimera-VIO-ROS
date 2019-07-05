@@ -1,0 +1,41 @@
+# Kitti Calibration File
+
+# Camera  
+camera_model: pinhole
+distortion_model: radial-tangential
+camera_rate_hz: 10
+camera_resolution: [1392, 512] # width, height
+
+left_camera_intrinsics: [984.2439, 980.8141, 690, 233.1966] # fu, fv, cu, cv
+left_camera_distortion_coefficients: [-0.3728755, 0.2037299, 0.002219027, 0.001383707, -0.07233722] # k1, k2, k3, p1, p2
+left_camera_extrinsics: [1.0, 0.0, 0.0, 0,
+                         0.0, 1.0, 0.0, 0,
+                         0.0, 0.0, 1.0, 0,
+                         0.0, 0.0, 0.0, 1.0]
+
+right_camera_intrinsics: [989.5267, 987.8386, 702, 245.559] # fu, fv, cu, cv
+right_camera_distortion_coefficients: [-0.344661, 0.1790019, 0.001148107, -0.0006298563, -0.05314062] # k1, k2, k3, p1, p2
+right_camera_extrinsics: [0.9993513, -0.01860866, 0.03083487, 0.5370000,
+                          0.01887662, 0.9997863, 0.008421873, -0.004822061,
+                          -0.03067156, -0.008998467, 0.9994890, 0.01252488,
+                          0.0, 0.0, 0.0, 1.0]
+
+# If extrinsics is not in body frame (in this case it is so identity ) 
+calibration_to_body_frame: [0.0083 , 0.0128, 0.9999, 1.0833,
+                            -0.9999, -0.0141, 0.0085, -0.3099,
+                            0.0142, -0.9998, 0.0127, 0.7299,
+                            0, 0, 0, 1.0]
+
+# IMU calibrations 
+imu_rate_hz: 100 
+imu_shift: 0.0 # t_imu0 = t_cam0 + imu_shift
+imu_extrinsics: [1.0, 0.0, 0.0, 0.0,
+                 0.0, 1.0, 0.0, 0.0,
+                 0.0, 0.0, 1.0, 0.0,
+                 0.0, 0.0, 0.0, 1.0]
+
+# inertial sensor noise model parameters (static)
+gyroscope_noise_density: 1.6968e-3     # [ rad / s / sqrt(Hz) ]   ( gyro "white noise" )
+gyroscope_random_walk: 1.9393e-4       # [ rad / s^2 / sqrt(Hz) ] ( gyro bias diffusion )
+accelerometer_noise_density: 2.0000e-2 # [ m / s^2 / sqrt(Hz) ]   ( accel "white noise" )
+accelerometer_random_walk: 3.0000e-2   # [ m / s^3 / sqrt(Hz) ].  ( accel bias diffusion )
