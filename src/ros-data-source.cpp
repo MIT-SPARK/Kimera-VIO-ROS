@@ -1,10 +1,11 @@
 /**
- * @file   RosDataSource.cpp
+ * @file   ros-data-source.cpp
  * @brief  ROS wrapper
  * @author Yun Chang
  */
 
-#include "RosDataSource.h"
+#include "spark-vio-ros/ros-data-source.h"
+
 #include <string>
 #include <vector>
 
@@ -12,26 +13,21 @@
 
 namespace VIO {
 
-RosDataProvider::RosDataProvider(
-    std::string left_camera_topic, std::string right_camera_topic,
-    std::string imu_topic,
-    std::string reinit_flag_topic = "/sparkvio/reinit_flag",
-    std::string reinit_pose_topic = "/sparkvio/reinit_pose")
-    : RosBaseDataProvider(left_camera_topic, right_camera_topic, imu_topic),
+RosDataProvider::RosDataProvider()
+    : RosBaseDataProvider(),
       it_(nh_cam_),
+      // TODO(Toni) Do not init this at ctor init list...
       // Image subscriber (left)
-      left_img_subscriber_(it_, left_camera_topic, 1),
+      left_img_subscriber_(it_, "left_cam", 1),
       // Image subscriber (right)
-      right_img_subscriber_(it_, right_camera_topic, 1),
+      right_img_subscriber_(it_, "right_cam", 1),
       sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_),
       // initialize last timestamp (img) to be 0
       last_time_stamp_(0),
       // initialize last timestamp (imu) to be 0
       last_imu_time_stamp_(0),
-      
       // keep track of number of frames processed)
       frame_count_(1) {
-
   ROS_INFO("Starting SparkVIO wrapper for online");
 
   parseImuData(&imu_data_, &imu_params_);
@@ -39,9 +35,8 @@ RosDataProvider::RosDataProvider(
   print();
 
   // Start IMU subscriber
-
   imu_subscriber_ =
-      nh_imu_.subscribe(imu_topic, 50, &RosDataProvider::callbackIMU, this);
+      nh_imu_.subscribe("imu", 50, &RosDataProvider::callbackIMU, this);
 
   // Define Callback Queue for IMU Data
   ros::CallbackQueue imu_queue;
@@ -54,7 +49,6 @@ RosDataProvider::RosDataProvider(
   async_spinner_imu.start();
 
   ////// Synchronize stero image callback
-
   sync.registerCallback(
       boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2));
 
@@ -67,16 +61,10 @@ RosDataProvider::RosDataProvider(
   async_spinner_cam.start();
 
   ////// Define Reinitializer Subscriber
-  reinit_flag_topic_ = reinit_flag_topic;
-  reinit_pose_topic_ = reinit_pose_topic;
-
-  // Start reinitializer subscriber
-  reinit_flag_subscriber_ = nh_reinit_.subscribe(reinit_flag_topic, 10,
-                                      &RosDataProvider::callbackReinit, this);
-
-  // Start reinitializer pose subscriber
+  reinit_flag_subscriber_ = nh_reinit_.subscribe(
+      "reinit_flag", 10, &RosDataProvider::callbackReinit, this);
   reinit_pose_subscriber_ = nh_reinit_.subscribe(
-      reinit_pose_topic, 10, &RosDataProvider::callbackReinitPose, this);
+      "reinit_pose", 10, &RosDataProvider::callbackReinitPose, this);
 
   // Define Callback Queue for Reinit Data
   ros::CallbackQueue reinit_queue;
@@ -115,7 +103,7 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr &msgIMU) {
     imu_data_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
   }
 
-  if (last_time_stamp_ == 0) { // initialize first img time stamp
+  if (last_time_stamp_ == 0) {  // initialize first img time stamp
     last_time_stamp_ = timestamp;
   }
 
@@ -140,15 +128,13 @@ void RosDataProvider::callbackReinit(
 // Getting re-initialization pose
 void RosDataProvider::callbackReinitPose(
     const geometry_msgs::PoseStamped &reinitPose) {
-
   // Set reinitialization pose
   gtsam::Rot3 rotation(gtsam::Quaternion(
       reinitPose.pose.orientation.w, reinitPose.pose.orientation.x,
       reinitPose.pose.orientation.y, reinitPose.pose.orientation.z));
 
-  gtsam::Point3 position(reinitPose.pose.position.x,
-                          reinitPose.pose.position.y,
-                          reinitPose.pose.position.z);
+  gtsam::Point3 position(reinitPose.pose.position.x, reinitPose.pose.position.y,
+                         reinitPose.pose.position.z);
   gtsam::Pose3 pose = gtsam::Pose3(rotation, position);
   reinit_packet_.setReinitPose(pose);
 }
@@ -157,7 +143,6 @@ void RosDataProvider::callbackReinitPose(
 void RosDataProvider::callbackCamAndProcessStereo(
     const sensor_msgs::ImageConstPtr &msgLeft,
     const sensor_msgs::ImageConstPtr &msgRight) {
-
   // store in stereo buffer
   stereo_buffer_.addStereoFrame(msgLeft, msgRight);
 }
@@ -171,9 +156,10 @@ bool RosDataProvider::spin() {
     const Timestamp timestamp = stereo_buffer_.getEarliestTimestamp();
     if (timestamp <= last_time_stamp_) {
       if (stereo_buffer_.size() != 0) {
-        ROS_WARN("Next frame in image buffer is from the same or "
-                 "earlier time than the last processed frame. Skip "
-                 "frame.");
+        ROS_WARN(
+            "Next frame in image buffer is from the same or "
+            "earlier time than the last processed frame. Skip "
+            "frame.");
         // remove next frame (this would usually for the first
         // frame)
         stereo_buffer_.removeNext();
@@ -200,20 +186,20 @@ bool RosDataProvider::spin() {
         cv::Mat left_image, right_image;
 
         switch (stereo_matching_params.vision_sensor_type_) {
-        case VisionSensorType::STEREO:
-          // no conversion
-          left_image = readRosImage(left_ros_img);
-          right_image = readRosImage(right_ros_img);
-          break;
-        case VisionSensorType::RGBD: // just use depth to "fake
-                                     // right pixel matches" apply
-                                     // conversion
-          left_image = readRosRGBImage(left_ros_img);
-          right_image = readRosDepthImage(right_ros_img);
-          break;
-        default:
-          LOG(FATAL) << "vision sensor type not recognised.";
-          break;
+          case VisionSensorType::STEREO:
+            // no conversion
+            left_image = readRosImage(left_ros_img);
+            right_image = readRosImage(right_ros_img);
+            break;
+          case VisionSensorType::RGBD:  // just use depth to "fake
+                                        // right pixel matches" apply
+                                        // conversion
+            left_image = readRosRGBImage(left_ros_img);
+            right_image = readRosDepthImage(right_ros_img);
+            break;
+          default:
+            LOG(FATAL) << "vision sensor type not recognised.";
+            break;
         }
         vio_output_ = vio_callback_(StereoImuSyncPacket(
             StereoFrame(frame_count_, timestamp, left_image,
@@ -232,8 +218,9 @@ bool RosDataProvider::spin() {
 
       } else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::
                                   kTooFewMeasurementsAvailable) {
-        ROS_WARN("Too few IMU measurements between next frame and "
-                 "last frame. Skip frame.");
+        ROS_WARN(
+            "Too few IMU measurements between next frame and "
+            "last frame. Skip frame.");
         // remove next frame (this would usually for the first
         // frame)
         stereo_buffer_.removeNext();
@@ -265,4 +252,4 @@ void RosDataProvider::print() const {
   std::cout << "========================================" << std::endl;
 }
 
-} // namespace VIO
+}  // namespace VIO

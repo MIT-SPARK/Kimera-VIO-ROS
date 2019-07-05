@@ -1,6 +1,7 @@
-/* @file   stereoVIOROS.cpp
+/* @file   stereo-vio-ros.cpp
  * @brief  ROS Wrapper for Spark-VIO
- * @author Yun Chang 
+ * @author Yun Chang
+ * @author Antoni Rosinol
  */
 
 #include <future>
@@ -13,20 +14,16 @@
 #include <ros/ros.h>
 
 // Dependencies from VIO
-#include <utils/Timer.h>
 #include <LoggerMatlab.h>
+#include <utils/Timer.h>
 
 // Dependencies from this repository
-#include "RosBaseDataSource.h"
-#include "RosbagDataSource.h"
-#include "RosDataSource.h"
+#include "spark-vio-ros/ros-base-data-source.h"
+#include "spark-vio-ros/ros-data-source.h"
+#include "spark-vio-ros/rosbag-data-source.h"
 
 DEFINE_bool(parallel_run, true, "Run VIO parallel or sequential");
 DEFINE_bool(online_run, true, "RUN VIO ROS online or offline");
-DEFINE_string(rosbag_path, "", "Path-to rosbag data.");
-DEFINE_string(left_camera_topic, "cam0/image_raw", "Left camera ROS topic.");
-DEFINE_string(right_camera_topic, "cam1/image_raw", "Right camera ROS topic.");
-DEFINE_string(imu_topic, "imu0", "IMU ROS topic.");
 
 ////////////////////////////////////////////////////////////////////////////////
 // stereoVIOexample using ROS wrapper example
@@ -40,30 +37,16 @@ int main(int argc, char *argv[]) {
   // Initialize ROS node
   ros::init(argc, argv, "spark_vio");
 
-  std::string left_camera_topic = FLAGS_left_camera_topic;
-  std::string right_camera_topic = FLAGS_right_camera_topic;
-  std::string imu_topic = FLAGS_imu_topic;
-  std::string rosbag_path = FLAGS_rosbag_path; 
-  std::string reinit_flag_topic = "sparkvio/reinit_flag";
-  std::string reinit_pose_topic = "sparkvio/reinit_pose";
-
   std::unique_ptr<VIO::RosBaseDataProvider> dataset_parser;
   if (FLAGS_online_run) {
-    // running ros online 
-    dataset_parser = VIO::make_unique<VIO::RosDataProvider>(
-      left_camera_topic, right_camera_topic, imu_topic,
-      reinit_flag_topic, reinit_pose_topic);
-
+    // Running ros online.
+    dataset_parser = VIO::make_unique<VIO::RosDataProvider>();
   } else {
-    // parse ros bag 
-    dataset_parser = VIO::make_unique<VIO::RosbagDataProvider>(
-      left_camera_topic, right_camera_topic, imu_topic,
-      rosbag_path);
-
+    // Parse rosbag.
+    dataset_parser = VIO::make_unique<VIO::RosbagDataProvider>();
   }
 
-  VIO::Pipeline vio_pipeline(dataset_parser->getParams(),
-                             FLAGS_parallel_run);
+  VIO::Pipeline vio_pipeline(dataset_parser->getParams(), FLAGS_parallel_run);
 
   // Register callback to vio_pipeline.
   dataset_parser->registerVioCallback(
@@ -73,8 +56,9 @@ int main(int argc, char *argv[]) {
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (FLAGS_parallel_run) {
-    auto handle = std::async(std::launch::async, &VIO::RosBaseDataProvider::spin,
-                            std::move(dataset_parser));
+    auto handle =
+        std::async(std::launch::async, &VIO::RosBaseDataProvider::spin,
+                   std::move(dataset_parser));
     auto handle_pipeline =
         std::async(std::launch::async, &VIO::Pipeline::shutdownWhenFinished,
                    &vio_pipeline);
@@ -96,5 +80,5 @@ int main(int argc, char *argv[]) {
     logger.closeLogFiles();
   }
 
-  return is_pipeline_successful? EXIT_SUCCESS : EXIT_FAILURE;
+  return is_pipeline_successful ? EXIT_SUCCESS : EXIT_FAILURE;
 }

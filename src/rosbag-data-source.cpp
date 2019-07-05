@@ -1,41 +1,45 @@
 /**
- * @file   RosbagDataSource.cpp
+ * @file   rosbag-data-source.cpp
  * @brief  Parse rosbad and run spark vio
  * @author Yun Chang
+ * @author Antoni Rosinol
  */
 
-#include "RosbagDataSource.h"
+#include "spark-vio-ros/rosbag-data-source.h"
 
 namespace VIO {
 
-RosbagDataProvider::RosbagDataProvider(
-    std::string left_camera_topic,
-    std::string right_camera_topic,
-    std::string imu_topic,
-    std::string bag_input_path) :
-    RosBaseDataProvider(left_camera_topic, right_camera_topic, imu_topic),
-    rosbag_data_() {
-
+RosbagDataProvider::RosbagDataProvider()
+    : RosBaseDataProvider(), rosbag_data_() {
   ROS_INFO("Starting SparkVIO wrapper for offline");
+
+  std::string rosbag_path;
+  CHECK(nh_.getParam("rosbag_path", rosbag_path));
+  std::string left_camera_topic;
+  CHECK(nh_.getParam("left_cam_rosbag_topic", left_camera_topic));
+  std::string right_camera_topic;
+  CHECK(nh_.getParam("right_cam_rosbag_topic", right_camera_topic));
+  std::string imu_topic;
+  CHECK(nh_.getParam("imu_rosbag_topic", imu_topic));
 
   parseImuData(&rosbag_data_, &imu_params_);
 
-  // parse data from rosbag
-  parseRosbag(bag_input_path, left_camera_topic, right_camera_topic, imu_topic,
-              &rosbag_data_);
+  // Parse data from rosbag
+  CHECK(parseRosbag(rosbag_path, left_camera_topic, right_camera_topic,
+                    imu_topic, &rosbag_data_));
 
   ROS_INFO(">>>>>>> Parsed rosbag data");
 
-  // print parameters for check
+  // Print parameters for check
   print();
 }
 
 RosbagDataProvider::~RosbagDataProvider() {}
 
-bool RosbagDataProvider::parseRosbag(std::string bag_path,
-                                     std::string left_imgs_topic,
-                                     std::string right_imgs_topic,
-                                     std::string imu_topic,
+bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
+                                     const std::string& left_imgs_topic,
+                                     const std::string& right_imgs_topic,
+                                     const std::string& imu_topic,
                                      RosbagData* rosbag_data) {
   // Fill in rosbag to data_
   rosbag::Bag bag;
@@ -47,9 +51,11 @@ bool RosbagDataProvider::parseRosbag(std::string bag_path,
   topics.push_back(imu_topic);
   rosbag::View view(bag, rosbag::TopicQuery(topics));
 
-  bool start_parsing_stereo = false; // Keep track of this since cannot process image before imu data
-  Timestamp last_imu_timestamp = 0; // For some dataset, have duplicated measurements for same time
-  for (rosbag::MessageInstance msg: view) {
+  bool start_parsing_stereo =
+      false;  // Keep track of this since cannot process image before imu data
+  Timestamp last_imu_timestamp =
+      0;  // For some dataset, have duplicated measurements for same time
+  for (rosbag::MessageInstance msg : view) {
     // Get topic.
     const std::string& msg_topic = msg.getTopic();
 
@@ -66,7 +72,7 @@ bool RosbagDataProvider::parseRosbag(std::string bag_path,
       Timestamp imu_data_timestamp = imu_data->header.stamp.toNSec();
       if (imu_data_timestamp > last_imu_timestamp) {
         rosbag_data->imu_data_.imu_buffer_.addMeasurement(imu_data_timestamp,
-                                                  imu_accgyr);
+                                                          imu_accgyr);
         last_imu_timestamp = imu_data_timestamp;
       }
       start_parsing_stereo = true;
@@ -94,11 +100,12 @@ bool RosbagDataProvider::parseRosbag(std::string bag_path,
 
   // Sanity check:
   ROS_ERROR_COND(rosbag_data->left_imgs_.size() == 0 ||
-                 rosbag_data->right_imgs_.size() == 0,
+                     rosbag_data->right_imgs_.size() == 0,
                  "No images parsed from rosbag!");
   ROS_ERROR_COND(rosbag_data->imu_data_.imu_buffer_.size() <=
-                 rosbag_data->left_imgs_.size(),
+                     rosbag_data->left_imgs_.size(),
                  "Less than or equal number fo imu data as image data.");
+  return true;
 }
 
 bool RosbagDataProvider::spin() {
@@ -119,49 +126,59 @@ bool RosbagDataProvider::spin() {
       if (timestamp_frame_k > timestamp_last_frame) {
         ImuMeasurements imu_meas;
         utils::ThreadsafeImuBuffer::QueryResult imu_query =
-            rosbag_data_.imu_data_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-              timestamp_last_frame,
-              timestamp_frame_k,
-              &imu_meas.timestamps_,
-              &imu_meas.measurements_);
-        if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
-
+            rosbag_data_.imu_data_.imu_buffer_
+                .getImuDataInterpolatedUpperBorder(
+                    timestamp_last_frame, timestamp_frame_k,
+                    &imu_meas.timestamps_, &imu_meas.measurements_);
+        if (imu_query ==
+            utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
           // Call VIO Pipeline.
           VLOG(10) << "Call VIO processing for frame k: " << k
                    << " with timestamp: " << timestamp_frame_k << '\n'
                    << "////////////////////////////////// Creating packet!\n"
-                   << "STAMPS IMU rows : \n" << imu_meas.timestamps_.rows() << '\n'
-                   << "STAMPS IMU cols : \n" << imu_meas.timestamps_.cols() << '\n'
-                   << "STAMPS IMU: \n" << imu_meas.timestamps_ << '\n'
-                   << "ACCGYR IMU rows : \n" << imu_meas.measurements_.rows() << '\n'
-                   << "ACCGYR IMU cols : \n" << imu_meas.measurements_.cols() << '\n'
-                   << "ACCGYR IMU: \n" << imu_meas.measurements_ << '\n';
+                   << "STAMPS IMU rows : \n"
+                   << imu_meas.timestamps_.rows() << '\n'
+                   << "STAMPS IMU cols : \n"
+                   << imu_meas.timestamps_.cols() << '\n'
+                   << "STAMPS IMU: \n"
+                   << imu_meas.timestamps_ << '\n'
+                   << "ACCGYR IMU rows : \n"
+                   << imu_meas.measurements_.rows() << '\n'
+                   << "ACCGYR IMU cols : \n"
+                   << imu_meas.measurements_.cols() << '\n'
+                   << "ACCGYR IMU: \n"
+                   << imu_meas.measurements_ << '\n';
 
           timestamp_last_frame = timestamp_frame_k;
 
           vio_output_ = vio_callback_(StereoImuSyncPacket(
-                            StereoFrame(k, timestamp_frame_k,
-                            readRosImage(rosbag_data_.left_imgs_.at(k)),
-                            stereo_calib_.left_camera_info_,
-                            readRosImage(rosbag_data_.right_imgs_.at(k)),
-                            stereo_calib_.right_camera_info_,
-                            stereo_calib_.camL_Pose_camR_,
-                            stereo_matching_params),
-                            imu_meas.timestamps_,
-                            imu_meas.measurements_));
+              StereoFrame(k, timestamp_frame_k,
+                          readRosImage(rosbag_data_.left_imgs_.at(k)),
+                          stereo_calib_.left_camera_info_,
+                          readRosImage(rosbag_data_.right_imgs_.at(k)),
+                          stereo_calib_.right_camera_info_,
+                          stereo_calib_.camL_Pose_camR_,
+                          stereo_matching_params),
+              imu_meas.timestamps_, imu_meas.measurements_));
 
           // Publish Output
           publishOutput();
 
           VLOG(10) << "Finished VIO processing for frame k = " << k;
         } else {
-          ROS_WARN("Skipping frame %d. No imu data available between current frame and last frame", static_cast<int>(k));
+          ROS_WARN(
+              "Skipping frame %d. No imu data available between current frame "
+              "and last frame",
+              static_cast<int>(k));
         }
       } else {
-        ROS_WARN("Skipping frame %d. Frame timestamp less than or equal to last frame.", static_cast<int>(k));
+        ROS_WARN(
+            "Skipping frame %d. Frame timestamp less than or equal to last "
+            "frame.",
+            static_cast<int>(k));
       }
     } else {
-      break; 
+      break;
     }
   }
 
@@ -181,9 +198,10 @@ void RosbagDataProvider::print() const {
   std::cout << ">> IMU info << " << std::endl;
   rosbag_data_.imu_data_.print();
 
-  std::cout << "number of stereo frames: " << rosbag_data_.getNumberOfImages() << std::endl;
+  std::cout << "number of stereo frames: " << rosbag_data_.getNumberOfImages()
+            << std::endl;
   std::cout << std::endl;
   std::cout << "========================================" << std::endl;
 }
 
-} // End of VIO namespace
+}  // namespace VIO

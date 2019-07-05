@@ -1,79 +1,76 @@
 /**
- * @file   RosDataSource.h
+ * @file   ros-base-data-source.h
  * @brief  ROS wrapper
  * @author Yun Chang
  */
 
 #pragma once
 
-#include <string>
 #include <functional>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/matx.hpp>
+#include <string>
 
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <ros/spinner.h>
-#include <ros/callback_queue.h>
 #include <cv_bridge/cv_bridge.h>
-#include <message_filters/time_synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <image_transport/subscriber_filter.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/CameraInfo.h>
-#include <nav_msgs/Odometry.h>
-#include <std_msgs/Bool.h>
-#include <std_msgs/Float64MultiArray.h>
-#include <sensor_msgs/image_encodings.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
+#include <image_transport/subscriber_filter.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/time_synchronizer.h>
+#include <nav_msgs/Odometry.h>
+#include <ros/callback_queue.h>
+#include <ros/console.h>
+#include <ros/ros.h>
+#include <ros/spinner.h>
+#include <sensor_msgs/CameraInfo.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/image_encodings.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <tf/transform_broadcaster.h>
 
+#include <ImuFrontEnd.h>
+#include <StereoFrame.h>
+#include <StereoImuSyncPacket.h>
+#include <VioFrontEndParams.h>
 #include <common/vio_types.h>
 #include <datasource/DataSource.h>
-#include <StereoImuSyncPacket.h>
-#include <StereoFrame.h>
-#include <VioFrontEndParams.h>
-#include <ImuFrontEnd.h>
 #include <pipeline/Pipeline.h>
 
-#include "StereoImageBuffer.h"
+#include "spark-vio-ros/stereo-image-buffer.h"
 
 namespace VIO {
 
 struct RosbagData {
-  inline size_t getNumberOfImages() const {return left_imgs_.size();}
-  // The image names of the images from left camera
+  inline size_t getNumberOfImages() const { return left_imgs_.size(); }
+  // The names of the images from left camera
   std::vector<sensor_msgs::ImageConstPtr> left_imgs_;
-  // The image names of the images from right camera
+  // The names of the images from right camera
   std::vector<sensor_msgs::ImageConstPtr> right_imgs_;
   // Vector of timestamps see issue in .cpp file
   std::vector<Timestamp> timestamps_;
-  //IMU data
+  // IMU data
   ImuData imu_data_;
 };
 
-class RosBaseDataProvider: public DataProvider {
-public:
-  RosBaseDataProvider(std::string left_camera_topic,
-                  std::string right_camera_topic,
-                  std::string imu_topic);
+class RosBaseDataProvider : public DataProvider {
+ public:
+  RosBaseDataProvider();
   virtual ~RosBaseDataProvider();
 
-protected:
-
+ protected:
   // Define Node Handler for general use (Parameter server)
   ros::NodeHandle nh_;
 
   // Stereo info
-  struct StereoCalibration{
+  struct StereoCalibration {
     CameraParams left_camera_info_;
     CameraParams right_camera_info_;
-    gtsam::Pose3 camL_Pose_camR_; // relative pose between cameras
+    gtsam::Pose3 camL_Pose_camR_;  // relative pose between cameras
   };
 
-protected:
+ protected:
   cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg);
 
   cv::Mat readRosRGBImage(const sensor_msgs::ImageConstPtr& img_msg);
@@ -123,13 +120,10 @@ protected:
   std::string odom_base_frame_id_;
   std::string odom_child_frame_id_;
 
-  // Define imu topic since might need to wait
-  std::string imu_topic_;
-
-protected:
+ protected:
   VioFrontEndParams frontend_params_;
   StereoCalibration stereo_calib_;
   SpinOutputContainer vio_output_;
 };
 
-} // End of VIO Namespace
+}  // namespace VIO

@@ -1,10 +1,11 @@
 /**
- * @file   RosDataSource.cpp
- * @brief  ROS wrapper
+ * @file   ros-base-data-source.cpp
+ * @brief  ROS wrapper......TODO
  * @author Yun Chang
  */
 
-#include "RosDataSource.h"
+#include "spark-vio-ros/ros-data-source.h"
+
 #include <string>
 #include <vector>
 
@@ -12,46 +13,40 @@
 
 namespace VIO {
 
-RosBaseDataProvider::RosBaseDataProvider(
-    std::string left_camera_topic, std::string right_camera_topic,
-    std::string imu_topic)
-    : stereo_calib_(), DataProvider(), vio_output_() {
-
+RosBaseDataProvider::RosBaseDataProvider()
+    : DataProvider(), stereo_calib_(), vio_output_() {
   ROS_INFO(">>>>>>> Initializing Spark-VIO-ROS <<<<<<<");
+
   // Parse calibration info for camera and IMU
   // Calibration info on parameter server (Parsed from yaml)
   parseCameraData(&stereo_calib_);
 
-  imu_topic_ = imu_topic;
-
   // Start odometry publisher
   CHECK(nh_.getParam("odom_base_frame_id", odom_base_frame_id_));
   CHECK(nh_.getParam("odom_child_frame_id", odom_child_frame_id_));
-  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(
-            "sparkvio/odometry", 10);
+  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
 
   // Start frontend stats publisher
-  frontend_stats_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(
-            "sparkvio/frontend_stats", 10);
+  frontend_stats_publisher_ =
+      nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 10);
 
   // Start resiliency publisher
-  resil_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(
-            "sparkvio/resiliency", 10);
+  resil_publisher_ =
+      nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 10);
 
   // Start imu bias publisher
-  bias_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>(
-            "sparkvio/imu_bias", 10);
+  bias_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 10);
 }
 
 RosBaseDataProvider::~RosBaseDataProvider() {}
 
-cv::Mat
-RosBaseDataProvider::readRosImage(const sensor_msgs::ImageConstPtr &img_msg) {
+cv::Mat RosBaseDataProvider::readRosImage(
+    const sensor_msgs::ImageConstPtr& img_msg) {
   // Use cv_bridge to read ros image to cv::Mat
   cv_bridge::CvImagePtr cv_ptr;
   try {
     cv_ptr = cv_bridge::toCvCopy(img_msg);
-  } catch(cv_bridge::Exception& exception) {
+  } catch (cv_bridge::Exception& exception) {
     ROS_FATAL("cv_bridge exception: %s", exception.what());
     ros::shutdown();
   }
@@ -59,8 +54,8 @@ RosBaseDataProvider::readRosImage(const sensor_msgs::ImageConstPtr &img_msg) {
   return cv_ptr->image;
 }
 
-cv::Mat
-RosBaseDataProvider::readRosRGBImage(const sensor_msgs::ImageConstPtr &img_msg) {
+cv::Mat RosBaseDataProvider::readRosRGBImage(
+    const sensor_msgs::ImageConstPtr& img_msg) {
   // Use cv_bridge to read ros image to cv::Mat
   cv::Mat img_rgb = RosBaseDataProvider::readRosImage(img_msg);
   // CV_RGB2GRAY);
@@ -69,14 +64,14 @@ RosBaseDataProvider::readRosRGBImage(const sensor_msgs::ImageConstPtr &img_msg) 
   return img_rgb;
 }
 
-cv::Mat
-RosBaseDataProvider::readRosDepthImage(const sensor_msgs::ImageConstPtr &img_msg) {
+cv::Mat RosBaseDataProvider::readRosDepthImage(
+    const sensor_msgs::ImageConstPtr& img_msg) {
   // Use cv_bridge to read ros image to cv::Mat
   cv_bridge::CvImagePtr cv_ptr;
   try {
     cv_ptr =
         cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::TYPE_16UC1);
-  } catch(cv_bridge::Exception& exception) {
+  } catch (cv_bridge::Exception& exception) {
     ROS_FATAL("cv_bridge exception: %s", exception.what());
     ros::shutdown();
   }
@@ -168,28 +163,28 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     cv::Mat distortion_coeff;
 
     switch (d_coeff.size()) {
-    // if given 4 coefficients
-    case (4):
-      ROS_INFO(
-          "using radtan or equidistant model (4 coefficients) for camera %d",
-          i);
-      distortion_coeff = cv::Mat::zeros(1, 4, CV_64F);
-      distortion_coeff.at<double>(0, 0) = d_coeff[0]; // k1
-      distortion_coeff.at<double>(0, 1) = d_coeff[1]; // k2
-      distortion_coeff.at<double>(0, 3) = d_coeff[2]; // p1 or k3
-      distortion_coeff.at<double>(0, 4) = d_coeff[3]; // p2 or k4
-      break;
+      // if given 4 coefficients
+      case (4):
+        ROS_INFO(
+            "using radtan or equidistant model (4 coefficients) for camera %d",
+            i);
+        distortion_coeff = cv::Mat::zeros(1, 4, CV_64F);
+        distortion_coeff.at<double>(0, 0) = d_coeff[0];  // k1
+        distortion_coeff.at<double>(0, 1) = d_coeff[1];  // k2
+        distortion_coeff.at<double>(0, 3) = d_coeff[2];  // p1 or k3
+        distortion_coeff.at<double>(0, 4) = d_coeff[3];  // p2 or k4
+        break;
 
-    case (5): // if given 5 coefficients
-      ROS_INFO("using radtan model (5 coefficients) for camera %d", i);
-      distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
-      for (int k = 0; k < 5; k++) {
-        distortion_coeff.at<double>(0, k) = d_coeff[k]; // k1, k2, k3, p1, p2
-      }
-      break;
+      case (5):  // if given 5 coefficients
+        ROS_INFO("using radtan model (5 coefficients) for camera %d", i);
+        distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
+        for (int k = 0; k < 5; k++) {
+          distortion_coeff.at<double>(0, k) = d_coeff[k];  // k1, k2, k3, p1, p2
+        }
+        break;
 
-    default: // otherwise
-      ROS_FATAL("Unsupported distortion format");
+      default:  // otherwise
+        ROS_FATAL("Unsupported distortion format");
     }
 
     camera_param_i.distortion_coeff_ = distortion_coeff;
@@ -197,15 +192,15 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     // TODO(unknown): add skew (can add switch statement when parsing
     // intrinsics)
     camera_param_i.calibration_ =
-        gtsam::Cal3DS2(intrinsics[0],                      // fx
-                       intrinsics[1],                      // fy
-                       0.0,                                // skew
-                       intrinsics[2],                      // u0
-                       intrinsics[3],                      // v0
-                       distortion_coeff.at<double>(0, 0),  //  k1
-                       distortion_coeff.at<double>(0, 1),  //  k2
-                       distortion_coeff.at<double>(0, 3),  //  p1
-                       distortion_coeff.at<double>(0, 4)); //  p2
+        gtsam::Cal3DS2(intrinsics[0],                       // fx
+                       intrinsics[1],                       // fy
+                       0.0,                                 // skew
+                       intrinsics[2],                       // u0
+                       intrinsics[3],                       // v0
+                       distortion_coeff.at<double>(0, 0),   //  k1
+                       distortion_coeff.at<double>(0, 1),   //  k2
+                       distortion_coeff.at<double>(0, 3),   //  p1
+                       distortion_coeff.at<double>(0, 4));  //  p2
 
     if (i == 0) {
       stereo_calib->left_camera_info_ = camera_param_i;
@@ -241,8 +236,8 @@ bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
   // TODO(Sandro): Do we need these parameters??
   imudata->nominal_imu_rate_ = 1.0 / rate;
   imudata->imu_rate_ = 1.0 / rate;
-  imudata->imu_rate_std_ = 0.00500009; // set to 0 for now
-  imudata->imu_rate_maxMismatch_ = 0.00500019; // set to 0 for now
+  imudata->imu_rate_std_ = 0.00500009;          // set to 0 for now
+  imudata->imu_rate_maxMismatch_ = 0.00500019;  // set to 0 for now
 
   // Gyroscope and accelerometer noise parameters
   imuparams->gyro_noise_ = gyro_noise;
@@ -250,7 +245,7 @@ bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
   imuparams->acc_noise_ = acc_noise;
   imuparams->acc_walk_ = acc_walk;
   imuparams->imu_shift_ =
-      imu_shift; // Defined as t_imu = t_cam + imu_shift (see: Kalibr)
+      imu_shift;  // Defined as t_imu = t_cam + imu_shift (see: Kalibr)
 
   ROS_INFO("Parsed IMU calibration");
   return true;
@@ -261,7 +256,8 @@ bool RosBaseDataProvider::parseImuData(RosbagData* rosbag_data,
   CHECK_NOTNULL(rosbag_data);
   CHECK_NOTNULL(imuparams);
   // Parse IMU calibration info (from param server)
-  double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise, acc_walk;
+  double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise,
+      acc_walk;
 
   std::vector<double> extrinsics;
 
@@ -271,14 +267,16 @@ bool RosBaseDataProvider::parseImuData(RosbagData* rosbag_data,
   CHECK(nh_.getParam("accelerometer_noise_density", acc_noise));
   CHECK(nh_.getParam("accelerometer_random_walk", acc_walk));
 
-  // TODO: We should probably remove this! This is not parsed in anyway to the pipeline!!
+  // TODO: We should probably remove this! This is not parsed in anyway to the
+  // pipeline!!
   CHECK(nh_.getParam("imu_extrinsics", extrinsics));
 
   // TODO: Do we need these parameters??
   rosbag_data->imu_data_.nominal_imu_rate_ = 1.0 / rate;
   rosbag_data->imu_data_.imu_rate_ = 1.0 / rate;
-  rosbag_data->imu_data_.imu_rate_std_ = 0.00500009; // set to 0 for now
-  rosbag_data->imu_data_.imu_rate_maxMismatch_ = 0.00500019; // set to 0 for now
+  rosbag_data->imu_data_.imu_rate_std_ = 0.00500009;  // set to 0 for now
+  rosbag_data->imu_data_.imu_rate_maxMismatch_ =
+      0.00500019;  // set to 0 for now
 
   // Gyroscope and accelerometer noise parameters
   imuparams->gyro_noise_ = gyro_noise;
@@ -351,7 +349,7 @@ void RosBaseDataProvider::publishState() {
   }
 
   // Linear velocities, trivial values for angular
-  Vector3 velocity_body = pose.rotation().transpose()*velocity;
+  Vector3 velocity_body = pose.rotation().transpose() * velocity;
   odometry_msg.twist.twist.linear.x = velocity_body(0);
   odometry_msg.twist.twist.linear.y = velocity_body(1);
   odometry_msg.twist.twist.linear.z = velocity_body(2);
@@ -457,10 +455,10 @@ void RosBaseDataProvider::publishResiliency() {
   CHECK_EQ(cov_p_eigv.size(), 3);
 
   // Quality statistics to publish
-  resiliency_msg.data.push_back(std::cbrt(cov_p_eigv(0)*
-                    cov_p_eigv(1)*cov_p_eigv(2)));
-  resiliency_msg.data.push_back(std::cbrt(cov_v_eigv(0)*
-                    cov_v_eigv(1)*cov_v_eigv(2)));
+  resiliency_msg.data.push_back(
+      std::cbrt(cov_p_eigv(0) * cov_p_eigv(1) * cov_p_eigv(2)));
+  resiliency_msg.data.push_back(
+      std::cbrt(cov_v_eigv(0) * cov_v_eigv(1) * cov_v_eigv(2)));
   resiliency_msg.data.push_back(debug_tracker_info.nrStereoInliers_);
   resiliency_msg.data.push_back(debug_tracker_info.nrMonoInliers_);
 
@@ -493,8 +491,7 @@ void RosBaseDataProvider::publishImuBias() {
   imu_bias_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
   imu_bias_msg.layout.dim[0].size = 6;
   imu_bias_msg.layout.dim[0].stride = 1;
-  imu_bias_msg.layout.dim[0].label =
-    "Gyro Bias: x,y,z. Accel Bias: x,y,z";
+  imu_bias_msg.layout.dim[0].label = "Gyro Bias: x,y,z. Accel Bias: x,y,z";
 
   // Get Imu Bias to Publish
   imu_bias_msg.data.push_back(gyro_bias[0]);
@@ -508,4 +505,4 @@ void RosBaseDataProvider::publishImuBias() {
   bias_publisher_.publish(imu_bias_msg);
 }
 
-} // namespace VIO
+}  // namespace VIO

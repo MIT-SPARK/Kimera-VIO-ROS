@@ -1,5 +1,5 @@
 /**
- * @file   StereoImageBuffer.h
+ * @file   stereo-image-buffer.h
  * @brief  Stereo Image Buffer for ROS wrapper
  * @author Yun Chang
  */
@@ -12,8 +12,9 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <sensor_msgs/Image.h>
-#include "datasource/DataSource.h"
 #include <common/vio_types.h>
+
+#include "datasource/DataSource.h"
 
 struct StereoPacket {
   VIO::Timestamp timestamp;

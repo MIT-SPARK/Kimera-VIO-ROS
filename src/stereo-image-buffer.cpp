@@ -1,9 +1,9 @@
 /**
- * @file   StereoImageBuffer.cpp
+ * @file   stereo-image-buffer.cpp
  * @brief  Stereo image buffer ROS wrapper
  * @author Yun Chang
  */
-#include "StereoImageBuffer.h"
+#include "spark-vio-ros/stereo-image-buffer.h"
 
 VIO::Timestamp StereoBuffer::getEarliestTimestamp() const {
   return earliest_timestamp_;
