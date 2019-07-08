@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
   // Initialize ROS node
   ros::init(argc, argv, "spark_vio");
 
+  // Create dataset parser.
   std::unique_ptr<VIO::RosBaseDataProvider> dataset_parser;
   if (FLAGS_online_run) {
     // Running ros online.
@@ -46,13 +47,14 @@ int main(int argc, char *argv[]) {
     dataset_parser = VIO::make_unique<VIO::RosbagDataProvider>();
   }
 
+  // Create actual VIO pipeline.
   VIO::Pipeline vio_pipeline(dataset_parser->getParams(), FLAGS_parallel_run);
 
   // Register callback to vio_pipeline.
   dataset_parser->registerVioCallback(
       std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
 
-  //// Spin dataset.
+  // Spin dataset.
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (FLAGS_parallel_run) {
@@ -62,23 +64,20 @@ int main(int argc, char *argv[]) {
     auto handle_pipeline =
         std::async(std::launch::async, &VIO::Pipeline::shutdownWhenFinished,
                    &vio_pipeline);
-    vio_pipeline.spinViz();
+    ros::start();
+    while (ros::ok()) {
+      vio_pipeline.spinViz(false);
+    }
+    ros::shutdown();
+    vio_pipeline.shutdown();
     is_pipeline_successful = handle.get();
     handle_pipeline.get();
   } else {
     is_pipeline_successful = dataset_parser->spin();
   }
   auto spin_duration = VIO::utils::Timer::toc(tic);
-
   LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
-
-  if (is_pipeline_successful) {
-    // Log overall time of pipeline run.
-    VIO::LoggerMatlab logger;
-    logger.openLogFiles(11);
-    logger.logPipelineOverallTiming(spin_duration);
-    logger.closeLogFiles();
-  }
-
+  LOG(INFO) << "Pipeline successful? "
+            << (is_pipeline_successful ? "Yes!" : "No!");
   return is_pipeline_successful ? EXIT_SUCCESS : EXIT_FAILURE;
 }

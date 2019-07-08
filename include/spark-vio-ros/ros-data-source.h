@@ -17,7 +17,7 @@ class RosDataProvider : public RosBaseDataProvider {
  public:
   RosDataProvider();
   virtual ~RosDataProvider();
-  bool spin();
+  virtual bool spin() override;
 
   // Checks the current status of reinitialization flag
   inline bool getReinitFlag() const { return reinit_flag_; }

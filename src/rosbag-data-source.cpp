@@ -43,7 +43,7 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
                                      RosbagData* rosbag_data) {
   // Fill in rosbag to data_
   rosbag::Bag bag;
-  bag.open(bag_path);
+  bag.open(bag_path, rosbag::bagmode::Read);
 
   std::vector<std::string> topics;
   topics.push_back(left_imgs_topic);
@@ -55,7 +55,7 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
       false;  // Keep track of this since cannot process image before imu data
   Timestamp last_imu_timestamp =
       0;  // For some dataset, have duplicated measurements for same time
-  for (rosbag::MessageInstance msg : view) {
+  for (const rosbag::MessageInstance& msg : view) {
     // Get topic.
     const std::string& msg_topic = msg.getTopic();
 
@@ -69,34 +69,41 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
       imu_accgyr(3) = imu_data->angular_velocity.x;
       imu_accgyr(4) = imu_data->angular_velocity.y;
       imu_accgyr(5) = imu_data->angular_velocity.z;
-      Timestamp imu_data_timestamp = imu_data->header.stamp.toNSec();
+      const Timestamp& imu_data_timestamp = imu_data->header.stamp.toNSec();
       if (imu_data_timestamp > last_imu_timestamp) {
         rosbag_data->imu_data_.imu_buffer_.addMeasurement(imu_data_timestamp,
                                                           imu_accgyr);
         last_imu_timestamp = imu_data_timestamp;
+      } else {
+        ROS_FATAL(
+            "IMU timestamps in rosbag are out of order: consider re-ordering "
+            "rosbag.");
       }
       start_parsing_stereo = true;
-    }
-
-    // Check if msg is an image.
-    sensor_msgs::ImageConstPtr img = msg.instantiate<sensor_msgs::Image>();
-    if (img != nullptr) {
-      if (start_parsing_stereo) {
-        // Check left or right image.
-        if (msg_topic == left_imgs_topic) {
-          // Timestamp is in nanoseconds
-          rosbag_data->timestamps_.push_back(img->header.stamp.toNSec());
-          rosbag_data->left_imgs_.push_back(img);
-        } else if (msg_topic == right_imgs_topic) {
-          rosbag_data->right_imgs_.push_back(img);
+    } else {
+      // Check if msg is an image.
+      sensor_msgs::ImageConstPtr img = msg.instantiate<sensor_msgs::Image>();
+      if (img != nullptr) {
+        if (start_parsing_stereo) {
+          // Check left or right image.
+          if (msg_topic == left_imgs_topic) {
+            // Timestamp is in nanoseconds
+            rosbag_data->timestamps_.push_back(img->header.stamp.toNSec());
+            rosbag_data->left_imgs_.push_back(img);
+          } else if (msg_topic == right_imgs_topic) {
+            rosbag_data->right_imgs_.push_back(img);
+          } else {
+            ROS_WARN_STREAM("Img with unexpected topic: " << msg_topic);
+          }
         } else {
-          ROS_WARN_STREAM("Img with unexpected topic: " << msg_topic);
+          ROS_WARN(
+              "Skipping first frame in rosbag, since IMU data not yet "
+              "available.");
         }
-      } else {
-        ROS_WARN("Skipping frame since IMU data not yet available");
       }
     }
   }
+  bag.close();
 
   // Sanity check:
   ROS_ERROR_COND(rosbag_data->left_imgs_.size() == 0 ||
@@ -116,13 +123,11 @@ bool RosbagDataProvider::spin() {
       frontend_params_.getStereoMatchingParams();
 
   for (size_t k = 0; k < rosbag_data_.getNumberOfImages(); k++) {
-    if (ros::ok()) {
+    if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
       // Main spin of the data provider: Interpolates IMU data
       // and builds StereoImuSyncPacket
       // (Think of this as the spin of the other parser/data-providers)
-      Timestamp timestamp_frame_k = rosbag_data_.timestamps_.at(k);
-      // LOG(INFO) << k << " with timestamp: " << timestamp_frame_k;
-
+      const Timestamp& timestamp_frame_k = rosbag_data_.timestamps_.at(k);
       if (timestamp_frame_k > timestamp_last_frame) {
         ImuMeasurements imu_meas;
         utils::ThreadsafeImuBuffer::QueryResult imu_query =
@@ -163,7 +168,6 @@ bool RosbagDataProvider::spin() {
 
           // Publish Output
           publishOutput();
-
           VLOG(10) << "Finished VIO processing for frame k = " << k;
         } else {
           ROS_WARN(
@@ -173,15 +177,18 @@ bool RosbagDataProvider::spin() {
         }
       } else {
         ROS_WARN(
-            "Skipping frame %d. Frame timestamp less than or equal to last "
-            "frame.",
+            "Skipping frame %d. Frame timestamps out of order:"
+            " less than or equal to last frame.",
             static_cast<int>(k));
       }
+      ros::spinOnce();
     } else {
-      break;
+      LOG(ERROR) << "ROS SHUTDOWN requested, stopping rosbag spin.";
+      ros::shutdown();
+      return false;
     }
   }
-
+  LOG(WARNING) << "Rosbag processing finished.";
   return true;
 }
 

@@ -66,6 +66,4 @@
               --parallel_run=$(arg parallel)
               --online_run=$(arg online)"/>
 
-  <!-- launch rviz  -->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find spark_vio_ros)/viz/visualize_sparkvio.rviz" />
 </launch>
