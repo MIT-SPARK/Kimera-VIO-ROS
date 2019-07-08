@@ -61,17 +61,15 @@ int main(int argc, char *argv[]) {
     auto handle =
         std::async(std::launch::async, &VIO::RosBaseDataProvider::spin,
                    std::move(dataset_parser));
-    auto handle_pipeline =
-        std::async(std::launch::async, &VIO::Pipeline::shutdownWhenFinished,
-                   &vio_pipeline);
     ros::start();
-    while (ros::ok()) {
-      vio_pipeline.spinViz(false);
-    }
+    // Run while ROS is ok and vio pipeline is not shutdown.
+    // Ideally make a thread that shutdowns pipeline if ros is not ok.
+    while (ros::ok() && vio_pipeline.spinViz(false)) {
+      continue;
+    };
     ros::shutdown();
     vio_pipeline.shutdown();
     is_pipeline_successful = handle.get();
-    handle_pipeline.get();
   } else {
     is_pipeline_successful = dataset_parser->spin();
   }
