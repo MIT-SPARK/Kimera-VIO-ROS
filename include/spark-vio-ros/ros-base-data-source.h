@@ -2,6 +2,7 @@
  * @file   ros-base-data-source.h
  * @brief  ROS wrapper
  * @author Yun Chang
+ * @author Antoni Rosinol
  */
 
 #pragma once
@@ -42,18 +43,6 @@
 
 namespace VIO {
 
-struct RosbagData {
-  inline size_t getNumberOfImages() const { return left_imgs_.size(); }
-  // The names of the images from left camera
-  std::vector<sensor_msgs::ImageConstPtr> left_imgs_;
-  // The names of the images from right camera
-  std::vector<sensor_msgs::ImageConstPtr> right_imgs_;
-  // Vector of timestamps see issue in .cpp file
-  std::vector<Timestamp> timestamps_;
-  // IMU data
-  ImuData imu_data_;
-};
-
 class RosBaseDataProvider : public DataProvider {
  public:
   RosBaseDataProvider();
@@ -83,9 +72,6 @@ class RosBaseDataProvider : public DataProvider {
 
   // Parse IMU calibration info (for ros online)
   bool parseImuData(ImuData* imudata, ImuParams* imuparams);
-
-  // Parse IMU calibration info (for rosbag)
-  bool parseImuData(RosbagData* rosbag_data, ImuParams* imuparams);
 
   // Publish all outputs by calling individual functions below
   void publishOutput();

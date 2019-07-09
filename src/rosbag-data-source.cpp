@@ -14,13 +14,13 @@ RosbagDataProvider::RosbagDataProvider()
   ROS_INFO("Starting SparkVIO wrapper for offline");
 
   std::string rosbag_path;
-  CHECK(nh_.getParam("rosbag_path", rosbag_path));
+  CHECK(nh_private_.getParam("rosbag_path", rosbag_path));
   std::string left_camera_topic;
-  CHECK(nh_.getParam("left_cam_rosbag_topic", left_camera_topic));
+  CHECK(nh_private_.getParam("left_cam_rosbag_topic", left_camera_topic));
   std::string right_camera_topic;
-  CHECK(nh_.getParam("right_cam_rosbag_topic", right_camera_topic));
+  CHECK(nh_private_.getParam("right_cam_rosbag_topic", right_camera_topic));
   std::string imu_topic;
-  CHECK(nh_.getParam("imu_rosbag_topic", imu_topic));
+  CHECK(nh_private_.getParam("imu_rosbag_topic", imu_topic));
 
   parseImuData(&rosbag_data_, &imu_params_);
 
@@ -189,6 +189,43 @@ bool RosbagDataProvider::spin() {
     }
   }
   LOG(WARNING) << "Rosbag processing finished.";
+  return true;
+}
+
+bool RosbagDataProvider::parseImuData(RosbagData* rosbag_data,
+                                      ImuParams* imuparams) {
+  CHECK_NOTNULL(rosbag_data);
+  CHECK_NOTNULL(imuparams);
+  // Parse IMU calibration info (from param server)
+  double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise,
+      acc_walk;
+
+  std::vector<double> extrinsics;
+
+  CHECK(nh_.getParam("imu_rate_hz", rate));
+  CHECK(nh_.getParam("gyroscope_noise_density", gyro_noise));
+  CHECK(nh_.getParam("gyroscope_random_walk", gyro_walk));
+  CHECK(nh_.getParam("accelerometer_noise_density", acc_noise));
+  CHECK(nh_.getParam("accelerometer_random_walk", acc_walk));
+
+  // TODO: We should probably remove this! This is not parsed in anyway to the
+  // pipeline!!
+  CHECK(nh_.getParam("imu_extrinsics", extrinsics));
+
+  // TODO: Do we need these parameters??
+  rosbag_data->imu_data_.nominal_imu_rate_ = 1.0 / rate;
+  rosbag_data->imu_data_.imu_rate_ = 1.0 / rate;
+  rosbag_data->imu_data_.imu_rate_std_ = 0.00500009;  // set to 0 for now
+  rosbag_data->imu_data_.imu_rate_maxMismatch_ =
+      0.00500019;  // set to 0 for now
+
+  // Gyroscope and accelerometer noise parameters
+  imuparams->gyro_noise_ = gyro_noise;
+  imuparams->gyro_walk_ = gyro_walk;
+  imuparams->acc_noise_ = acc_noise;
+  imuparams->acc_walk_ = acc_walk;
+
+  ROS_INFO("Parsed IMU calibration");
   return true;
 }
 
