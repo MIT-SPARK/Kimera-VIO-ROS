@@ -4,89 +4,72 @@
   <arg name="parallel" default="True" />
   <!-- If False, parses the given rosbag, otw it plays the rosbage -->
   <arg name="online" default="True" />
-
+  <!-- !!!! VIT !!!! This should be true when running online with a rosbag publishing clock,
+  but false when parsing rosbag? Needs rosbag to be publishing clock -->
+  <param name="use_sim_time" value="True"/>
   <arg name="rosbag_path" unless="$(arg online)"/>
-  <!-- Needs rosbag to be publishing clock -->
-  <param name="use_sim_time" value="True" unless="$(arg online)"/>
+
+  <arg name="verbosity" default="0" />
+  <arg name="backend_type" default="1" /> <!-- For regular VIO -->
+  <arg name="visualize" default="False" /> <!-- Note that this is duplicated from the flags file -->
 
   <!-- Each dataset has its own set of parameter files -->
-  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
+  <arg name="params_folder" value="$(find spark_vio_ros)/param/$(arg dataset_name)"/>
+  <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/>
 
   <!-- Resiliency Thresholds: TODO(Sandro) document -->
-  <param name="velocity_det_threshold" value="0.1" />
-  <param name="position_det_threshold" value="0.3" />
-  <param name="stereo_ransac_threshold" value="20" />
-  <param name="mono_ransac_threshold" value="30" />
+  <param name="velocity_det_threshold"  value="0.1"/>
+  <param name="position_det_threshold"  value="0.3"/>
+  <param name="stereo_ransac_threshold" value="20"/>
+  <param name="mono_ransac_threshold"   value="30"/>
 
-    <!-- More parameter arguments -->
-    <arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
-    <arg name="TRACKER_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/trackerParameters.yaml" />
-    <param name="tracker_params_filepath" value="$(arg TRACKER_PARAMS_PATH)" />
-    <param name="vio_params_filepath" value="$(arg VIO_PARAMS_PATH)" />
+  <!-- TF from IMU to Cam0 for Euroc -->
+  <arg name="left_cam_frame_id"  default="cam0"/>
+  <node pkg="tf" type="static_transform_publisher" name="left_cam_broadcaster"
+  args="-0.0216401454975 -0.064676986768 0.00981073058949
+  -0.0077071797555374275 0.010499323370587278 0.7017528002919717 0.7123014606689537 base_link $(arg left_cam_frame_id) 100"/>
 
-    <arg name="VIO_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/StereoVIO.flags" />
-    <arg name="MESHER_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Mesher.flags" />
-    <arg name="BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/VioBackEnd.flags" />
-    <arg name="REGULAR_BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/RegularVioBackEnd.flags" />
-    <arg name="VISUALIZER_FLAGS" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Visualizer3D.flags" />
+  <!-- Launch main node  -->
+  <node name="spark_vio_ros" pkg="spark_vio_ros" type="spark_vio_ros" output="screen"
+  args="--vio_params_path=$(arg params_folder)/regularVioParameters.yaml
+        --tracker_params_path=$(arg params_folder)/trackerParameters.yaml
+        --flagfile=$(arg params_folder)/flags/StereoVIO.flags
+        --flagfile=$(arg params_folder)/flags/Mesher.flags
+        --flagfile=$(arg params_folder)/flags/VioBackEnd.flags
+        --flagfile=$(arg params_folder)/flags/RegularVioBackEnd.flags
+        --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+        --logtostderr=1
+        --colorlogtostderr=1
+        --log_prefix=1
+        --v=$(arg verbosity)
+        --backend_type=$(arg backend_type)
+        --log_output=False
+        --output_path='.'
+        --visualize=$(arg visualize)
+        --parallel_run=$(arg parallel)
+        --online_run=$(arg online)">
+    <!-- Frame IDs for Odometry -->
+    <param name="world_frame_id"     value="world"/>
+    <param name="base_link_frame_id" value="base_link"/>
 
-    <arg name="VERBOSITY" default="0" />
-    <arg name="BACKEND_TYPE" default="1" /> <!-- For regular VIO -->
-    <arg name="LOG_OUTPUT" default="False" />
-    <arg name="OUTPUT_PATH" default="./" />
-    <arg name="VISUALIZE" default="True" /> <!-- Note that this is duplicated from the flags file -->
+    <!-- Subscriber topics -->
+    <!-- if we run online, use remap -->
+    <remap from="left_cam"  to="/cam0/image_raw" if="$(arg online)"/>
+    <remap from="right_cam" to="/cam1/image_raw" if="$(arg online)"/>
+    <remap from="imu"       to="/imu0"           if="$(arg online)"/>
+    <!-- if we run offline, use params -->
+    <param name="rosbag_path"            value="$(arg rosbag_path)" unless="$(arg online)"/>
+    <param name="left_cam_rosbag_topic"  value="/cam0/image_raw"    unless="$(arg online)"/>
+    <param name="right_cam_rosbag_topic" value="/cam1/image_raw"    unless="$(arg online)"/>
+    <param name="imu_rosbag_topic"       value="/imu0"              unless="$(arg online)"/>
 
-    <!-- Define Frame IDs -->
-    <arg name="world_frame_id"     default="world"/>
-    <arg name="base_link_frame_id" default="base_link"/>
-    <arg name="left_cam_frame_id"  default="cam0"/>
+    <!-- Other subscription topics -->
+    <remap from="reinit_flag" to="/sparkvio/reinit_flag"/>
+    <remap from="reinit_pose" to="/sparkvio/reinit_pose"/>
 
-    <!-- Launch main node  -->
-    <node name="spark_vio_ros" pkg="spark_vio_ros" type="spark_vio_ros" output="screen"
-    args="--logtostderr=1
-          --colorlogtostderr=1
-          --log_prefix=1
-          --vio_params_path=$(arg VIO_PARAMS_PATH)
-          --tracker_params_path=$(arg TRACKER_PARAMS_PATH)
-          --flagfile=$(arg VIO_FLAGS_PATH)
-          --flagfile=$(arg MESHER_FLAGS_PATH)
-          --flagfile=$(arg BACKEND_FLAGS_PATH)
-          --flagfile=$(arg REGULAR_BACKEND_FLAGS_PATH)
-          --flagfile=$(arg VISUALIZER_FLAGS)
-          --v=$(arg VERBOSITY)
-          --backend_type=$(arg BACKEND_TYPE)
-          --log_output=$(arg LOG_OUTPUT)
-          --output_path=$(arg OUTPUT_PATH)
-          --visualize=$(arg VISUALIZE)
-          --parallel_run=$(arg parallel)
-          --online_run=$(arg online)">
-      <!-- Frame IDs for Odometry -->
-      <param name="world_frame_id" value="$(arg world_frame_id)" />
-      <param name="base_link_frame_id" value="$(arg base_link_frame_id)" />
-
-      <!-- Subscriber topics -->
-      <!-- if we run online, use remap -->
-      <remap from="left_cam"  to="/cam0/image_raw" if="$(arg online)"/>
-      <remap from="right_cam" to="/cam1/image_raw" if="$(arg online)"/>
-      <remap from="imu"       to="/imu0"           if="$(arg online)"/>
-      <!-- if we run offline, use params -->
-      <param name="rosbag_path"            value="$(arg rosbag_path)" unless="$(arg online)"/>
-      <param name="left_cam_rosbag_topic"  value="/cam0/image_raw"    unless="$(arg online)"/>
-      <param name="right_cam_rosbag_topic" value="/cam1/image_raw"    unless="$(arg online)"/>
-      <param name="imu_rosbag_topic"       value="/imu0"              unless="$(arg online)"/>
-
-      <!-- Other subscription topics -->
-      <remap from="reinit_flag" to="/sparkvio/reinit_flag"/>
-      <remap from="reinit_pose" to="/sparkvio/reinit_pose"/>
-
-      <!-- Remap publisher topics -->
-      <remap from="odometry"   to="/sparkvio/odometry"/>
-      <remap from="resiliency" to="/sparkvio/resiliency"/>
-      <remap from="imu_bias"   to="/sparkvio/imu_bias"/>
-    </node>
-
- <!-- TF from IMU to Cam0: the actual data below, transformed to quaternion in static tf pub -->
- <node pkg="tf" type="static_transform_publisher" name="left_cam_broadcaster"
-   args="-0.0216401454975 -0.064676986768 0.00981073058949
-  -0.0077071797555374275 0.010499323370587278 0.7017528002919717 0.7123014606689537 $(arg base_link_frame_id) $(arg left_cam_frame_id) 100"/>
+    <!-- Remap publisher topics -->
+    <remap from="odometry"   to="/sparkvio/odometry"/>
+    <remap from="resiliency" to="/sparkvio/resiliency"/>
+    <remap from="imu_bias"   to="/sparkvio/imu_bias"/>
+  </node>
 </launch>
