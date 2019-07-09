@@ -14,7 +14,7 @@
 namespace VIO {
 
 RosBaseDataProvider::RosBaseDataProvider()
-    : DataProvider(), stereo_calib_(), vio_output_() {
+    : DataProvider(), stereo_calib_(), vio_output_(), nh_(), nh_private_("~") {
   ROS_INFO(">>>>>>> Initializing Spark-VIO-ROS <<<<<<<");
 
   // Parse calibration info for camera and IMU
@@ -22,8 +22,8 @@ RosBaseDataProvider::RosBaseDataProvider()
   parseCameraData(&stereo_calib_);
 
   // Start odometry publisher
-  CHECK(nh_.getParam("odom_base_frame_id", odom_base_frame_id_));
-  CHECK(nh_.getParam("odom_child_frame_id", odom_child_frame_id_));
+  CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id));
+  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
   odom_publisher_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
 
   // Start frontend stats publisher
@@ -303,31 +303,27 @@ void RosBaseDataProvider::publishOutput() {
 }
 
 void RosBaseDataProvider::publishState() {
-  // Get latest estimates for odometry
-  gtsam::Pose3 pose = vio_output_.getEstimatedPose();
-  gtsam::Vector3 velocity = vio_output_.getEstimatedVelocity();
-  Timestamp ts = vio_output_.getTimestamp();
-  gtsam::Matrix6 pose_cov = vio_output_.getEstimatedPoseCov();
-  gtsam::Matrix3 vel_cov = vio_output_.getEstimatedVelCov();
+  // Get latest estimates for odometry.
+  const gtsam::Pose3& pose = vio_output_.getEstimatedPose();
+  const gtsam::Vector3& velocity = vio_output_.getEstimatedVelocity();
+  const Timestamp& ts = vio_output_.getTimestamp();
+  const gtsam::Matrix6& pose_cov = vio_output_.getEstimatedPoseCov();
+  const gtsam::Matrix3& vel_cov = vio_output_.getEstimatedVelCov();
 
   // First publish odometry estimate
   nav_msgs::Odometry odometry_msg;
 
-  long int sec = ts / 1e9;
-  long int nsec = ts - sec * 1e9;
+  // Create header.
+  odometry_msg.header.stamp.fromNSec(ts);
+  odometry_msg.header.frame_id = world_frame_id_;
+  odometry_msg.child_frame_id = base_link_frame_id;
 
-  // create header
-  odometry_msg.header.stamp.sec = sec;
-  odometry_msg.header.stamp.nsec = nsec;
-  odometry_msg.header.frame_id = odom_base_frame_id_;
-  odometry_msg.child_frame_id = odom_child_frame_id_;
-
-  // position
+  // Position
   odometry_msg.pose.pose.position.x = pose.x();
   odometry_msg.pose.pose.position.y = pose.y();
   odometry_msg.pose.pose.position.z = pose.z();
 
-  // orientation
+  // Orientation
   odometry_msg.pose.pose.orientation.w = pose.rotation().toQuaternion().w();
   odometry_msg.pose.pose.orientation.x = pose.rotation().toQuaternion().x();
   odometry_msg.pose.pose.orientation.y = pose.rotation().toQuaternion().y();
@@ -335,11 +331,12 @@ void RosBaseDataProvider::publishState() {
 
   // Remap covariance from GTSAM convention
   // to odometry convention and fill in covariance
-  std::vector<int> remapping{3, 4, 5, 0, 1, 2};
+  static const std::vector<int> remapping{3, 4, 5, 0, 1, 2};
+
   // Position covariance first, angular covariance after
-  CHECK_EQ(pose_cov.rows(), remapping.size());
-  CHECK_EQ(pose_cov.rows() * pose_cov.cols(),
-           odometry_msg.pose.covariance.size());
+  DCHECK_EQ(pose_cov.rows(), remapping.size());
+  DCHECK_EQ(pose_cov.rows() * pose_cov.cols(),
+            odometry_msg.pose.covariance.size());
   for (int i = 0; i < pose_cov.rows(); i++) {
     for (int j = 0; j < pose_cov.cols(); j++) {
       odometry_msg.pose
@@ -349,18 +346,18 @@ void RosBaseDataProvider::publishState() {
   }
 
   // Linear velocities, trivial values for angular
-  Vector3 velocity_body = pose.rotation().transpose() * velocity;
+  const Vector3 velocity_body = pose.rotation().transpose() * velocity;
   odometry_msg.twist.twist.linear.x = velocity_body(0);
   odometry_msg.twist.twist.linear.y = velocity_body(1);
   odometry_msg.twist.twist.linear.z = velocity_body(2);
 
   // Velocity covariance: first linear
   // and then angular (trivial values for angular)
-  gtsam::Matrix3 vel_cov_body =
+  const gtsam::Matrix3 vel_cov_body =
       pose.rotation().transpose().matrix() * vel_cov * pose.rotation().matrix();
-  CHECK_EQ(vel_cov_body.rows(), 3);
-  CHECK_EQ(vel_cov_body.cols(), 3);
-  CHECK_EQ(odometry_msg.twist.covariance.size(), 36);
+  DCHECK_EQ(vel_cov_body.rows(), 3);
+  DCHECK_EQ(vel_cov_body.cols(), 3);
+  DCHECK_EQ(odometry_msg.twist.covariance.size(), 36);
   for (int i = 0; i < vel_cov_body.rows(); i++) {
     for (int j = 0; j < vel_cov_body.cols(); j++) {
       odometry_msg.twist
@@ -375,7 +372,7 @@ void RosBaseDataProvider::publishState() {
   // Publish base_link TF.
   geometry_msgs::TransformStamped odom_tf;
   odom_tf.header = odometry_msg.header;
-  odom_tf.child_frame_id = odom_child_frame_id_;
+  odom_tf.child_frame_id = base_link_frame_id;
 
   odom_tf.transform.translation.x = pose.x();
   odom_tf.transform.translation.y = pose.y();

@@ -4,6 +4,7 @@
   <arg name="parallel" default="True" />
   <!-- If False, parses the given rosbag, otw it plays the rosbage -->
   <arg name="online" default="True" />
+  <param name="use_sim_time" value="True" />
 
   <!-- Each dataset has its own set of parameter files -->
   <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
@@ -34,6 +35,10 @@
     <arg name="VISUALIZE" default="False" /> <!-- Note that this is duplicated from the flags file -->
 
     <!-- Launch main node  -->
+    <arg name="world_frame_id"     default="world"/>
+    <arg name="base_link_frame_id" default="base_link"/>
+    <arg name="left_cam_frame_id"  default="cam0"/>
+    <arg name="right_cam_frame_id" default="cam1"/>
     <node name="spark_vio_ros" pkg="spark_vio_ros" type="spark_vio_ros" output="screen"
     args="--logtostderr=1
           --colorlogtostderr=1
@@ -58,8 +63,8 @@
       <remap from="imu" to="/imu0"/>
 
       <!-- Frame IDs for Odometry -->
-      <param name="odom_base_frame_id" value="world" />
-      <param name="odom_child_frame_id" value="base_link" />
+      <param name="world_frame_id" value="$(arg world_frame_id)" />
+      <param name="base_link_frame_id" value="$(arg base_link_frame_id)" />
 
       <!-- Remap subscriber topics -->
       <remap from="reinit_flag" to="/sparkvio/reinit_flag"/>
@@ -70,4 +75,22 @@
       <remap from="resiliency" to="/sparkvio/resiliency"/>
       <remap from="imu_bias" to="/sparkvio/imu_bias"/>
     </node>
+
+
+    <!-- TF from IMU to Cam0: the actual data below, transformed to quaternion in static tf pub
+# actually T_I_C (B = I) for cam0
+T_B_C:
+ - [0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975]
+ - [0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768]
+ - [-0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949]
+ - [0.0, 0.0, 0.0, 1.0]
+-->
+ <node pkg="tf" type="static_transform_publisher" name="left_cam_broadcaster"
+   args="-0.0216401454975 -0.064676986768 0.00981073058949
+  -0.0077071797555374275 0.010499323370587278 0.7017528002919717 0.7123014606689537 $(arg base_link_frame_id) $(arg left_cam_frame_id) 100" />
+
+<!-- TODO fix, already published by dense stereo-->
+<!--
+    <node pkg="tf" type="static_transform_publisher" name="right_cam_broadcaster" args="1 0 0 0 0 0 1 $(arg left_cam_frame_id) $(arg right_cam_frame_id) 100" />
+-->
 </launch>

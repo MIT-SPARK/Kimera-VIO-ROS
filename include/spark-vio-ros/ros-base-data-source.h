@@ -62,6 +62,7 @@ class RosBaseDataProvider : public DataProvider {
  protected:
   // Define Node Handler for general use (Parameter server)
   ros::NodeHandle nh_;
+  ros::NodeHandle nh_private_;
 
   // Stereo info
   struct StereoCalibration {
@@ -117,8 +118,8 @@ class RosBaseDataProvider : public DataProvider {
   tf::TransformBroadcaster odom_broadcaster_;
 
   // Define frame ids for odometry message
-  std::string odom_base_frame_id_;
-  std::string odom_child_frame_id_;
+  std::string world_frame_id_;
+  std::string base_link_frame_id;
 
  protected:
   VioFrontEndParams frontend_params_;
