@@ -89,11 +89,11 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
 
   // Rate
   double rate;
-  nh_.getParam("camera_rate_hz", rate);
+  nh_private_.getParam("camera_rate_hz", rate);
 
   // Resoltuion
   std::vector<int> resolution;
-  nh_.getParam("camera_resolution", resolution);
+  nh_private_.getParam("camera_resolution", resolution);
 
   // Get distortion/intrinsics/extrinsics for each camera
   for (int i = 0; i < 2; i++) {
@@ -111,7 +111,7 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     }
     // Parse intrinsics (camera matrix)
     std::vector<double> intrinsics;
-    nh_.getParam(camera_name + "intrinsics", intrinsics);
+    nh_private_.getParam(camera_name + "intrinsics", intrinsics);
     camera_param_i.intrinsics_ = intrinsics;
     // Conver intrinsics to camera matrix (OpenCV format)
     camera_param_i.camera_matrix_ = cv::Mat::eye(3, 3, CV_64F);
@@ -124,8 +124,8 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     std::vector<double> extrinsics;
     // Encode calibration frame to body frame
     std::vector<double> frame_change;
-    CHECK(nh_.getParam(camera_name + "extrinsics", extrinsics));
-    CHECK(nh_.getParam("calibration_to_body_frame", frame_change));
+    CHECK(nh_private_.getParam(camera_name + "extrinsics", extrinsics));
+    CHECK(nh_private_.getParam("calibration_to_body_frame", frame_change));
     // Place into matrix
     // 4 4 is hardcoded here because currently only accept extrinsic input
     // in homoegeneous format [R T ; 0 1]
@@ -155,12 +155,12 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
 
     // Distortion model
     std::string distortion_model;
-    nh_.getParam("distortion_model", distortion_model);
+    nh_private_.getParam("distortion_model", distortion_model);
     camera_param_i.distortion_model_ = distortion_model;
 
     // Parse distortion
     std::vector<double> d_coeff;
-    nh_.getParam(camera_name + "distortion_coefficients", d_coeff);
+    nh_private_.getParam(camera_name + "distortion_coefficients", d_coeff);
     cv::Mat distortion_coeff;
 
     switch (d_coeff.size()) {
@@ -226,13 +226,13 @@ bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
 
   std::vector<double> extrinsics;
 
-  CHECK(nh_.getParam("imu_rate_hz", rate));
-  CHECK(nh_.getParam("gyroscope_noise_density", gyro_noise));
-  CHECK(nh_.getParam("gyroscope_random_walk", gyro_walk));
-  CHECK(nh_.getParam("accelerometer_noise_density", acc_noise));
-  CHECK(nh_.getParam("accelerometer_random_walk", acc_walk));
-  CHECK(nh_.getParam("imu_extrinsics", extrinsics));
-  CHECK(nh_.getParam("imu_shift", imu_shift));
+  CHECK(nh_private_.getParam("imu_rate_hz", rate));
+  CHECK(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
+  CHECK(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
+  CHECK(nh_private_.getParam("accelerometer_noise_density", acc_noise));
+  CHECK(nh_private_.getParam("accelerometer_random_walk", acc_walk));
+  CHECK(nh_private_.getParam("imu_extrinsics", extrinsics));
+  CHECK(nh_private_.getParam("imu_shift", imu_shift));
 
   // TODO(Sandro): Do we need these parameters??
   imudata->nominal_imu_rate_ = 1.0 / rate;
@@ -426,10 +426,11 @@ void RosBaseDataProvider::publishResiliency() {
   // Publish thresholds for statistics
   float pos_det_threshold, vel_det_threshold;
   int mono_ransac_theshold, stereo_ransac_threshold;
-  CHECK(nh_.getParam("velocity_det_threshold", vel_det_threshold));
-  CHECK(nh_.getParam("position_det_threshold", pos_det_threshold));
-  CHECK(nh_.getParam("stereo_ransac_threshold", stereo_ransac_threshold));
-  CHECK(nh_.getParam("mono_ransac_threshold", mono_ransac_theshold));
+  CHECK(nh_private_.getParam("velocity_det_threshold", vel_det_threshold));
+  CHECK(nh_private_.getParam("position_det_threshold", pos_det_threshold));
+  CHECK(
+      nh_private_.getParam("stereo_ransac_threshold", stereo_ransac_threshold));
+  CHECK(nh_private_.getParam("mono_ransac_threshold", mono_ransac_theshold));
   resiliency_msg.data.push_back(pos_det_threshold);
   resiliency_msg.data.push_back(vel_det_threshold);
   resiliency_msg.data.push_back(stereo_ransac_threshold);

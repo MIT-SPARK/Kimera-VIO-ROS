@@ -202,15 +202,15 @@ bool RosbagDataProvider::parseImuData(RosbagData* rosbag_data,
 
   std::vector<double> extrinsics;
 
-  CHECK(nh_.getParam("imu_rate_hz", rate));
-  CHECK(nh_.getParam("gyroscope_noise_density", gyro_noise));
-  CHECK(nh_.getParam("gyroscope_random_walk", gyro_walk));
-  CHECK(nh_.getParam("accelerometer_noise_density", acc_noise));
-  CHECK(nh_.getParam("accelerometer_random_walk", acc_walk));
+  CHECK(nh_private_.getParam("imu_rate_hz", rate));
+  CHECK(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
+  CHECK(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
+  CHECK(nh_private_.getParam("accelerometer_noise_density", acc_noise));
+  CHECK(nh_private_.getParam("accelerometer_random_walk", acc_walk));
 
   // TODO: We should probably remove this! This is not parsed in anyway to the
   // pipeline!!
-  CHECK(nh_.getParam("imu_extrinsics", extrinsics));
+  CHECK(nh_private_.getParam("imu_extrinsics", extrinsics));
 
   // TODO: Do we need these parameters??
   rosbag_data->imu_data_.nominal_imu_rate_ = 1.0 / rate;

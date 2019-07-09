@@ -1,2 +1,89 @@
 <launch>
+  <!-- General spark vio ros launch file. Change arguments in your own launch
+  file and include this one to launch spark vio on the dataset of your choice -->
+  <arg name="dataset_name" default="EuRoC"/>
+  <!-- If you want to run the pipeline in parallel vs sequential mode -->
+  <arg name="parallel" default="true" />
+  <!-- If False, parses the given rosbag, otw it plays the rosbage -->
+  <arg name="online" default="true" />
+  <!-- !!!! VIT !!!! This should be true when running online with a rosbag publishing clock,
+  but false when parsing rosbag? Needs rosbag to be publishing clock -->
+  <param name="use_sim_time" value="true"/>
+  <arg name="rosbag_path" unless="$(arg online)"/>
+
+  <!-- Parameters -->
+  <!-- each dataset has its own set of parameter files -->
+  <!-- the parameters are set in param folder, ordered by the dataset's name -->
+  <arg name="params_folder" value="$(find spark_vio_ros)/param/$(arg dataset_name)"/>
+
+  <!-- Subscribed Topics -->
+  <arg name="left_cam_topic"  default="/cam0/image_raw"/>
+  <arg name="right_cam_topic" default="/cam1/image_raw"/>
+  <arg name="imu_topic"       default="/imu0"/>
+
+  <!-- Frame IDs -->
+  <arg name="world_frame_id"     default="world"/>
+  <arg name="base_link_frame_id" default="base_link"/>
+
+  <!-- General parameters -->
+  <arg name="verbosity"    default="0" />
+  <!-- 0: for vanilla VIO, 1: for regular VIO -->
+  <arg name="backend_type" default="1" />
+  <!-- Visualize pipeline output in OpenCV. -->
+  <!-- Note that this is duplicated from the flags file -->
+  <arg name="visualize"    default="false" />
+
+  <!-- Launch main node  -->
+  <node name="spark_vio_ros" pkg="spark_vio_ros" type="spark_vio_ros" output="screen"
+  args="--vio_params_path=$(arg params_folder)/regularVioParameters.yaml
+        --tracker_params_path=$(arg params_folder)/trackerParameters.yaml
+        --flagfile=$(arg params_folder)/flags/StereoVIO.flags
+        --flagfile=$(arg params_folder)/flags/Mesher.flags
+        --flagfile=$(arg params_folder)/flags/VioBackEnd.flags
+        --flagfile=$(arg params_folder)/flags/RegularVioBackEnd.flags
+        --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+        --logtostderr=1
+        --colorlogtostderr=1
+        --log_prefix=1
+        --v=$(arg verbosity)
+        --backend_type=$(arg backend_type)
+        --log_output=0
+        --output_path='.'
+        --visualize=$(arg visualize)
+        --parallel_run=$(arg parallel)
+        --online_run=$(arg online)">
+    <!-- Frame IDs for Odometry -->
+    <param name="world_frame_id"     value="$(arg world_frame_id)"/>
+    <param name="base_link_frame_id" value="$(arg base_link_frame_id)"/>
+
+    <!-- Subscriber topics -->
+    <!-- if we run online, use remap -->
+    <remap from="left_cam"  to="$(arg left_cam_topic)"  if="$(arg online)"/>
+    <remap from="right_cam" to="$(arg right_cam_topic)" if="$(arg online)"/>
+    <remap from="imu"       to="$(arg imu_topic)"       if="$(arg online)"/>
+    <!-- if we run offline, use params -->
+    <param name="rosbag_path"            value="$(arg rosbag_path)"     unless="$(arg online)"/>
+    <param name="left_cam_rosbag_topic"  value="$(arg left_cam_topic)"  unless="$(arg online)"/>
+    <param name="right_cam_rosbag_topic" value="$(arg right_cam_topic)" unless="$(arg online)"/>
+    <param name="imu_rosbag_topic"       value="$(arg imu_topic)"       unless="$(arg online)"/>
+
+    <!-- Other subscription topics -->
+    <remap from="reinit_flag" to="/sparkvio/reinit_flag"/>
+    <remap from="reinit_pose" to="/sparkvio/reinit_pose"/>
+
+    <!-- Remap publisher topics -->
+    <remap from="odometry"   to="/sparkvio/odometry"/>
+    <remap from="resiliency" to="/sparkvio/resiliency"/>
+    <remap from="imu_bias"   to="/sparkvio/imu_bias"/>
+
+    <!-- Resiliency Thresholds: TODO(Sandro) document -->
+    <param name="velocity_det_threshold"  value="0.1"/>
+    <param name="position_det_threshold"  value="0.3"/>
+    <param name="stereo_ransac_threshold" value="20"/>
+    <param name="mono_ransac_threshold"   value="30"/>
+
+    <!-- Load calibration -->
+    <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/>
+
+  </node>
 </launch>
