@@ -12,8 +12,6 @@ cs_add_executable(${PROJECT_NAME}
   src/ros-data-source.cpp
   src/stereo-image-buffer.cpp)
 target_link_libraries(${PROJECT_NAME} SparkVio)
-# Set the C++ standard based on features... rather than like this.
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_14)
 
 cs_install()
 
