@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file   ros-base-data-source.cpp
  * @brief  ROS wrapper......TODO
  * @author Yun Chang
@@ -10,33 +10,49 @@
 #include <string>
 #include <vector>
 
+#include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <nav_msgs/Odometry.h>
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/image_encodings.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/Float64MultiArray.h>
+
+//#include <pcl_conversions/pcl_conversions.h>
+//#include <pcl_msgs/PolygonMesh.h>
+//#include <pcl_ros/point_cloud.h>
 
 namespace VIO {
 
 RosBaseDataProvider::RosBaseDataProvider()
-    : DataProvider(), stereo_calib_(), vio_output_(), nh_(), nh_private_("~") {
+    : DataProvider(),
+      it_(nullptr),
+      stereo_calib_(),
+      vio_output_(),
+      nh_(),
+      nh_private_("~"),
+      vio_output_queue_("VIO output") {
   ROS_INFO(">>>>>>> Initializing Spark-VIO-ROS <<<<<<<");
 
   // Parse calibration info for camera and IMU
   // Calibration info on parameter server (Parsed from yaml)
   parseCameraData(&stereo_calib_);
 
-  // Start odometry publisher
-  CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id));
-  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
-  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
+  it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
 
-  // Start frontend stats publisher
+  // Get ROS params
+  CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
+  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
+
+  // Publishers
+  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
   frontend_stats_publisher_ =
       nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 10);
-
-  // Start resiliency publisher
   resil_publisher_ =
       nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 10);
-
-  // Start imu bias publisher
   bias_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 10);
+  // mesh_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5);
+  debug_img_pub_ = it_->advertise("debug_mesh_img", 10);
 }
 
 RosBaseDataProvider::~RosBaseDataProvider() {}
@@ -252,27 +268,51 @@ bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
   return true;
 }
 
-void RosBaseDataProvider::publishOutput() {
-  // Publish Output
-  publishState();
+void RosBaseDataProvider::publishOutput(const SpinOutputPacket& vio_output) {
+  // Publish VIO state
+  publishState(vio_output);
+
+  // Publish 2d mesh debug image
+  publishDebugImage(vio_output.getTimestamp(), vio_output.mesh_2d_img_);
 
   // Publish Frontend Stats
-  publishFrontendStats();
+  publishFrontendStats(vio_output);
 
   // Publish Resiliency
-  publishResiliency();
+  publishResiliency(vio_output);
 
   // Publish imu bias
-  publishImuBias();
+  publishImuBias(vio_output);
 }
 
-void RosBaseDataProvider::publishState() {
+void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
+                                            const cv::Mat& debug_image) {
+  // CHECK(debug_image.type(), CV_8UC1);
+  std_msgs::Header h;
+  h.stamp.fromNSec(timestamp);
+  h.frame_id = base_link_frame_id_;
+  sensor_msgs::ImagePtr msg =
+      cv_bridge::CvImage(h, "bgr8", debug_image).toImageMsg();  // Copies...
+  debug_img_pub_.publish(msg);
+}
+
+void RosBaseDataProvider::publishMesh3D(const SpinOutputPacket& vio_output) {
+  LOG(ERROR) << "WTF with the duck";
+  const Mesh2D& mesh_2d = vio_output.mesh_2d_;
+  const Mesh3D& mesh_3d = vio_output.mesh_3d_;
+  size_t number_mesh_2d_polygons = mesh_2d.getNumberOfPolygons();
+  size_t mesh_2d_poly_dim = mesh_2d.getMeshPolygonDimension();
+
+}  // namespace VIO
+
+void RosBaseDataProvider::publishState(const SpinOutputPacket& vio_output) {
+  LOG(ERROR) << "Received outptu!";
   // Get latest estimates for odometry.
-  const gtsam::Pose3& pose = vio_output_.getEstimatedPose();
-  const gtsam::Vector3& velocity = vio_output_.getEstimatedVelocity();
-  const Timestamp& ts = vio_output_.getTimestamp();
-  const gtsam::Matrix6& pose_cov = vio_output_.getEstimatedPoseCov();
-  const gtsam::Matrix3& vel_cov = vio_output_.getEstimatedVelCov();
+  const gtsam::Pose3& pose = vio_output.getEstimatedPose();
+  const gtsam::Vector3& velocity = vio_output.getEstimatedVelocity();
+  const Timestamp& ts = vio_output.getTimestamp();
+  const gtsam::Matrix6& pose_cov = vio_output.getEstimatedPoseCov();
+  const gtsam::Matrix3& vel_cov = vio_output.getEstimatedVelCov();
 
   // First publish odometry estimate
   nav_msgs::Odometry odometry_msg;
@@ -280,7 +320,7 @@ void RosBaseDataProvider::publishState() {
   // Create header.
   odometry_msg.header.stamp.fromNSec(ts);
   odometry_msg.header.frame_id = world_frame_id_;
-  odometry_msg.child_frame_id = base_link_frame_id;
+  odometry_msg.child_frame_id = base_link_frame_id_;
 
   // Position
   odometry_msg.pose.pose.position.x = pose.x();
@@ -336,7 +376,7 @@ void RosBaseDataProvider::publishState() {
   // Publish base_link TF.
   geometry_msgs::TransformStamped odom_tf;
   odom_tf.header = odometry_msg.header;
-  odom_tf.child_frame_id = base_link_frame_id;
+  odom_tf.child_frame_id = base_link_frame_id_;
 
   odom_tf.transform.translation.x = pose.x();
   odom_tf.transform.translation.y = pose.y();
@@ -345,9 +385,10 @@ void RosBaseDataProvider::publishState() {
   odom_broadcaster_.sendTransform(odom_tf);
 }
 
-void RosBaseDataProvider::publishFrontendStats() {
+void RosBaseDataProvider::publishFrontendStats(
+    const SpinOutputPacket& vio_output) const {
   // Get frontend data for resiliency output
-  DebugTrackerInfo debug_tracker_info = vio_output_.getTrackerInfo();
+  DebugTrackerInfo debug_tracker_info = vio_output.getTrackerInfo();
 
   // Create message type
   std_msgs::Float64MultiArray frontend_stats_msg;
@@ -379,11 +420,12 @@ void RosBaseDataProvider::publishFrontendStats() {
   frontend_stats_publisher_.publish(frontend_stats_msg);
 }
 
-void RosBaseDataProvider::publishResiliency() {
+void RosBaseDataProvider::publishResiliency(
+    const SpinOutputPacket& vio_output) const {
   // Get frontend and velocity covariance data for resiliency output
-  DebugTrackerInfo debug_tracker_info = vio_output_.getTrackerInfo();
-  gtsam::Matrix3 vel_cov = vio_output_.getEstimatedVelCov();
-  gtsam::Matrix6 pose_cov = vio_output_.getEstimatedPoseCov();
+  DebugTrackerInfo debug_tracker_info = vio_output.getTrackerInfo();
+  gtsam::Matrix3 vel_cov = vio_output.getEstimatedVelCov();
+  gtsam::Matrix6 pose_cov = vio_output.getEstimatedPoseCov();
 
   // Create message type for quality of SparkVIO
   std_msgs::Float64MultiArray resiliency_msg;
@@ -440,9 +482,10 @@ void RosBaseDataProvider::publishResiliency() {
   resil_publisher_.publish(resiliency_msg);
 }
 
-void RosBaseDataProvider::publishImuBias() {
+void RosBaseDataProvider::publishImuBias(
+    const SpinOutputPacket& vio_output) const {
   // Get imu bias to output
-  ImuBias imu_bias = vio_output_.getEstimatedBias();
+  ImuBias imu_bias = vio_output.getEstimatedBias();
   Vector3 accel_bias = imu_bias.accelerometer();
   Vector3 gyro_bias = imu_bias.gyroscope();
 
@@ -465,6 +508,16 @@ void RosBaseDataProvider::publishImuBias() {
 
   // Publish Message
   bias_publisher_.publish(imu_bias_msg);
+}
+
+// VIO output callback at keyframe rate
+void RosBaseDataProvider::callbackKeyframeRateVioOutput(
+    const SpinOutputPacket& vio_output) {
+  // The code here should be lighting fast or we will be blocking the backend
+  // thread in the VIO. This is actually running in the backend thread, as such
+  // do not modify things other than thread-safe stuff.
+  LOG(ERROR) << "callback keyframe rate vio output!";
+  vio_output_queue_.push(vio_output);
 }
 
 }  // namespace VIO

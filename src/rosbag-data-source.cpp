@@ -7,6 +7,8 @@
 
 #include "spark-vio-ros/rosbag-data-source.h"
 
+#include <sensor_msgs/Imu.h>
+
 namespace VIO {
 
 RosbagDataProvider::RosbagDataProvider()
@@ -156,7 +158,8 @@ bool RosbagDataProvider::spin() {
 
           timestamp_last_frame = timestamp_frame_k;
 
-          vio_output_ = vio_callback_(StereoImuSyncPacket(
+          // Publish Output
+          vio_callback_(StereoImuSyncPacket(
               StereoFrame(k, timestamp_frame_k,
                           readRosImage(rosbag_data_.left_imgs_.at(k)),
                           stereo_calib_.left_camera_info_,
@@ -165,9 +168,6 @@ bool RosbagDataProvider::spin() {
                           stereo_calib_.camL_Pose_camR_,
                           stereo_matching_params),
               imu_meas.timestamps_, imu_meas.measurements_));
-
-          // Publish Output
-          publishOutput();
           VLOG(10) << "Finished VIO processing for frame k = " << k;
         } else {
           ROS_WARN(
@@ -181,6 +181,12 @@ bool RosbagDataProvider::spin() {
             " less than or equal to last frame.",
             static_cast<int>(k));
       }
+
+      // Publish VIO output if any.
+      // TODO(Toni) this could go faster if running in another thread or node...
+      SpinOutputPacket vio_output;
+      if (vio_output_queue_.pop(vio_output)) publishOutput(vio_output);
+
       ros::spinOnce();
     } else {
       LOG(ERROR) << "ROS SHUTDOWN requested, stopping rosbag spin.";

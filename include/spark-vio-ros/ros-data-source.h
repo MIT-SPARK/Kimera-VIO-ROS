@@ -2,12 +2,19 @@
  * @file   ros-data-source.h
  * @brief  ROS wrapper
  * @author Yun Chang
+ * @author Antoni Rosinol
  */
 
 #pragma once
 
 #include "spark-vio-ros/ros-base-data-source.h"
 #include "spark-vio-ros/stereo-image-buffer.h"
+
+#include <message_filters/subscriber.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/time_synchronizer.h>
+#include <sensor_msgs/Imu.h>
+#include <std_msgs/Bool.h>
 
 // using namespace StereoImageBuffer;
 
@@ -25,7 +32,7 @@ class RosDataProvider : public RosBaseDataProvider {
   void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
 
  private:
-  // TODO (TOni): only use one node handle...
+  // TODO (Toni): only use one node handle...
   // Define Node Handler for IMU Callback (and Queue)
   ros::NodeHandle nh_imu_;
 
@@ -34,9 +41,6 @@ class RosDataProvider : public RosBaseDataProvider {
 
   // Define Node Handler for Cam Callback (and Queue)
   ros::NodeHandle nh_cam_;
-  image_transport::ImageTransport it_;
-
-  typedef image_transport::SubscriberFilter ImageSubscriber;
 
   ImuData imu_data_;               // store IMU data from last frame
   Timestamp last_time_stamp_;      // Timestamp correponding to last frame
@@ -64,16 +68,16 @@ class RosDataProvider : public RosBaseDataProvider {
                                    const sensor_msgs::ImageConstPtr& msgRight);
 
   // Message filters and to sync stereo images
+  typedef image_transport::SubscriberFilter ImageSubscriber;
   ImageSubscriber left_img_subscriber_;
   ImageSubscriber right_img_subscriber_;
 
-  // Declare Synchronization Policy for Stereo
+  // Declare Approx Synchronization Policy and Synchronizer for stereo images.
+  // TODO(Toni): should be exact sync policy
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
                                                           sensor_msgs::Image>
       sync_pol;
-
-  // Declare synchronizer
-  message_filters::Synchronizer<sync_pol> sync;
+  std::unique_ptr<message_filters::Synchronizer<sync_pol>> sync_;
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;

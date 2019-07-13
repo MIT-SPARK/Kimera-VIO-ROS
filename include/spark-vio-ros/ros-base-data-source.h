@@ -12,25 +12,16 @@
 #include <opencv2/core/matx.hpp>
 #include <string>
 
-#include <cv_bridge/cv_bridge.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/Vector3Stamped.h>
 #include <image_transport/subscriber_filter.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/time_synchronizer.h>
-#include <nav_msgs/Odometry.h>
 #include <ros/callback_queue.h>
 #include <ros/console.h>
 #include <ros/ros.h>
 #include <ros/spinner.h>
-#include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/Image.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/image_encodings.h>
-#include <std_msgs/Bool.h>
-#include <std_msgs/Float64MultiArray.h>
 #include <tf/transform_broadcaster.h>
 
+// TODO(Toni): do we really need all these includes??
+// I doubt we are using the imu frontend and the pipeline!
 #include <ImuFrontEnd.h>
 #include <StereoFrame.h>
 #include <StereoImuSyncPacket.h>
@@ -48,11 +39,10 @@ class RosBaseDataProvider : public DataProvider {
   RosBaseDataProvider();
   virtual ~RosBaseDataProvider();
 
- protected:
-  // Define Node Handler for general use (Parameter server)
-  ros::NodeHandle nh_;
-  ros::NodeHandle nh_private_;
+  // VIO output callback at keyframe rate
+  void callbackKeyframeRateVioOutput(const SpinOutputPacket& vio_output);
 
+ protected:
   // Stereo info
   struct StereoCalibration {
     CameraParams left_camera_info_;
@@ -74,43 +64,49 @@ class RosBaseDataProvider : public DataProvider {
   bool parseImuData(ImuData* imudata, ImuParams* imuparams);
 
   // Publish all outputs by calling individual functions below
-  void publishOutput();
-
-  // Publish current state estimate
-  void publishState();
-
-  // Publish frontend statistics
-  void publishFrontendStats();
-
-  // Publish resiliency statistics
-  void publishResiliency();
-
-  // Publish IMU bias
-  void publishImuBias();
-
-  // Define publisher to publish odometry
-  ros::Publisher odom_publisher_;
-
-  // Define publisher to publish resiliency
-  ros::Publisher resil_publisher_;
-
-  // Define frontend statistics publisher
-  ros::Publisher frontend_stats_publisher_;
-
-  // Define publisher to publish imu bias
-  ros::Publisher bias_publisher_;
-
-  // Define tf broadcaster for world to base_link (IMU).
-  tf::TransformBroadcaster odom_broadcaster_;
-
-  // Define frame ids for odometry message
-  std::string world_frame_id_;
-  std::string base_link_frame_id;
+  void publishOutput(const SpinOutputPacket& vio_output);
 
  protected:
   VioFrontEndParams frontend_params_;
   StereoCalibration stereo_calib_;
-  SpinOutputContainer vio_output_;
+  SpinOutputPacket vio_output_;
+
+  // Define Node Handler for general use (Parameter server)
+  ros::NodeHandle nh_;
+  ros::NodeHandle nh_private_;
+
+  // Define image transport for this and derived classes.
+  std::unique_ptr<image_transport::ImageTransport> it_;
+
+  // Define frame ids for odometry message
+  std::string world_frame_id_;
+  std::string base_link_frame_id_;
+
+  // Queue to store and retrieve VIO output in a thread-safe way.
+  ThreadsafeQueue<SpinOutputPacket> vio_output_queue_;
+
+ private:
+  // Define publisher for debug images.
+  image_transport::Publisher debug_img_pub_;
+
+  // Publishers
+  ros::Publisher mesh_pub_;
+  ros::Publisher odom_publisher_;
+  ros::Publisher resil_publisher_;
+  ros::Publisher frontend_stats_publisher_;
+  ros::Publisher bias_publisher_;
+
+  void publishMesh3D(const SpinOutputPacket& vio_output);
+  void publishState(const SpinOutputPacket& vio_output);
+  void publishFrontendStats(const SpinOutputPacket& vio_output) const;
+  // Publish resiliency statistics
+  void publishResiliency(const SpinOutputPacket& vio_output) const;
+  void publishImuBias(const SpinOutputPacket& vio_output) const;
+  void publishDebugImage(const Timestamp& timestamp,
+                         const cv::Mat& debug_image);
+
+  // Define tf broadcaster for world to base_link (IMU).
+  tf::TransformBroadcaster odom_broadcaster_;
 };
 
 }  // namespace VIO

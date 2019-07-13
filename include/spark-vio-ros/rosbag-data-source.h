@@ -16,6 +16,7 @@
 #include <ros/ros.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
+#include <sensor_msgs/Image.h>
 
 #include "spark-vio-ros/ros-base-data-source.h"
 

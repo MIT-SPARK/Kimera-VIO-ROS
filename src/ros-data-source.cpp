@@ -2,6 +2,7 @@
  * @file   ros-data-source.cpp
  * @brief  ROS wrapper
  * @author Yun Chang
+ * @author Antoni Rosinol
  */
 
 #include "spark-vio-ros/ros-data-source.h"
@@ -9,24 +10,21 @@
 #include <string>
 #include <vector>
 
-#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <std_msgs/Bool.h>
 
 namespace VIO {
 
 RosDataProvider::RosDataProvider()
     : RosBaseDataProvider(),
-      it_(nh_cam_),
-      // TODO(Toni) Do not init this at ctor init list...
-      // Image subscriber (left)
-      left_img_subscriber_(it_, "left_cam", 1),
-      // Image subscriber (right)
-      right_img_subscriber_(it_, "right_cam", 1),
-      sync(sync_pol(10), left_img_subscriber_, right_img_subscriber_),
+      left_img_subscriber_(),
+      right_img_subscriber_(),
+      sync_(nullptr),
       // initialize last timestamp (img) to be 0
       last_time_stamp_(0),
       // initialize last timestamp (imu) to be 0
       last_imu_time_stamp_(0),
-      // keep track of number of frames processed)
+      // keep track of number of frames processed
       frame_count_(1) {
   ROS_INFO("Starting SparkVIO wrapper for online");
 
@@ -48,8 +46,14 @@ RosDataProvider::RosDataProvider()
   ros::AsyncSpinner async_spinner_imu(0, &imu_queue);
   async_spinner_imu.start();
 
-  ////// Synchronize stero image callback
-  sync.registerCallback(
+  // Subscribe to stereo images. Approx time sync, should be exact though...
+  DCHECK(it_);
+  left_img_subscriber_.subscribe(*it_, "left_cam", 1);
+  right_img_subscriber_.subscribe(*it_, "right_cam", 1);
+  sync_ = VIO::make_unique<message_filters::Synchronizer<sync_pol>>(
+      sync_pol(10), left_img_subscriber_, right_img_subscriber_);
+  DCHECK(sync_);
+  sync_->registerCallback(
       boost::bind(&RosDataProvider::callbackCamAndProcessStereo, this, _1, _2));
 
   // Define Callback Queue for Cam Data
@@ -153,14 +157,14 @@ bool RosDataProvider::spin() {
     // Main spin of the data provider: Interpolates IMU data and build
     // StereoImuSyncPacket (Think of this as the spin of the other
     // parser/data-providers)
-    const Timestamp timestamp = stereo_buffer_.getEarliestTimestamp();
+    const Timestamp &timestamp = stereo_buffer_.getEarliestTimestamp();
     if (timestamp <= last_time_stamp_) {
       if (stereo_buffer_.size() != 0) {
         ROS_WARN(
             "Next frame in image buffer is from the same or "
             "earlier time than the last processed frame. Skip "
             "frame.");
-        // remove next frame (this would usually for the first
+        // remove next frame (this would usually happen for the first
         // frame)
         stereo_buffer_.removeNext();
       }
@@ -177,7 +181,7 @@ bool RosDataProvider::spin() {
           utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
         // data available
         sensor_msgs::ImageConstPtr left_ros_img, right_ros_img;
-        stereo_buffer_.extractLatestImages(left_ros_img, right_ros_img);
+        CHECK(stereo_buffer_.extractLatestImages(left_ros_img, right_ros_img));
 
         const StereoMatchingParams &stereo_matching_params =
             frontend_params_.getStereoMatchingParams();
@@ -201,17 +205,16 @@ bool RosDataProvider::spin() {
             LOG(FATAL) << "vision sensor type not recognised.";
             break;
         }
-        vio_output_ = vio_callback_(StereoImuSyncPacket(
+        // Reset reinit flag for reinit packet
+        resetReinitFlag();
+
+        // Send input data to VIO!
+        vio_callback_(StereoImuSyncPacket(
             StereoFrame(frame_count_, timestamp, left_image,
                         stereo_calib_.left_camera_info_, right_image,
                         stereo_calib_.right_camera_info_,
                         stereo_calib_.camL_Pose_camR_, stereo_matching_params),
             imu_meas.timestamps_, imu_meas.measurements_, reinit_packet_));
-        // Reset reinit flag for reinit packet
-        resetReinitFlag();
-
-        // Publish all outputs
-        publishOutput();
 
         last_time_stamp_ = timestamp;
         frame_count_++;
@@ -224,17 +227,28 @@ bool RosDataProvider::spin() {
         // remove next frame (this would usually for the first
         // frame)
         stereo_buffer_.removeNext();
+      } else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::
+                                  kDataNotYetAvailable) {
+        ROS_WARN("IMU data not yet available. Skip frame.");
       }
 
       // else it would be the kNotYetAvailable then just wait for
       // next loop
     }
 
+    // Publish VIO output if any.
+    SpinOutputPacket vio_output;
+    if (vio_output_queue_.pop(vio_output)) {
+      publishOutput(vio_output);
+    }
+
     // spin loop
     ros::spinOnce();
   }
 
-  ROS_INFO("Done.");
+  ROS_INFO("Ros data source spin done. Shutting down vio output queue.");
+  vio_output_queue_.shutdown();
+
   return true;
 }
 

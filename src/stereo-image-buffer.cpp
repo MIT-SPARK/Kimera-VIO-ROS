@@ -2,8 +2,11 @@
  * @file   stereo-image-buffer.cpp
  * @brief  Stereo image buffer ROS wrapper
  * @author Yun Chang
+ * @author Antoni Rosinol
  */
 #include "spark-vio-ros/stereo-image-buffer.h"
+
+namespace VIO {
 
 VIO::Timestamp StereoBuffer::getEarliestTimestamp() const {
   return earliest_timestamp_;
@@ -13,15 +16,12 @@ VIO::Timestamp StereoBuffer::getLatestTimestamp() const {
   return latest_timestamp_;
 }
 
-size_t StereoBuffer::size() const {
-  return stereo_buffer_.size();
-}
+size_t StereoBuffer::size() const { return stereo_buffer_.size(); }
 
 bool StereoBuffer::extractLatestImages(sensor_msgs::ImageConstPtr& left_img,
                                        sensor_msgs::ImageConstPtr& right_img) {
   if (stereo_buffer_.size() == 0) {
-    // no more images in buffer
-    return true;
+    return false;
   }
 
   left_img = stereo_buffer_[0].left_ros_img;
@@ -40,7 +40,7 @@ bool StereoBuffer::extractLatestImages(sensor_msgs::ImageConstPtr& left_img,
 void StereoBuffer::addStereoFrame(sensor_msgs::ImageConstPtr left_img,
                                   sensor_msgs::ImageConstPtr right_img) {
   // Timestamp is in nanoseconds
-  VIO::Timestamp timestamp = left_img->header.stamp.toNSec();
+  Timestamp timestamp = left_img->header.stamp.toNSec();
 
   if (stereo_buffer_.size() == 0) {
     // if only frame
@@ -66,3 +66,5 @@ void StereoBuffer::removeNext() {
     earliest_timestamp_ = stereo_buffer_[0].timestamp;
   }
 }
+
+}  // namespace VIO

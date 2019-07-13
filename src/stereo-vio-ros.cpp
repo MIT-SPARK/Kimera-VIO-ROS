@@ -38,13 +38,13 @@ int main(int argc, char *argv[]) {
   ros::init(argc, argv, "spark_vio");
 
   // Create dataset parser.
-  std::unique_ptr<VIO::RosBaseDataProvider> dataset_parser;
+  std::shared_ptr<VIO::RosBaseDataProvider> dataset_parser;
   if (FLAGS_online_run) {
     // Running ros online.
-    dataset_parser = VIO::make_unique<VIO::RosDataProvider>();
+    dataset_parser = std::make_shared<VIO::RosDataProvider>();
   } else {
     // Parse rosbag.
-    dataset_parser = VIO::make_unique<VIO::RosbagDataProvider>();
+    dataset_parser = std::make_shared<VIO::RosbagDataProvider>();
   }
 
   // Create actual VIO pipeline.
@@ -54,19 +54,24 @@ int main(int argc, char *argv[]) {
   dataset_parser->registerVioCallback(
       std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
 
+  // Register callback to retrieve vio pipeline output.
+  vio_pipeline.registerKeyFrameRateOutputCallback(
+      std::bind(&VIO::RosBaseDataProvider::callbackKeyframeRateVioOutput,
+                dataset_parser, std::placeholders::_1));
+
   // Spin dataset.
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (FLAGS_parallel_run) {
-    auto handle =
-        std::async(std::launch::async, &VIO::RosBaseDataProvider::spin,
-                   std::move(dataset_parser));
+    auto handle = std::async(std::launch::async,
+                             &VIO::RosBaseDataProvider::spin, dataset_parser);
     ros::start();
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.
     while (ros::ok() && vio_pipeline.spinViz(false)) {
       continue;
     };
+    LOG(INFO) << "Shutting down ROS and VIO pipeline.";
     ros::shutdown();
     vio_pipeline.shutdown();
     is_pipeline_successful = handle.get();
