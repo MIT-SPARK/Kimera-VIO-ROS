@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     while (ros::ok() && vio_pipeline.spinViz(false)) {
       continue;
     };
-    LOG(INFO) << "Shutting down ROS and VIO pipeline.";
+    ROS_INFO("Shutting down ROS and VIO pipeline.");
     ros::shutdown();
     vio_pipeline.shutdown();
     is_pipeline_successful = handle.get();
@@ -79,8 +79,8 @@ int main(int argc, char *argv[]) {
     is_pipeline_successful = dataset_parser->spin();
   }
   auto spin_duration = VIO::utils::Timer::toc(tic);
-  LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
-  LOG(INFO) << "Pipeline successful? "
-            << (is_pipeline_successful ? "Yes!" : "No!");
+  ROS_WARN_STREAM("Spin took: " << spin_duration.count() << " ms.");
+  ROS_INFO_STREAM("Pipeline successful? "
+                  << (is_pipeline_successful ? "Yes!" : "No!"));
   return is_pipeline_successful ? EXIT_SUCCESS : EXIT_FAILURE;
 }
