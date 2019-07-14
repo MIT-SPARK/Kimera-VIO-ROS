@@ -23,9 +23,10 @@
   <build_depend>tf</build_depend>
 
 <!--
-  <build_depend>pcl</build_depend>
+ <build_depend>pcl</build_depend>
+ -->
   <build_depend>pcl_ros</build_depend>
+  <build_depend>pcl_msgs</build_depend>
   <build_depend>pcl_conversions</build_depend>
-  -->
 
 </package>

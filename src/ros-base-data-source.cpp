@@ -18,9 +18,9 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64MultiArray.h>
 
-//#include <pcl_conversions/pcl_conversions.h>
-//#include <pcl_msgs/PolygonMesh.h>
-//#include <pcl_ros/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_msgs/PolygonMesh.h>
+#include <pcl_ros/point_cloud.h>
 
 namespace VIO {
 
@@ -51,7 +51,9 @@ RosBaseDataProvider::RosBaseDataProvider()
   resil_publisher_ =
       nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 10);
   bias_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 10);
-  // mesh_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5);
+  pointcloud_pub_ =
+      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10);
+  per_frame_mesh_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5);
   debug_img_pub_ = it_->advertise("debug_mesh_img", 10);
 }
 
@@ -272,8 +274,14 @@ void RosBaseDataProvider::publishOutput(const SpinOutputPacket& vio_output) {
   // Publish VIO state
   publishState(vio_output);
 
+  publishPerFrameMesh3D(vio_output);
+
   // Publish 2d mesh debug image
   publishDebugImage(vio_output.getTimestamp(), vio_output.mesh_2d_img_);
+
+  publishTimeHorizonPointCloud(vio_output.getTimestamp(),
+                               vio_output.points_with_id_VIO_,
+                               vio_output.lmk_id_to_lmk_type_map_);
 
   // Publish Frontend Stats
   publishFrontendStats(vio_output);
@@ -283,6 +291,70 @@ void RosBaseDataProvider::publishOutput(const SpinOutputPacket& vio_output) {
 
   // Publish imu bias
   publishImuBias(vio_output);
+}
+
+void RosBaseDataProvider::publishTimeHorizonPointCloud(
+    const Timestamp& timestamp, const PointsWithIdMap& points_with_id,
+    const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) {
+  PointCloudXYZRGB::Ptr msg(new PointCloudXYZRGB);
+  msg->header.frame_id = world_frame_id_;
+  msg->is_dense = true;
+  msg->height = 1;
+  msg->width = points_with_id.size();
+  msg->points.resize(points_with_id.size());
+
+  bool color_the_cloud = false;
+  if (lmk_id_to_lmk_type_map.size() != 0) {
+    color_the_cloud = true;
+    CHECK_EQ(points_with_id.size(), lmk_id_to_lmk_type_map.size());
+  }
+
+  if (points_with_id.size() == 0) {
+    // No points to visualize.
+    return;
+  }
+
+  // Populate cloud structure with 3D points.
+  size_t i = 0;
+  for (const std::pair<LandmarkId, gtsam::Point3>& id_point : points_with_id) {
+    const gtsam::Point3 point_3d = id_point.second;
+    msg->points[i].x = static_cast<float>(point_3d.x());
+    msg->points[i].y = static_cast<float>(point_3d.y());
+    msg->points[i].z = static_cast<float>(point_3d.z());
+    if (color_the_cloud) {
+      DCHECK(lmk_id_to_lmk_type_map.find(id_point.first) !=
+             lmk_id_to_lmk_type_map.end());
+      switch (lmk_id_to_lmk_type_map.at(id_point.first)) {
+        case LandmarkType::SMART: {
+          // point_cloud_color.col(i) = cv::viz::Color::white();
+          msg->points[i].r = 0;
+          msg->points[i].g = 255;
+          msg->points[i].b = 0;
+          break;
+        }
+        case LandmarkType::PROJECTION: {
+          // point_cloud_color.col(i) = cv::viz::Color::green();
+          msg->points[i].r = 0;
+          msg->points[i].g = 0;
+          msg->points[i].b = 255;
+          break;
+        }
+        default: {
+          // point_cloud_color.col(i) = cv::viz::Color::white();
+          msg->points[i].r = 255;
+          msg->points[i].g = 0;
+          msg->points[i].b = 0;
+          break;
+        }
+      }
+    }
+    i++;
+  }
+
+  ros::Time ros_timestamp;
+  ros_timestamp.fromNSec(timestamp);
+  pcl_conversions::toPCL(ros_timestamp, msg->header.stamp);
+  pointcloud_pub_.publish(msg);
 }
 
 void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
@@ -296,17 +368,118 @@ void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
   debug_img_pub_.publish(msg);
 }
 
-void RosBaseDataProvider::publishMesh3D(const SpinOutputPacket& vio_output) {
-  LOG(ERROR) << "WTF with the duck";
+// void RosBaseDataProvider::publishTimeHorizonMesh3D(
+//    const SpinOutputPacket& vio_output) {
+//  const Mesh3D& mesh_3d = vio_output.mesh_3d_;
+//  size_t number_mesh_3d_polygons = mesh_3d.getNumberOfPolygons();
+//}
+
+void RosBaseDataProvider::publishPerFrameMesh3D(
+    const SpinOutputPacket& vio_output) {
   const Mesh2D& mesh_2d = vio_output.mesh_2d_;
   const Mesh3D& mesh_3d = vio_output.mesh_3d_;
   size_t number_mesh_2d_polygons = mesh_2d.getNumberOfPolygons();
   size_t mesh_2d_poly_dim = mesh_2d.getMeshPolygonDimension();
 
+  static const size_t cam_width =
+      stereo_calib_.left_camera_info_.image_size_.width;
+  static const size_t cam_height =
+      stereo_calib_.left_camera_info_.image_size_.height;
+  DCHECK_GT(cam_width, 0);
+  DCHECK_GT(cam_height, 0);
+
+  pcl_msgs::PolygonMesh::Ptr msg(new pcl_msgs::PolygonMesh());
+  msg->header.stamp.fromNSec(vio_output.getTimestamp());
+  msg->header.frame_id = world_frame_id_;
+
+  // Create point cloud to hold vertices.
+  pcl::PointCloud<PointNormalUV> cloud;
+  cloud.points.reserve(number_mesh_2d_polygons * mesh_2d_poly_dim);
+  msg->polygons.reserve(number_mesh_2d_polygons);
+
+  Mesh2D::Polygon polygon;
+  for (size_t i = 0; i < number_mesh_2d_polygons; i++) {
+    CHECK(mesh_2d.getPolygon(i, &polygon)) << "Could not retrieve 2d polygon.";
+    const LandmarkId& lmk0_id = polygon.at(0).getLmkId();
+    const LandmarkId& lmk1_id = polygon.at(1).getLmkId();
+    const LandmarkId& lmk2_id = polygon.at(2).getLmkId();
+
+    // Returns indices of points in the 3D mesh corresponding to the
+    // vertices
+    // in the 2D mesh.
+    int p0_id, p1_id, p2_id;
+    Mesh3D::VertexType vtx0, vtx1, vtx2;
+    if (mesh_3d.getVertex(lmk0_id, &vtx0, &p0_id) &&
+        mesh_3d.getVertex(lmk1_id, &vtx1, &p1_id) &&
+        mesh_3d.getVertex(lmk2_id, &vtx2, &p2_id)) {
+      // Get pixel coordinates of the vertices of the 2D mesh.
+      const Vertex2D& px0 = polygon.at(0).getVertexPosition();
+      const Vertex2D& px1 = polygon.at(1).getVertexPosition();
+      const Vertex2D& px2 = polygon.at(2).getVertexPosition();
+
+      // Get 3D coordinates of the vertices of the 3D mesh.
+      const Vertex3D& lmk0_pos = vtx0.getVertexPosition();
+      const Vertex3D& lmk1_pos = vtx1.getVertexPosition();
+      const Vertex3D& lmk2_pos = vtx2.getVertexPosition();
+
+      // Get normals of the vertices of the 3D mesh.
+      const Mesh3D::VertexNormal& normal0 = vtx0.getVertexNormal();
+      const Mesh3D::VertexNormal& normal1 = vtx1.getVertexNormal();
+      const Mesh3D::VertexNormal& normal2 = vtx2.getVertexNormal();
+
+      // FILL POINTCLOUD
+      // clang-format off
+      PointNormalUV pn0, pn1, pn2;
+      pn0.x = lmk0_pos.x; pn1.x = lmk1_pos.x; pn2.x = lmk2_pos.x;
+      pn0.y = lmk0_pos.y; pn1.y = lmk1_pos.y; pn2.y = lmk2_pos.y;
+      pn0.z = lmk0_pos.z; pn1.z = lmk1_pos.z; pn2.z = lmk2_pos.z;
+      // OpenGL textures range from 0 to 1.
+      pn0.u = px0.x / cam_width; pn1.u = px1.x / cam_width; pn2.u = px2.x / cam_width;
+      pn0.v = px0.y / cam_height; pn1.v = px1.y / cam_height; pn2.v = px2.y / cam_height;
+      pn0.normal_x = normal0.x; pn1.normal_x = normal1.x; pn2.normal_x = normal2.x;
+      pn0.normal_y = normal0.y; pn1.normal_y = normal1.y; pn2.normal_y = normal2.y;
+      pn0.normal_z = normal0.z; pn1.normal_z = normal1.z; pn2.normal_z = normal2.z;
+      // clang-format on
+
+      // TODO(Toni): we are adding repeated vertices!!
+      cloud.points.push_back(pn0);
+      cloud.points.push_back(pn1);
+      cloud.points.push_back(pn2);
+
+      // Store polygon connectivity
+      pcl_msgs::Vertices vtx_ii;
+      vtx_ii.vertices.resize(3);
+      size_t idx = i * mesh_2d_poly_dim;
+      // Store connectivity CCW bcs of RVIZ
+      vtx_ii.vertices[0] = idx + 2;
+      vtx_ii.vertices[1] = idx + 1;
+      vtx_ii.vertices[2] = idx;
+      msg->polygons.push_back(vtx_ii);
+    } else {
+      // LOG_EVERY_N(ERROR, 1000) << "Polygon in 2d mesh did not have a
+      // corresponding polygon in"
+      //                          " 3d mesh!";
+    }
+  }
+
+  cloud.is_dense = false;
+  cloud.width = cloud.points.size();
+  cloud.height = 1;
+  pcl::toROSMsg(cloud, msg->cloud);
+
+  // NOTE: Header fields need to be filled in after pcl::toROSMsg() call.
+  msg->cloud.header = std_msgs::Header();
+  msg->cloud.header.stamp = msg->header.stamp;
+  msg->cloud.header.frame_id = msg->header.frame_id;
+
+  if (msg->polygons.size() > 0) {
+    per_frame_mesh_pub_.publish(msg);
+  }
+
+  return;
 }  // namespace VIO
 
 void RosBaseDataProvider::publishState(const SpinOutputPacket& vio_output) {
-  LOG(ERROR) << "Received outptu!";
   // Get latest estimates for odometry.
   const gtsam::Pose3& pose = vio_output.getEstimatedPose();
   const gtsam::Vector3& velocity = vio_output.getEstimatedVelocity();
@@ -514,9 +687,8 @@ void RosBaseDataProvider::publishImuBias(
 void RosBaseDataProvider::callbackKeyframeRateVioOutput(
     const SpinOutputPacket& vio_output) {
   // The code here should be lighting fast or we will be blocking the backend
-  // thread in the VIO. This is actually running in the backend thread, as such
-  // do not modify things other than thread-safe stuff.
-  LOG(ERROR) << "callback keyframe rate vio output!";
+  // thread in the VIO. This is actually running in the backend thread, as
+  // such do not modify things other than thread-safe stuff.
   vio_output_queue_.push(vio_output);
 }
 

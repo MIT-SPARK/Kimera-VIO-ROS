@@ -229,11 +229,9 @@ bool RosDataProvider::spin() {
         stereo_buffer_.removeNext();
       } else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::
                                   kDataNotYetAvailable) {
-        ROS_WARN("IMU data not yet available. Skip frame.");
+        // kNotYetAvailable then just wait for next loop...
+        ROS_WARN_THROTTLE(100, "IMU data not yet available. Skip frame.");
       }
-
-      // else it would be the kNotYetAvailable then just wait for
-      // next loop
     }
 
     // Publish VIO output if any.

@@ -12,6 +12,12 @@
 #include <opencv2/core/matx.hpp>
 #include <string>
 
+#define PCL_NO_PRECOMPILE  // Define this before you include any PCL headers
+                           // to include the templated algorithms
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/point_cloud.h>
+
 #include <image_transport/subscriber_filter.h>
 #include <ros/callback_queue.h>
 #include <ros/console.h>
@@ -33,6 +39,17 @@
 #include "spark-vio-ros/stereo-image-buffer.h"
 
 namespace VIO {
+
+/**
+ * @breif Struct to hold mesh vertex data.
+ */
+struct PointNormalUV {
+  PCL_ADD_POINT4D;
+  PCL_ADD_NORMAL4D;
+  float u;  // Texture coordinates.
+  float v;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+} EIGEN_ALIGN16;
 
 class RosBaseDataProvider : public DataProvider {
  public:
@@ -90,13 +107,20 @@ class RosBaseDataProvider : public DataProvider {
   image_transport::Publisher debug_img_pub_;
 
   // Publishers
-  ros::Publisher mesh_pub_;
+  ros::Publisher pointcloud_pub_;
+  ros::Publisher per_frame_mesh_pub_;
   ros::Publisher odom_publisher_;
   ros::Publisher resil_publisher_;
   ros::Publisher frontend_stats_publisher_;
   ros::Publisher bias_publisher_;
 
-  void publishMesh3D(const SpinOutputPacket& vio_output);
+  typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
+
+  void publishTimeHorizonPointCloud(
+      const Timestamp& timestamp, const PointsWithIdMap& points_with_id,
+      const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map);
+  void publishPerFrameMesh3D(const SpinOutputPacket& vio_output);
+  void publishTimeHorizonMesh3D(const SpinOutputPacket& vio_output);
   void publishState(const SpinOutputPacket& vio_output);
   void publishFrontendStats(const SpinOutputPacket& vio_output) const;
   // Publish resiliency statistics
@@ -110,3 +134,9 @@ class RosBaseDataProvider : public DataProvider {
 };
 
 }  // namespace VIO
+
+POINT_CLOUD_REGISTER_POINT_STRUCT(
+    VIO::PointNormalUV,
+    (float, x, x)(float, y, y)(float, x, z)(float, normal_x, normal_x)(
+        float, normal_y, normal_y)(float, normal_z, normal_z)(float, u,
+                                                              u)(float, v, v))

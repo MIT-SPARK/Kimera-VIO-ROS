@@ -4,7 +4,7 @@
 --regular_vio_backend_modality=0
 --deterministic_random_number_generator=true
 --visualize=false
---visualize_lmk_type=false
+--visualize_lmk_type=true
 --visualize_mesh=false
 --visualize_mesh_with_colored_polygon_clusters=false
 --visualize_point_cloud=false
@@ -17,4 +17,4 @@
 #--visualize_load_mesh_filename=/home/tonirv/datasets/euroc/V1_01_easy/mav0/pointcloud0/data.ply
 --viz_type=3
 --min_num_obs_for_mesher_points=3
---extract_planes_from_the_scene=false
+--extract_planes_from_the_scene=true
