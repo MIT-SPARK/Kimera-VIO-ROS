@@ -41,8 +41,8 @@ RosBaseDataProvider::RosBaseDataProvider()
   it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
 
   // Get ROS params
-  CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
-  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
+  ROS_ASSERT(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
+  ROS_ASSERT(nh_private_.getParam("world_frame_id", world_frame_id_));
 
   // Publishers
   odom_publisher_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
@@ -142,8 +142,8 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     std::vector<double> extrinsics;
     // Encode calibration frame to body frame
     std::vector<double> frame_change;
-    CHECK(nh_private_.getParam(camera_name + "extrinsics", extrinsics));
-    CHECK(nh_private_.getParam("calibration_to_body_frame", frame_change));
+    ROS_ASSERT(nh_private_.getParam(camera_name + "extrinsics", extrinsics));
+    ROS_ASSERT(nh_private_.getParam("calibration_to_body_frame", frame_change));
     // Place into matrix
     // 4 4 is hardcoded here because currently only accept extrinsic input
     // in homoegeneous format [R T ; 0 1]
@@ -244,13 +244,13 @@ bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
 
   std::vector<double> extrinsics;
 
-  CHECK(nh_private_.getParam("imu_rate_hz", rate));
-  CHECK(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
-  CHECK(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
-  CHECK(nh_private_.getParam("accelerometer_noise_density", acc_noise));
-  CHECK(nh_private_.getParam("accelerometer_random_walk", acc_walk));
-  CHECK(nh_private_.getParam("imu_extrinsics", extrinsics));
-  CHECK(nh_private_.getParam("imu_shift", imu_shift));
+  ROS_ASSERT(nh_private_.getParam("imu_rate_hz", rate));
+  ROS_ASSERT(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
+  ROS_ASSERT(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
+  ROS_ASSERT(nh_private_.getParam("accelerometer_noise_density", acc_noise));
+  ROS_ASSERT(nh_private_.getParam("accelerometer_random_walk", acc_walk));
+  ROS_ASSERT(nh_private_.getParam("imu_extrinsics", extrinsics));
+  ROS_ASSERT(nh_private_.getParam("imu_shift", imu_shift));
 
   // TODO(Sandro): Do we need these parameters??
   imudata->nominal_imu_rate_ = 1.0 / rate;
@@ -641,11 +641,12 @@ void RosBaseDataProvider::publishResiliency(
   // Publish thresholds for statistics
   float pos_det_threshold, vel_det_threshold;
   int mono_ransac_theshold, stereo_ransac_threshold;
-  CHECK(nh_private_.getParam("velocity_det_threshold", vel_det_threshold));
-  CHECK(nh_private_.getParam("position_det_threshold", pos_det_threshold));
-  CHECK(
+  ROS_ASSERT(nh_private_.getParam("velocity_det_threshold", vel_det_threshold));
+  ROS_ASSERT(nh_private_.getParam("position_det_threshold", pos_det_threshold));
+  ROS_ASSERT(
       nh_private_.getParam("stereo_ransac_threshold", stereo_ransac_threshold));
-  CHECK(nh_private_.getParam("mono_ransac_threshold", mono_ransac_theshold));
+  ROS_ASSERT(
+      nh_private_.getParam("mono_ransac_threshold", mono_ransac_theshold));
   resiliency_msg.data.push_back(pos_det_threshold);
   resiliency_msg.data.push_back(vel_det_threshold);
   resiliency_msg.data.push_back(stereo_ransac_threshold);
