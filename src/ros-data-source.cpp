@@ -251,17 +251,17 @@ bool RosDataProvider::spin() {
 }
 
 void RosDataProvider::print() const {
-  std::cout << ">>>>>>>>> RosDataProvider::print <<<<<<<<<<<" << std::endl;
-  stereo_calib_.camL_Pose_camR_.print("camL_Pose_calR \n");
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << ">>>>>>>>> RosDataProvider::print <<<<<<<<<<<" << '\n'
+            << "camL_Pose_camR_: " << stereo_calib_.camL_Pose_camR_;
   // For each of the 2 cameras.
-  std::cout << ">> Left camera params <<" << std::endl;
+  LOG(INFO) << "- Left camera params:";
   stereo_calib_.left_camera_info_.print();
-  std::cout << ">> Right camera params <<" << std::endl;
+  LOG(INFO) << "- Right camera params:";
   stereo_calib_.right_camera_info_.print();
-  std::cout << ">> IMU info << " << std::endl;
+  LOG(INFO) << "- IMU info: ";
   imu_data_.print();
-  std::cout << std::endl;
-  std::cout << "========================================" << std::endl;
+  LOG(INFO) << '\n' << std::string(80, '=');
 }
 
 }  // namespace VIO
