@@ -18,7 +18,7 @@
 #include <utils/Timer.h>
 
 // Dependencies from this repository
-#include "spark-vio-ros/ros-base-data-source.h"
+#include "spark-vio-ros/base-data-source.h"
 #include "spark-vio-ros/ros-data-source.h"
 #include "spark-vio-ros/rosbag-data-source.h"
 

@@ -1,6 +1,6 @@
 /**
- * @file   ros-base-data-source.h
- * @brief  ROS wrapper
+ * @file   base-data-source.h
+ * @brief  Base class for ROS wrappers for spark vio.
  * @author Yun Chang
  * @author Antoni Rosinol
  */

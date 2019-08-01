@@ -1,6 +1,6 @@
 /**
  * @file   ros-data-source.cpp
- * @brief  ROS wrapper
+ * @brief  ROS wrapper for online processing.
  * @author Yun Chang
  * @author Antoni Rosinol
  */
@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <sensor_msgs/image_encodings.h>
 #include <std_msgs/Bool.h>
 
 namespace VIO {
@@ -192,8 +193,18 @@ bool RosDataProvider::spin() {
         switch (stereo_matching_params.vision_sensor_type_) {
           case VisionSensorType::STEREO:
             // no conversion
-            left_image = readRosImage(left_ros_img);
-            right_image = readRosImage(right_ros_img);
+            if (left_ros_img->encoding == sensor_msgs::image_encodings::RGB8 &&
+                right_ros_img->encoding == sensor_msgs::image_encodings::RGB8) {
+              left_image = readRosRGBImage(left_ros_img);
+              right_image = readRosRGBImage(right_ros_img);
+            } else {
+              CHECK(left_ros_img->encoding !=
+                    sensor_msgs::image_encodings::MONO8);
+              CHECK(right_ros_img->encoding !=
+                    sensor_msgs::image_encodings::MONO8);
+              left_image = readRosImage(left_ros_img);
+              right_image = readRosImage(right_ros_img);
+            }
             break;
           case VisionSensorType::RGBD:  // just use depth to "fake
                                         // right pixel matches" apply

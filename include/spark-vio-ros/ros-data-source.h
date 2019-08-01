@@ -1,13 +1,13 @@
 /**
  * @file   ros-data-source.h
- * @brief  ROS wrapper
+ * @brief  ROS wrapper for online processing.
  * @author Yun Chang
  * @author Antoni Rosinol
  */
 
 #pragma once
 
-#include "spark-vio-ros/ros-base-data-source.h"
+#include "spark-vio-ros/base-data-source.h"
 #include "spark-vio-ros/stereo-image-buffer.h"
 
 #include <message_filters/subscriber.h>

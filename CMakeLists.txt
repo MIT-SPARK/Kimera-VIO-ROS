@@ -7,7 +7,7 @@ catkin_simple()
 
 cs_add_executable(${PROJECT_NAME}
   src/stereo-vio-ros.cpp
-  src/ros-base-data-source.cpp
+  src/base-data-source.cpp
   src/rosbag-data-source.cpp
   src/ros-data-source.cpp
   src/stereo-image-buffer.cpp)

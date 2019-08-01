@@ -18,7 +18,7 @@
 #include <rosbag/view.h>
 #include <sensor_msgs/Image.h>
 
-#include "spark-vio-ros/ros-base-data-source.h"
+#include "spark-vio-ros/base-data-source.h"
 
 namespace VIO {
 
