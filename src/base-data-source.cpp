@@ -61,7 +61,6 @@ RosBaseDataProvider::~RosBaseDataProvider() {}
 
 cv::Mat RosBaseDataProvider::readRosImage(
     const sensor_msgs::ImageConstPtr& img_msg) {
-  // Use cv_bridge to read ros image to cv::Mat
   cv_bridge::CvImagePtr cv_ptr;
   try {
     cv_ptr = cv_bridge::toCvCopy(img_msg);
@@ -69,23 +68,20 @@ cv::Mat RosBaseDataProvider::readRosImage(
     ROS_FATAL("cv_bridge exception: %s", exception.what());
     ros::shutdown();
   }
-  // Return cv::Mat
-  return cv_ptr->image;
-}
 
-cv::Mat RosBaseDataProvider::readRosRGBImage(
-    const sensor_msgs::ImageConstPtr& img_msg) {
-  // Use cv_bridge to read ros image to cv::Mat
-  cv::Mat img_rgb = RosBaseDataProvider::readRosImage(img_msg);
-  // CV_RGB2GRAY);
-  cv::cvtColor(img_rgb, img_rgb, cv::COLOR_BGR2GRAY);
-  // Return cv::Mat
-  return img_rgb;
+  if (img_msg->encoding == sensor_msgs::image_encodings::BGR8) {
+    LOG(WARNING) << "Converting image...";
+    cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_BGR2GRAY);
+  } else {
+    CHECK_EQ(cv_ptr->encoding, sensor_msgs::image_encodings::MONO8)
+        << "Expected image with MONO8 or BGR8 encoding.";
+  }
+
+  return cv_ptr->image;
 }
 
 cv::Mat RosBaseDataProvider::readRosDepthImage(
     const sensor_msgs::ImageConstPtr& img_msg) {
-  // Use cv_bridge to read ros image to cv::Mat
   cv_bridge::CvImagePtr cv_ptr;
   try {
     cv_ptr =
@@ -95,14 +91,15 @@ cv::Mat RosBaseDataProvider::readRosDepthImage(
     ros::shutdown();
   }
   cv::Mat img_depth = cv_ptr->image;
-  if (img_depth.type() != CV_16UC1)
-    // mDepthMapFactor);
+  if (img_depth.type() != CV_16UC1) {
+    LOG(WARNING) << "Converting img_depth.";
     img_depth.convertTo(img_depth, CV_16UC1);
-  // Return cv::Mat
+  }
   return img_depth;
 }
 
 bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
+  CHECK_NOTNULL(stereo_calib);
   // Parse camera calibration info (from param server)
 
   // Rate
@@ -111,7 +108,8 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
 
   // Resoltuion
   std::vector<int> resolution;
-  nh_private_.getParam("camera_resolution", resolution);
+  CHECK(nh_private_.getParam("camera_resolution", resolution));
+  CHECK_EQ(resolution.size(), 2);
 
   // Get distortion/intrinsics/extrinsics for each camera
   for (int i = 0; i < 2; i++) {
@@ -142,15 +140,17 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     std::vector<double> extrinsics;
     // Encode calibration frame to body frame
     std::vector<double> frame_change;
-    ROS_ASSERT(nh_private_.getParam(camera_name + "extrinsics", extrinsics));
-    ROS_ASSERT(nh_private_.getParam("calibration_to_body_frame", frame_change));
+    CHECK(nh_private_.getParam(camera_name + "extrinsics", extrinsics));
+    CHECK(nh_private_.getParam("calibration_to_body_frame", frame_change));
+    CHECK_EQ(extrinsics.size(), 16);
+    CHECK_EQ(frame_change.size(), 16);
     // Place into matrix
     // 4 4 is hardcoded here because currently only accept extrinsic input
     // in homoegeneous format [R T ; 0 1]
     cv::Mat E_calib = cv::Mat::zeros(4, 4, CV_64F);
     cv::Mat calib2body = cv::Mat::zeros(4, 4, CV_64F);
     for (int k = 0; k < 16; k++) {
-      int row = k / 4;
+      int row = k / 4;  // Integer division, truncation of fractional part.
       int col = k % 4;
       E_calib.at<double>(row, col) = extrinsics[k];
       calib2body.at<double>(row, col) = frame_change[k];
@@ -163,7 +163,7 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     // restore back to vector form
     std::vector<double> extrinsics_body;
     for (int k = 0; k < 16; k++) {
-      int row = k / 4;
+      int row = k / 4;  // Integer division, truncation of fractional part.
       int col = k % 4;
       extrinsics_body.push_back(E_body.at<double>(row, col));
     }
@@ -185,7 +185,7 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
       // if given 4 coefficients
       case (4):
         ROS_INFO(
-            "using radtan or equidistant model (4 coefficients) for camera %d",
+            "Using radtan or equidistant model (4 coefficients) for camera %d",
             i);
         distortion_coeff = cv::Mat::zeros(1, 4, CV_64F);
         distortion_coeff.at<double>(0, 0) = d_coeff[0];  // k1
@@ -195,7 +195,7 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
         break;
 
       case (5):  // if given 5 coefficients
-        ROS_INFO("using radtan model (5 coefficients) for camera %d", i);
+        ROS_INFO("Using radtan model (5 coefficients) for camera %d", i);
         distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
         for (int k = 0; k < 5; k++) {
           distortion_coeff.at<double>(0, k) = d_coeff[k];  // k1, k2, k3, p1, p2
@@ -203,7 +203,7 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
         break;
 
       default:  // otherwise
-        ROS_FATAL("Unsupported distortion format");
+        ROS_FATAL("Unsupported distortion format.");
     }
 
     camera_param_i.distortion_coeff_ = distortion_coeff;

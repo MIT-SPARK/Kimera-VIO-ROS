@@ -70,8 +70,6 @@ class RosBaseDataProvider : public DataProvider {
  protected:
   cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg);
 
-  cv::Mat readRosRGBImage(const sensor_msgs::ImageConstPtr& img_msg);
-
   cv::Mat readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg);
 
   // Parse camera calibration info (from param server)
