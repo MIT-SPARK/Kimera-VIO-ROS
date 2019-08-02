@@ -14,7 +14,7 @@
 #include <ros/ros.h>
 
 // Dependencies from VIO
-#include <LoggerMatlab.h>
+#include <pipeline/Pipeline.h>
 #include <utils/Timer.h>
 
 // Dependencies from this repository

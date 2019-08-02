@@ -13,6 +13,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
+#include <sensor_msgs/Image.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/Bool.h>
@@ -45,22 +46,22 @@ RosBaseDataProvider::RosBaseDataProvider()
   ROS_ASSERT(nh_private_.getParam("world_frame_id", world_frame_id_));
 
   // Publishers
-  odom_publisher_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
-  frontend_stats_publisher_ =
+  odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
+  frontend_stats_pub_ =
       nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 10);
-  resil_publisher_ =
+  resiliency_pub_ =
       nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 10);
-  bias_publisher_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 10);
+  imu_bias_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 10);
   pointcloud_pub_ =
       nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10);
-  per_frame_mesh_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5);
+  mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5);
   debug_img_pub_ = it_->advertise("debug_mesh_img", 10);
 }
 
 RosBaseDataProvider::~RosBaseDataProvider() {}
 
 cv::Mat RosBaseDataProvider::readRosImage(
-    const sensor_msgs::ImageConstPtr& img_msg) {
+    const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
     cv_ptr = cv_bridge::toCvCopy(img_msg);
@@ -81,7 +82,7 @@ cv::Mat RosBaseDataProvider::readRosImage(
 }
 
 cv::Mat RosBaseDataProvider::readRosDepthImage(
-    const sensor_msgs::ImageConstPtr& img_msg) {
+    const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
     cv_ptr =
@@ -128,6 +129,7 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     // Parse intrinsics (camera matrix)
     std::vector<double> intrinsics;
     nh_private_.getParam(camera_name + "intrinsics", intrinsics);
+    CHECK_EQ(intrinsics.size(), 4u);
     camera_param_i.intrinsics_ = intrinsics;
     // Conver intrinsics to camera matrix (OpenCV format)
     camera_param_i.camera_matrix_ = cv::Mat::eye(3, 3, CV_64F);
@@ -142,8 +144,8 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     std::vector<double> frame_change;
     CHECK(nh_private_.getParam(camera_name + "extrinsics", extrinsics));
     CHECK(nh_private_.getParam("calibration_to_body_frame", frame_change));
-    CHECK_EQ(extrinsics.size(), 16);
-    CHECK_EQ(frame_change.size(), 16);
+    CHECK_EQ(extrinsics.size(), 16u);
+    CHECK_EQ(frame_change.size(), 16u);
     // Place into matrix
     // 4 4 is hardcoded here because currently only accept extrinsic input
     // in homoegeneous format [R T ; 0 1]
@@ -271,37 +273,46 @@ bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
 }
 
 void RosBaseDataProvider::publishOutput(const SpinOutputPacket& vio_output) {
-  // Publish VIO state
-  publishState(vio_output);
-
-  publishPerFrameMesh3D(vio_output);
-
+  publishTf(vio_output);
+  if (odometry_pub_.getNumSubscribers() > 0) {
+    publishState(vio_output);
+  }
+  // Publish 3d mesh (not the time-horizon one! just the per-frame one)
+  if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
+    publishPerFrameMesh3D(vio_output);
+  }
   // Publish 2d mesh debug image
-  publishDebugImage(vio_output.getTimestamp(), vio_output.mesh_2d_img_);
-
-  publishTimeHorizonPointCloud(vio_output.getTimestamp(),
-                               vio_output.points_with_id_VIO_,
-                               vio_output.lmk_id_to_lmk_type_map_);
-
-  // Publish Frontend Stats
-  publishFrontendStats(vio_output);
-
+  if (debug_img_pub_.getNumSubscribers() > 0) {
+    publishDebugImage(vio_output.getTimestamp(), vio_output.mesh_2d_img_);
+  }
+  if (pointcloud_pub_.getNumSubscribers() > 0) {
+    publishTimeHorizonPointCloud(vio_output.getTimestamp(),
+                                 vio_output.points_with_id_VIO_,
+                                 vio_output.lmk_id_to_lmk_type_map_);
+  }
+  if (frontend_stats_pub_.getNumSubscribers() > 0) {
+    publishFrontendStats(vio_output);
+  }
   // Publish Resiliency
-  publishResiliency(vio_output);
-
-  // Publish imu bias
-  publishImuBias(vio_output);
+  if (resiliency_pub_.getNumSubscribers() > 0) {
+    publishResiliency(vio_output);
+  }
+  if (imu_bias_pub_.getNumSubscribers() > 0) {
+    publishImuBias(vio_output);
+  }
 }
 
 void RosBaseDataProvider::publishTimeHorizonPointCloud(
     const Timestamp& timestamp, const PointsWithIdMap& points_with_id,
-    const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) {
+    const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const {
   PointCloudXYZRGB::Ptr msg(new PointCloudXYZRGB);
   msg->header.frame_id = world_frame_id_;
   msg->is_dense = true;
   msg->height = 1;
   msg->width = points_with_id.size();
   msg->points.resize(points_with_id.size());
+
+  LOG(ERROR) << "Points with id size: " << msg->points.size();
 
   bool color_the_cloud = false;
   if (lmk_id_to_lmk_type_map.size() != 0) {
@@ -358,14 +369,14 @@ void RosBaseDataProvider::publishTimeHorizonPointCloud(
 }
 
 void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
-                                            const cv::Mat& debug_image) {
+                                            const cv::Mat& debug_image) const {
   // CHECK(debug_image.type(), CV_8UC1);
   std_msgs::Header h;
   h.stamp.fromNSec(timestamp);
   h.frame_id = base_link_frame_id_;
-  sensor_msgs::ImagePtr msg =
-      cv_bridge::CvImage(h, "bgr8", debug_image).toImageMsg();  // Copies...
-  debug_img_pub_.publish(msg);
+  // Copies...
+  debug_img_pub_.publish(
+      cv_bridge::CvImage(h, "bgr8", debug_image).toImageMsg());
 }
 
 // void RosBaseDataProvider::publishTimeHorizonMesh3D(
@@ -375,7 +386,7 @@ void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
 //}
 
 void RosBaseDataProvider::publishPerFrameMesh3D(
-    const SpinOutputPacket& vio_output) {
+    const SpinOutputPacket& vio_output) const {
   const Mesh2D& mesh_2d = vio_output.mesh_2d_;
   const Mesh3D& mesh_3d = vio_output.mesh_3d_;
   size_t number_mesh_2d_polygons = mesh_2d.getNumberOfPolygons();
@@ -473,13 +484,14 @@ void RosBaseDataProvider::publishPerFrameMesh3D(
   msg->cloud.header.frame_id = msg->header.frame_id;
 
   if (msg->polygons.size() > 0) {
-    per_frame_mesh_pub_.publish(msg);
+    mesh_3d_frame_pub_.publish(msg);
   }
 
   return;
 }  // namespace VIO
 
-void RosBaseDataProvider::publishState(const SpinOutputPacket& vio_output) {
+void RosBaseDataProvider::publishState(
+    const SpinOutputPacket& vio_output) const {
   // Get latest estimates for odometry.
   const gtsam::Pose3& pose = vio_output.getEstimatedPose();
   const gtsam::Vector3& velocity = vio_output.getEstimatedVelocity();
@@ -501,10 +513,12 @@ void RosBaseDataProvider::publishState(const SpinOutputPacket& vio_output) {
   odometry_msg.pose.pose.position.z = pose.z();
 
   // Orientation
-  odometry_msg.pose.pose.orientation.w = pose.rotation().toQuaternion().w();
-  odometry_msg.pose.pose.orientation.x = pose.rotation().toQuaternion().x();
-  odometry_msg.pose.pose.orientation.y = pose.rotation().toQuaternion().y();
-  odometry_msg.pose.pose.orientation.z = pose.rotation().toQuaternion().z();
+  const gtsam::Rot3& rotation = pose.rotation();
+  const gtsam::Quaternion& quaternion = rotation.toQuaternion();
+  odometry_msg.pose.pose.orientation.w = quaternion.w();
+  odometry_msg.pose.pose.orientation.x = quaternion.x();
+  odometry_msg.pose.pose.orientation.y = quaternion.y();
+  odometry_msg.pose.pose.orientation.z = quaternion.z();
 
   // Remap covariance from GTSAM convention
   // to odometry convention and fill in covariance
@@ -523,7 +537,8 @@ void RosBaseDataProvider::publishState(const SpinOutputPacket& vio_output) {
   }
 
   // Linear velocities, trivial values for angular
-  const Vector3 velocity_body = pose.rotation().transpose() * velocity;
+  const gtsam::Matrix3& inversed_rotation = rotation.transpose();
+  const Vector3 velocity_body = inversed_rotation * velocity;
   odometry_msg.twist.twist.linear.x = velocity_body(0);
   odometry_msg.twist.twist.linear.y = velocity_body(1);
   odometry_msg.twist.twist.linear.z = velocity_body(2);
@@ -531,7 +546,7 @@ void RosBaseDataProvider::publishState(const SpinOutputPacket& vio_output) {
   // Velocity covariance: first linear
   // and then angular (trivial values for angular)
   const gtsam::Matrix3 vel_cov_body =
-      pose.rotation().transpose().matrix() * vel_cov * pose.rotation().matrix();
+      inversed_rotation.matrix() * vel_cov * rotation.matrix();
   DCHECK_EQ(vel_cov_body.rows(), 3);
   DCHECK_EQ(vel_cov_body.cols(), 3);
   DCHECK_EQ(odometry_msg.twist.covariance.size(), 36);
@@ -544,69 +559,72 @@ void RosBaseDataProvider::publishState(const SpinOutputPacket& vio_output) {
     }
   }
   // Publish message
-  odom_publisher_.publish(odometry_msg);
+  odometry_pub_.publish(odometry_msg);
+}
 
+void RosBaseDataProvider::publishTf(const SpinOutputPacket& vio_output) {
+  const Timestamp& ts = vio_output.getTimestamp();
+  const gtsam::Pose3& pose = vio_output.getEstimatedPose();
+  const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
   // Publish base_link TF.
   geometry_msgs::TransformStamped odom_tf;
-  odom_tf.header = odometry_msg.header;
+  odom_tf.header.stamp.fromNSec(ts);
+  odom_tf.header.frame_id = world_frame_id_;
   odom_tf.child_frame_id = base_link_frame_id_;
 
   odom_tf.transform.translation.x = pose.x();
   odom_tf.transform.translation.y = pose.y();
   odom_tf.transform.translation.z = pose.z();
-  odom_tf.transform.rotation = odometry_msg.pose.pose.orientation;
-  odom_broadcaster_.sendTransform(odom_tf);
+  odom_tf.transform.rotation.w = quaternion.w();
+  odom_tf.transform.rotation.x = quaternion.x();
+  odom_tf.transform.rotation.y = quaternion.y();
+  odom_tf.transform.rotation.z = quaternion.z();
+  tf_broadcaster_.sendTransform(odom_tf);
 }
 
 void RosBaseDataProvider::publishFrontendStats(
     const SpinOutputPacket& vio_output) const {
   // Get frontend data for resiliency output
-  DebugTrackerInfo debug_tracker_info = vio_output.getTrackerInfo();
+  const DebugTrackerInfo& debug_tracker_info = vio_output.getTrackerInfo();
 
   // Create message type
   std_msgs::Float64MultiArray frontend_stats_msg;
 
   // Build Message Layout
-  frontend_stats_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
-  frontend_stats_msg.layout.dim[0].size = 13;
+  frontend_stats_msg.data.resize(13);
+  frontend_stats_msg.data[0] = debug_tracker_info.nrDetectedFeatures_;
+  frontend_stats_msg.data[1] = debug_tracker_info.nrTrackerFeatures_;
+  frontend_stats_msg.data[2] = debug_tracker_info.nrMonoInliers_;
+  frontend_stats_msg.data[3] = debug_tracker_info.nrMonoPutatives_;
+  frontend_stats_msg.data[4] = debug_tracker_info.nrStereoInliers_;
+  frontend_stats_msg.data[5] = debug_tracker_info.nrStereoPutatives_;
+  frontend_stats_msg.data[6] = debug_tracker_info.monoRansacIters_;
+  frontend_stats_msg.data[7] = debug_tracker_info.stereoRansacIters_;
+  frontend_stats_msg.data[8] = debug_tracker_info.nrValidRKP_;
+  frontend_stats_msg.data[9] = debug_tracker_info.nrNoLeftRectRKP_;
+  frontend_stats_msg.data[10] = debug_tracker_info.nrNoRightRectRKP_;
+  frontend_stats_msg.data[11] = debug_tracker_info.nrNoDepthRKP_;
+  frontend_stats_msg.data[12] = debug_tracker_info.nrFailedArunRKP_;
+  frontend_stats_msg.layout.dim.resize(1);
+  frontend_stats_msg.layout.dim[0].size = frontend_stats_msg.data.size();
   frontend_stats_msg.layout.dim[0].stride = 1;
   frontend_stats_msg.layout.dim[0].label =
       "FrontEnd: nrDetFeat, nrTrackFeat, nrMoIn, nrMoPu, nrStIn, nrStPu, "
       "moRaIt, stRaIt, nrVaRKP, nrNoLRKP, nrNoRRKP, nrNoDRKP nrFaARKP";
 
-  // Get FrontEnd Statistics to Publish
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrDetectedFeatures_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrTrackerFeatures_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrMonoInliers_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrMonoPutatives_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrStereoInliers_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrStereoPutatives_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.monoRansacIters_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.stereoRansacIters_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrValidRKP_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrNoLeftRectRKP_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrNoRightRectRKP_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrNoDepthRKP_);
-  frontend_stats_msg.data.push_back(debug_tracker_info.nrFailedArunRKP_);
-
   // Publish Message
-  frontend_stats_publisher_.publish(frontend_stats_msg);
+  frontend_stats_pub_.publish(frontend_stats_msg);
 }
 
 void RosBaseDataProvider::publishResiliency(
     const SpinOutputPacket& vio_output) const {
   // Get frontend and velocity covariance data for resiliency output
-  DebugTrackerInfo debug_tracker_info = vio_output.getTrackerInfo();
-  gtsam::Matrix3 vel_cov = vio_output.getEstimatedVelCov();
-  gtsam::Matrix6 pose_cov = vio_output.getEstimatedPoseCov();
+  const DebugTrackerInfo& debug_tracker_info = vio_output.getTrackerInfo();
+  const gtsam::Matrix3& vel_cov = vio_output.getEstimatedVelCov();
+  const gtsam::Matrix6& pose_cov = vio_output.getEstimatedPoseCov();
 
   // Create message type for quality of SparkVIO
   std_msgs::Float64MultiArray resiliency_msg;
-
-  // Build Message Layout
-  resiliency_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
-  resiliency_msg.layout.dim[0].size = 8;
-  resiliency_msg.layout.dim[0].stride = 1;
 
   // Publishing extra information:
   // cov_v_det and nrStIn should be the most relevant!
@@ -631,57 +649,63 @@ void RosBaseDataProvider::publishResiliency(
   CHECK_EQ(cov_p_eigv.size(), 3);
 
   // Quality statistics to publish
-  resiliency_msg.data.push_back(
-      std::cbrt(cov_p_eigv(0) * cov_p_eigv(1) * cov_p_eigv(2)));
-  resiliency_msg.data.push_back(
-      std::cbrt(cov_v_eigv(0) * cov_v_eigv(1) * cov_v_eigv(2)));
-  resiliency_msg.data.push_back(debug_tracker_info.nrStereoInliers_);
-  resiliency_msg.data.push_back(debug_tracker_info.nrMonoInliers_);
+  resiliency_msg.data.resize(8);
+  resiliency_msg.data[0] =
+      std::cbrt(cov_p_eigv(0) * cov_p_eigv(1) * cov_p_eigv(2));
+  resiliency_msg.data[1] =
+      std::cbrt(cov_v_eigv(0) * cov_v_eigv(1) * cov_v_eigv(2));
+  resiliency_msg.data[2] = debug_tracker_info.nrStereoInliers_;
+  resiliency_msg.data[3] = debug_tracker_info.nrMonoInliers_;
 
   // Publish thresholds for statistics
   float pos_det_threshold, vel_det_threshold;
   int mono_ransac_theshold, stereo_ransac_threshold;
-  ROS_ASSERT(nh_private_.getParam("velocity_det_threshold", vel_det_threshold));
-  ROS_ASSERT(nh_private_.getParam("position_det_threshold", pos_det_threshold));
-  ROS_ASSERT(
+  CHECK(nh_private_.getParam("velocity_det_threshold", vel_det_threshold));
+  CHECK(nh_private_.getParam("position_det_threshold", pos_det_threshold));
+  CHECK(
       nh_private_.getParam("stereo_ransac_threshold", stereo_ransac_threshold));
-  ROS_ASSERT(
-      nh_private_.getParam("mono_ransac_threshold", mono_ransac_theshold));
-  resiliency_msg.data.push_back(pos_det_threshold);
-  resiliency_msg.data.push_back(vel_det_threshold);
-  resiliency_msg.data.push_back(stereo_ransac_threshold);
-  resiliency_msg.data.push_back(mono_ransac_theshold);
+  CHECK(nh_private_.getParam("mono_ransac_threshold", mono_ransac_theshold));
+  resiliency_msg.data[4] = pos_det_threshold;
+  resiliency_msg.data[5] = vel_det_threshold;
+  resiliency_msg.data[6] = stereo_ransac_threshold;
+  resiliency_msg.data[7] = mono_ransac_theshold;
+
+  // Build Message Layout
+  resiliency_msg.layout.dim.resize(1);
+  resiliency_msg.layout.dim[0].size = resiliency_msg.data.size();
+  resiliency_msg.layout.dim[0].stride = 1;
 
   // Publish Message
-  resil_publisher_.publish(resiliency_msg);
+  resiliency_pub_.publish(resiliency_msg);
 }
 
 void RosBaseDataProvider::publishImuBias(
     const SpinOutputPacket& vio_output) const {
   // Get imu bias to output
-  ImuBias imu_bias = vio_output.getEstimatedBias();
-  Vector3 accel_bias = imu_bias.accelerometer();
-  Vector3 gyro_bias = imu_bias.gyroscope();
+  const ImuBias& imu_bias = vio_output.getEstimatedBias();
+  const Vector3& accel_bias = imu_bias.accelerometer();
+  const Vector3& gyro_bias = imu_bias.gyroscope();
 
   // Create message type
   std_msgs::Float64MultiArray imu_bias_msg;
 
+  // Get Imu Bias to Publish
+  imu_bias_msg.data.resize(6);
+  imu_bias_msg.data.at(0) = gyro_bias[0];
+  imu_bias_msg.data.at(1) = gyro_bias[1];
+  imu_bias_msg.data.at(2) = gyro_bias[2];
+  imu_bias_msg.data.at(3) = accel_bias[0];
+  imu_bias_msg.data.at(4) = accel_bias[1];
+  imu_bias_msg.data.at(5) = accel_bias[2];
+
   // Build Message Layout
-  imu_bias_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
-  imu_bias_msg.layout.dim[0].size = 6;
+  imu_bias_msg.layout.dim.resize(1);
+  imu_bias_msg.layout.dim[0].size = imu_bias_msg.data.size();
   imu_bias_msg.layout.dim[0].stride = 1;
   imu_bias_msg.layout.dim[0].label = "Gyro Bias: x,y,z. Accel Bias: x,y,z";
 
-  // Get Imu Bias to Publish
-  imu_bias_msg.data.push_back(gyro_bias[0]);
-  imu_bias_msg.data.push_back(gyro_bias[1]);
-  imu_bias_msg.data.push_back(gyro_bias[2]);
-  imu_bias_msg.data.push_back(accel_bias[0]);
-  imu_bias_msg.data.push_back(accel_bias[1]);
-  imu_bias_msg.data.push_back(accel_bias[2]);
-
   // Publish Message
-  bias_publisher_.publish(imu_bias_msg);
+  imu_bias_pub_.publish(imu_bias_msg);
 }
 
 // VIO output callback at keyframe rate

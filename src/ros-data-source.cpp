@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <ros/callback_queue.h>
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/Bool.h>
 

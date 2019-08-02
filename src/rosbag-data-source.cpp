@@ -185,23 +185,35 @@ bool RosbagDataProvider::spin() {
       // Publish VIO output if any.
       // TODO(Toni) this could go faster if running in another thread or node...
       SpinOutputPacket vio_output;
-      if (vio_output_queue_.pop(vio_output)) publishOutput(vio_output);
-
+      if (vio_output_queue_.pop(vio_output)) {
+        publishOutput(vio_output);
+      } else {
+        LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
+      }
       ros::spinOnce();
     } else {
       LOG(ERROR) << "ROS SHUTDOWN requested, stopping rosbag spin.";
       ros::shutdown();
       return false;
     }
-  }
+  }  // End of for loop over rosbag images.
   LOG(WARNING) << "Rosbag processing finished.";
+
+  // Endless loop until ros dies to publish left-over outputs.
+  while (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
+    SpinOutputPacket vio_output;
+    CHECK(vio_output_queue_.popBlocking(vio_output))
+        << "Vio output queue was shutdown...";
+    publishOutput(vio_output);
+  }
+
   return true;
 }
 
 bool RosbagDataProvider::parseImuData(RosbagData* rosbag_data,
-                                      ImuParams* imuparams) {
+                                      ImuParams* imu_params) {
   CHECK_NOTNULL(rosbag_data);
-  CHECK_NOTNULL(imuparams);
+  CHECK_NOTNULL(imu_params);
   // Parse IMU calibration info (from param server)
   double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise,
       acc_walk;
@@ -226,10 +238,10 @@ bool RosbagDataProvider::parseImuData(RosbagData* rosbag_data,
       0.00500019;  // set to 0 for now
 
   // Gyroscope and accelerometer noise parameters
-  imuparams->gyro_noise_ = gyro_noise;
-  imuparams->gyro_walk_ = gyro_walk;
-  imuparams->acc_noise_ = acc_noise;
-  imuparams->acc_walk_ = acc_walk;
+  imu_params->gyro_noise_ = gyro_noise;
+  imu_params->gyro_walk_ = gyro_walk;
+  imu_params->acc_noise_ = acc_noise;
+  imu_params->acc_walk_ = acc_walk;
 
   ROS_INFO("Parsed IMU calibration");
   return true;

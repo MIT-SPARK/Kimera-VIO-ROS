@@ -37,8 +37,8 @@ bool StereoBuffer::extractLatestImages(sensor_msgs::ImageConstPtr& left_img,
   return true;
 }
 
-void StereoBuffer::addStereoFrame(sensor_msgs::ImageConstPtr left_img,
-                                  sensor_msgs::ImageConstPtr right_img) {
+void StereoBuffer::addStereoFrame(const sensor_msgs::ImageConstPtr& left_img,
+                                  const sensor_msgs::ImageConstPtr& right_img) {
   // Timestamp is in nanoseconds
   Timestamp timestamp = left_img->header.stamp.toNSec();
 
@@ -53,7 +53,7 @@ void StereoBuffer::addStereoFrame(sensor_msgs::ImageConstPtr left_img,
   sp.left_ros_img = left_img;
   sp.right_ros_img = right_img;
 
-  // update buffer and time
+  // Update buffer and time
   stereo_buffer_.push_back(sp);
   latest_timestamp_ = timestamp;
   return;

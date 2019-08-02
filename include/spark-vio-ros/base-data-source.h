@@ -15,26 +15,20 @@
 #define PCL_NO_PRECOMPILE  // Define this before you include any PCL headers
                            // to include the templated algorithms
 #include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
 
 #include <image_transport/subscriber_filter.h>
-#include <ros/callback_queue.h>
-#include <ros/console.h>
 #include <ros/ros.h>
-#include <ros/spinner.h>
-#include <sensor_msgs/Image.h>
 #include <tf/transform_broadcaster.h>
 
 // TODO(Toni): do we really need all these includes??
 // I doubt we are using the imu frontend and the pipeline!
-#include <ImuFrontEnd.h>
 #include <StereoFrame.h>
 #include <StereoImuSyncPacket.h>
 #include <VioFrontEndParams.h>
 #include <common/vio_types.h>
 #include <datasource/DataSource.h>
-#include <pipeline/Pipeline.h>
+#include <utils/ThreadsafeQueue.h>
 
 #include "spark-vio-ros/stereo-image-buffer.h"
 
@@ -56,7 +50,7 @@ class RosBaseDataProvider : public DataProvider {
   RosBaseDataProvider();
   virtual ~RosBaseDataProvider();
 
-  // VIO output callback at keyframe rate
+  // VIO output callback at keyframe rate.
   void callbackKeyframeRateVioOutput(const SpinOutputPacket& vio_output);
 
  protected:
@@ -68,9 +62,9 @@ class RosBaseDataProvider : public DataProvider {
   };
 
  protected:
-  cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg);
+  cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;
 
-  cv::Mat readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg);
+  cv::Mat readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg) const;
 
   // Parse camera calibration info (from param server)
   bool parseCameraData(StereoCalibration* stereo_calib);
@@ -106,29 +100,31 @@ class RosBaseDataProvider : public DataProvider {
 
   // Publishers
   ros::Publisher pointcloud_pub_;
-  ros::Publisher per_frame_mesh_pub_;
-  ros::Publisher odom_publisher_;
-  ros::Publisher resil_publisher_;
-  ros::Publisher frontend_stats_publisher_;
-  ros::Publisher bias_publisher_;
+  // Published 3d mesh per frame (not time horizon of opitimization!)
+  ros::Publisher mesh_3d_frame_pub_;
+  ros::Publisher odometry_pub_;
+  ros::Publisher resiliency_pub_;
+  ros::Publisher frontend_stats_pub_;
+  ros::Publisher imu_bias_pub_;
 
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
 
   void publishTimeHorizonPointCloud(
       const Timestamp& timestamp, const PointsWithIdMap& points_with_id,
-      const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map);
-  void publishPerFrameMesh3D(const SpinOutputPacket& vio_output);
-  void publishTimeHorizonMesh3D(const SpinOutputPacket& vio_output);
-  void publishState(const SpinOutputPacket& vio_output);
+      const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const;
+  void publishPerFrameMesh3D(const SpinOutputPacket& vio_output) const;
+  void publishTimeHorizonMesh3D(const SpinOutputPacket& vio_output) const;
+  void publishState(const SpinOutputPacket& vio_output) const;
+  void publishTf(const SpinOutputPacket& vio_output);
   void publishFrontendStats(const SpinOutputPacket& vio_output) const;
   // Publish resiliency statistics
   void publishResiliency(const SpinOutputPacket& vio_output) const;
   void publishImuBias(const SpinOutputPacket& vio_output) const;
   void publishDebugImage(const Timestamp& timestamp,
-                         const cv::Mat& debug_image);
+                         const cv::Mat& debug_image) const;
 
   // Define tf broadcaster for world to base_link (IMU).
-  tf::TransformBroadcaster odom_broadcaster_;
+  tf::TransformBroadcaster tf_broadcaster_;
 };
 
 }  // namespace VIO

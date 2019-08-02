@@ -9,12 +9,11 @@
 #include <cstdio>
 #include <vector>
 
-#include <common/vio_types.h>
-#include <ros/console.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 
-#include "datasource/DataSource.h"
+#include <common/vio_types.h>
+#include <datasource/DataSource.h>
 
 namespace VIO {
 
@@ -42,13 +41,13 @@ class StereoBuffer {
   bool extractLatestImages(sensor_msgs::ImageConstPtr& left_img,
                            sensor_msgs::ImageConstPtr& right_img);
 
-  // add images to buffer
+  // Add images to buffer
   // and update latest timestamp
-  void addStereoFrame(sensor_msgs::ImageConstPtr left_img,
-                      sensor_msgs::ImageConstPtr right_img);
+  void addStereoFrame(const sensor_msgs::ImageConstPtr& left_img,
+                      const sensor_msgs::ImageConstPtr& right_img);
 
+  // Discard next frame
   void removeNext();
-  // discard next frame
 };
 
 }  // namespace VIO
