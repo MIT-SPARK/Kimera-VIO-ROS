@@ -30,7 +30,8 @@ RosDataProvider::RosDataProvider()
       frame_count_(1) {
   ROS_INFO("Starting SparkVIO wrapper for online");
 
-  parseImuData(&imu_data_, &imu_params_);
+  parseImuData(&imu_data_, &pipeline_params_.imu_params_);
+  parseParams();  // parse backend/frontend parameters
   // print parameters for check
   print();
 
@@ -98,7 +99,7 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr &msgIMU) {
   imu_accgyr(4) = msgIMU->angular_velocity.y;
   imu_accgyr(5) = msgIMU->angular_velocity.z;
   // Adapt imu timestamp to account for time shift in IMU-cam
-  ros::Duration imu_shift(imu_params_.imu_shift_);
+  ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
   Timestamp timestamp = msgIMU->header.stamp.toNSec() - imu_shift.toNSec();
   // t_imu = t_cam + imu_shift (see: Kalibr)
   // ROS_INFO("Recieved message at time %ld", timestamp);
