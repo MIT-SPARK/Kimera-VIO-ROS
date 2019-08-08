@@ -4,13 +4,13 @@
   <arg name="online" default="True" />
 
   <!-- Only used when parsing a rosbag -->
-  <arg name="rosbag_path" default="/home/tonirv/datasets/kitti/TODO"
+  <arg name="rosbag_path" default="/home/yunchang/data/kitti_2011_09_26_drive_0005_unsynced.bag"
        unless="$(arg online)"/>
 
   <!-- Subscribed Topics -->
-  <arg name="left_cam_topic"  default="/kitti/camera_gray_left/image_raw"/>
-  <arg name="right_cam_topic" default="/kitti/camera_gray_right/image_raw"/>
-  <arg name="imu_topic"       default="/kitti/oxts/imu"/>
+  <arg name="left_cam_topic"  value="/kitti/camera_gray_left/image_raw"/>
+  <arg name="right_cam_topic" value="/kitti/camera_gray_right/image_raw"/>
+  <arg name="imu_topic"       value="/kitti/oxts/imu"/>
 
   <!-- Launch actual pipeline -->
   <include file="$(find spark_vio_ros)/launch/spark_vio_ros.launch"
