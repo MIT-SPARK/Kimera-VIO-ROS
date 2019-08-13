@@ -31,7 +31,9 @@ RosDataProvider::RosDataProvider()
   ROS_INFO("Starting SparkVIO wrapper for online");
 
   parseImuData(&imu_data_, &pipeline_params_.imu_params_);
-  parseParams();  // parse backend/frontend parameters
+  // parse backend/frontend parameters
+  parseBackendParams();
+  parseFrontendParams();
   // print parameters for check
   print();
 
