@@ -25,7 +25,9 @@ RosbagDataProvider::RosbagDataProvider()
   CHECK(nh_private_.getParam("imu_rosbag_topic", imu_topic));
 
   parseImuData(&rosbag_data_, &pipeline_params_.imu_params_);
-  parseParams();  // parse backend/frontend parameters
+  // parse backend/frontend parameters
+  parseBackendParams();
+  parseFrontendParams();
 
   // Parse data from rosbag
   CHECK(parseRosbag(rosbag_path, left_camera_topic, right_camera_topic,
