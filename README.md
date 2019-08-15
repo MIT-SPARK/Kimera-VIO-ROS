@@ -3,12 +3,19 @@ ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
 # Requirements
 
-Install ROS.
+Install [ROS Desktop-Full Install](http://wiki.ros.org/kinetic/Installation), below we prodive installation instructions for :
+```
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+sudo apt-get update
+# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
+sudo apt-get install ros-melodic-desktop-full
+```
 
 Install catkin tools.
 
 # Installation
-If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src)
+If you have [Spark VIO](https://github.mit.edu/SPARK/VIO) installed and built, installation should just be:
 
 ```
 # Setup catkin workspace
