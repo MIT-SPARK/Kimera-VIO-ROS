@@ -1,8 +1,22 @@
 # SPARK_VIO_ROS
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
+# Requirements
+
+Install [ROS Desktop-Full Install](http://wiki.ros.org/kinetic/Installation), below we prodive installation instructions for :
+```
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+sudo apt-get update
+# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
+sudo apt-get install ros-melodic-desktop-full
+```
+
+Install catkin tools.
+
 # Installation
-Note that this is to be used with the `feature/clean_code` branch of SparkVio. If you have SparkVio installed and made, installation should just be: (in your catkin_ws/src) 
+If you have [Spark VIO](https://github.mit.edu/SPARK/VIO) installed and built, installation should just be:
+
 ```
 # Setup catkin workspace
 mkdir -p ~/catkin_ws/src
@@ -29,34 +43,53 @@ source ~/.bashrc
 ```
 
 # Usage
-An example one can try is with the EuRoC dataset. To run, type 
-```
-roslaunch spark_vio_ros spark_vio_ros_euroc.launch data:="<path-to-rosbag>" rate:="<playback rate factor>
-```
-Note that the data parameter is required and the rate is default set to 1.0 (real time)
+- Download the EuRoC dataset. (TODO provide a sliced rosbag of EUROC V1_01 for testing.)
 
-To use your own dataset, you can copy the param/EuRoC folder and exchange all the values within the folder to those corresponding to your dataset (calibration, topic name, tracker/vio values, etc. ). Then, copy the launch file and just exchange the argument for dataset name to the name of your new folder. 
+  ## Online
 
-For debugging, the VERBOSITY argument in the launch file can be toggled. 
+- To run:
+  - In one terminal, launch the spark vio ROS wrapper:
+```
+roslaunch spark_vio_ros spark_vio_ros_euroc.launch
+```
+  - In another terminal, launch a Euroc rosbag: 
+```
+rosbag play /path/to/euroc_rosbag --clock
+```
+
+  ## Offline
+    In this mode, the provided rosbag will be first parsed and then sent to the VIO for processing.
+    This is particularly useful when debugging to avoid potential ROS networking issues.
+    - To run:
+      - Open a new terminal and launch the Spark VIO ROS wrapper with the `online` parameter set to `false`:
+      ```
+        roslaunch spark_vio_ros spark_vio_ros_euroc.launch online:=false
+      ```
+
+
+  ## Custom
+To use your own dataset, you can copy the param/EuRoC folder and exchange all the values within the folder to those corresponding to your dataset (calibration, topic name, tracker/vio values, etc. ). Then, copy the launch file and just exchange the argument for dataset name to the name of your new folder.
+
+For debugging, the VERBOSITY argument in the launch file can be toggled.
 
 You can also run this offline (the rosbag is parsed before starting the pipeline). To do this, type
 ```
 roslaunch spark_vio_ros spark_vio_ros_euroc_offline.launch data:="<path-to-rosbag>"
 ```
-You can use your own dataset, as explained above. 
+You can use your own dataset, as explained above.
 
 # ToDo
 Check Issues and Projects tabs.
 
 # Notes/FAQ
-One possible source of confusion is the DUMMY_DATASET_PATH argument. This is needed because of the way the SparkVio architecture is currently setup. More precisely, it requires the ETH Parser to be passed into the pipeline, so the quick way around it is to give it a dummy eth dataset (placed in the temp folder), that it doesn't really use. 
+One possible source of confusion is the DUMMY_DATASET_PATH argument. This is needed because of the way the SparkVio architecture is currently setup. More precisely, it requires the ETH Parser to be passed into the pipeline, so the quick way around it is to give it a dummy eth dataset (placed in the temp folder), that it doesn't really use.
 
-Another thing to note is that in regularVioParameters.yaml, autoinitialize needs to be set to 1, otherwise the pipeline will initialize according to the ground truth in the dummy data. 
+Another thing to note is that in regularVioParameters.yaml, autoinitialize needs to be set to 1, otherwise the pipeline will initialize according to the ground truth in the dummy data.
 
 # Hardware use
 ## RealSense D435i (Infrared)
 
-Why do we use the infrared cameras on the D435i? 
+Why do we use the infrared cameras on the D435i?
 The infrared cameras offer the option to run the SparkVIO stereo version on monochrome global shutter cameras, which are generally better suited for visual tracking.
 
 ### Setup
@@ -99,7 +132,7 @@ It is important to remember that when launching the VIO, the camera should be st
 
 2. Collect calibration bagfiles for camera intrinsics and extrinsics [(see instructions)](https://www.youtube.com/watch?v=puNXsnrYWTY&app=desktop)
 
-3. Calibrate camera intrinsics and extrinsics using [Kalibr](https://github.com/ethz-asl/kalibr), recommended model is: ```pinhole-equi``` [(see OpenCV documentation)](https://docs.opencv.org/3.3.1/db/d58/group__calib3d__fisheye.html) 
+3. Calibrate camera intrinsics and extrinsics using [Kalibr](https://github.com/ethz-asl/kalibr), recommended model is: ```pinhole-equi``` [(see OpenCV documentation)](https://docs.opencv.org/3.3.1/db/d58/group__calib3d__fisheye.html)
 
 4. Create configuration files for SparkVIO ROS wrapper using [Kalibr2SparkVIO-pinhole-equi](https://github.mit.edu/SPARK/VIO/blob/feature/parallelization/jpl/kalibr/kalibr2sparkvio_stereo_pinhole-equi.py) or [[Kalibr2SparkVIO-pinhole-radtan](https://github.mit.edu/SPARK/VIO/blob/feature/parallelization/jpl/kalibr/kalibr2sparkvio_stereo_pinhole-equi.py)]
 

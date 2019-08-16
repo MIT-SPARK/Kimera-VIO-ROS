@@ -1,5 +1,5 @@
 /**
- * @file   StereoImageBuffer.h
+ * @file   stereo-image-buffer.h
  * @brief  Stereo Image Buffer for ROS wrapper
  * @author Yun Chang
  */
@@ -10,13 +10,15 @@
 #include <vector>
 
 #include <ros/ros.h>
-#include <ros/console.h>
 #include <sensor_msgs/Image.h>
-#include "datasource/DataSource.h"
+
 #include <common/vio_types.h>
+#include <datasource/DataSource.h>
+
+namespace VIO {
 
 struct StereoPacket {
-  VIO::Timestamp timestamp;
+  Timestamp timestamp;
   sensor_msgs::ImageConstPtr left_ros_img;
   sensor_msgs::ImageConstPtr right_ros_img;
 };
@@ -24,14 +26,14 @@ struct StereoPacket {
 class StereoBuffer {
   std::vector<StereoPacket> stereo_buffer_;
   // Latest timestamp
-  VIO::Timestamp latest_timestamp_;
+  Timestamp latest_timestamp_;
   // Earliest timestamp
-  VIO::Timestamp earliest_timestamp_;
+  Timestamp earliest_timestamp_;
 
-public:
+ public:
   // Get timestamp of latest frame
-  VIO::Timestamp getLatestTimestamp() const;
-  VIO::Timestamp getEarliestTimestamp() const;
+  Timestamp getLatestTimestamp() const;
+  Timestamp getEarliestTimestamp() const;
   size_t size() const;
 
   // Get the images of the latest frame
@@ -39,11 +41,13 @@ public:
   bool extractLatestImages(sensor_msgs::ImageConstPtr& left_img,
                            sensor_msgs::ImageConstPtr& right_img);
 
-  // add images to buffer
+  // Add images to buffer
   // and update latest timestamp
-  void addStereoFrame(sensor_msgs::ImageConstPtr left_img,
-                      sensor_msgs::ImageConstPtr right_img);
+  void addStereoFrame(const sensor_msgs::ImageConstPtr& left_img,
+                      const sensor_msgs::ImageConstPtr& right_img);
 
+  // Discard next frame
   void removeNext();
-  // discard next frame
 };
+
+}  // namespace VIO

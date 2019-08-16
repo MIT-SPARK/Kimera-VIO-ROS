@@ -1,70 +1,26 @@
 <launch>
   <arg name="dataset_name" value="EuRoC"/>
+  <arg name="verbosity"    default="0" />
 
-  <arg name="parallel" default="True" />
+  <!-- Set online to true if you use rosbag play or sensor stream -->
+  <arg name="online" default="true" />
+  <!-- Set use_sim_time to true if you use rosbag with clock argument -->
+  <param name="use_sim_time" value="true"/>
 
-  <arg name="online" default="True" />
+  <!-- Change rosbag path if online argument is false -->
+  <arg name="rosbag_path" default="/home/tonirv/datasets/euroc/V1_01_easy/V1_01_easy.bag"
+    unless="$(arg online)"/>
 
-  <!-- Each dataset has its own set of parameter files -->
-  <rosparam command="load" file="$(find spark_vio_ros)/param/$(arg dataset_name)/calibration.yaml"/>
+  <!-- Frame IDs -->
+  <arg name="base_link_frame_id" value="base_link"/>
 
-  <!-- Define subscriber topics -->
-  <remap from="cam0/image_raw" to="/cam0/image_raw"/>
-  <remap from="cam1/image_raw" to="/cam1/image_raw"/>
-  <remap from="imu0" to="/imu0"/>
+  <!-- Launch static TF node from IMU to Cam0 for Euroc -->
+  <node pkg="tf" type="static_transform_publisher" name="left_cam_broadcaster"
+    args="-0.0216401454975 -0.064676986768 0.00981073058949
+    -0.0077071797555374275 0.010499323370587278 0.7017528002919717 0.7123014606689537
+    $(arg base_link_frame_id) cam0 100"/>
 
-  <!-- Remap subscriber topics -->
-  <!-- remap from="sparkvio/reinit_flag" to="/sparkvio/reinit_flag"/ -->
-  <!-- remap from="sparkvio/reinit_pose" to="/sparkvio/reinit_pose"/ -->
-
-  <!-- Remap publisher topics -->
-  <!-- remap from="sparkvio/odometry" to="/sparkvio/odometry"/ -->
-  <!-- remap from="sparkvio/resiliency" to="/sparkvio/resiliency"/ -->
-  <!-- remap from="sparkvio/imu_bias" to="/sparkvio/imu_bias"/ -->
-
-  <!-- Resiliency Thresholds -->
-  <param name="velocity_det_threshold" value="0.1" />
-  <param name="position_det_threshold" value="0.3" />
-  <param name="stereo_ransac_threshold" value="20" />
-  <param name="mono_ransac_threshold" value="30" />
-
-  <!-- Frame IDs for Odometry -->
-  <param name="odom_base_frame_id" value="world" />
-  <param name="odom_child_frame_id" value="base_link" />
-
-	<!-- More parameter arguments -->
-	<arg name="VIO_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/regularVioParameters.yaml" />
-	<param name="vio_params_filepath" value="$(arg VIO_PARAMS_PATH)" />
-	<arg name="TRACKER_PARAMS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/trackerParameters.yaml" />
-	<param name="tracker_params_filepath" value="$(arg TRACKER_PARAMS_PATH)" />
-	<arg name="VIO_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/StereoVIO.flags" />
-	<arg name="MESHER_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Mesher.flags" />
-	<arg name="BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/VioBackEnd.flags" />
-	<arg name="REGULAR_BACKEND_FLAGS_PATH" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/RegularVioBackEnd.flags" />
-	<arg name="VISUALIZER_FLAGS" value="$(find spark_vio_ros)/param/$(arg dataset_name)/flags/Visualizer3D.flags" />
-	<arg name="VERBOSITY" default="0" />
-	<arg name="BACKEND_TYPE" default="1" /> <!-- For regular VIO -->
-	<arg name="LOG_OUTPUT" default="False" />
-	<arg name="OUTPUT_PATH" default="./" />
-	<arg name="VISUALIZE" default="False" /> <!-- Note that this is duplicated from the flags file -->
-
-	<!-- Launch main node  -->
-	<node name="stereo_vio_ros" pkg="spark_vio_ros" type="stereo_vio_ros" output="screen" 
-				args="--logtostderr=1
-  					  --colorlogtostderr=1 
-  					  --log_prefix=1 
-  					  --vio_params_path=$(arg VIO_PARAMS_PATH) 
-  					  --tracker_params_path=$(arg TRACKER_PARAMS_PATH) 
-  					  --flagfile=$(arg VIO_FLAGS_PATH) 
-  					  --flagfile=$(arg MESHER_FLAGS_PATH)
-  					  --flagfile=$(arg BACKEND_FLAGS_PATH)
-  					  --flagfile=$(arg REGULAR_BACKEND_FLAGS_PATH)
-  					  --flagfile=$(arg VISUALIZER_FLAGS)
-  					  --v=$(arg VERBOSITY)
-  					  --backend_type=$(arg BACKEND_TYPE)
-  					  --log_output=$(arg LOG_OUTPUT)
-  					  --output_path=$(arg OUTPUT_PATH)
-  					  --visualize=$(arg VISUALIZE)
-              --parallel_run=$(arg parallel)
-              --online_run=$(arg online)" />
+  <!-- Launch actual pipeline -->
+  <include file="$(find spark_vio_ros)/launch/spark_vio_ros.launch"
+    pass_all_args="true"/>
 </launch>

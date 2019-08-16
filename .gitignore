@@ -1,3 +1,6 @@
+# Qt things
+*.user*
+
 # Prerequisites
 *.d
 

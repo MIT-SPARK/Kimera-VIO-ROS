@@ -1,36 +1,38 @@
 /**
- * @file   RosDataSource.h
- * @brief  ROS wrapper
+ * @file   ros-data-source.h
+ * @brief  ROS wrapper for online processing.
  * @author Yun Chang
+ * @author Antoni Rosinol
  */
 
 #pragma once
 
-#include "RosBaseDataSource.h"
+#include "spark-vio-ros/base-data-source.h"
+#include "spark-vio-ros/stereo-image-buffer.h"
 
-#include "StereoImageBuffer.h"
+#include <message_filters/subscriber.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/time_synchronizer.h>
+#include <sensor_msgs/Imu.h>
+#include <std_msgs/Bool.h>
 
 // using namespace StereoImageBuffer;
 
 namespace VIO {
 
-class RosDataProvider: public RosBaseDataProvider {
-public:
-  RosDataProvider(std::string left_camera_topic,
-                  std::string right_camera_topic,
-                  std::string imu_topic,
-                  std::string reinit_flag_topic,
-                  std::string reinit_pose_topic);
+class RosDataProvider : public RosBaseDataProvider {
+ public:
+  RosDataProvider();
   virtual ~RosDataProvider();
-  bool spin();
+  virtual bool spin() override;
 
   // Checks the current status of reinitialization flag
-  inline bool getReinitFlag() const { return reinit_flag_;}
+  inline bool getReinitFlag() const { return reinit_flag_; }
   // Resets the current status of reinitialization flag
-  void resetReinitFlag() { reinit_packet_.resetReinitFlag();}
+  void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
 
-private:
-
+ private:
+  // TODO (Toni): only use one node handle...
   // Define Node Handler for IMU Callback (and Queue)
   ros::NodeHandle nh_imu_;
 
@@ -39,15 +41,11 @@ private:
 
   // Define Node Handler for Cam Callback (and Queue)
   ros::NodeHandle nh_cam_;
-  image_transport::ImageTransport it_;
-  // image_tranport should be used for images instead of subscribers
 
-  typedef image_transport::SubscriberFilter ImageSubscriber;
-
-  ImuData imu_data_; // store IMU data from last frame
-  Timestamp last_time_stamp_; // Timestamp correponding to last frame
-  Timestamp last_imu_time_stamp_; // Timestamp corresponding to last imu meas
-  int frame_count_; // Keep track of number of frames processed
+  ImuData imu_data_;               // store IMU data from last frame
+  Timestamp last_time_stamp_;      // Timestamp correponding to last frame
+  Timestamp last_imu_time_stamp_;  // Timestamp corresponding to last imu meas
+  int frame_count_;                // Keep track of number of frames processed
 
   StereoBuffer stereo_buffer_;
 
@@ -55,7 +53,7 @@ private:
   bool reinit_flag_ = false;
   ReinitPacket reinit_packet_ = ReinitPacket();
 
-private:
+ private:
   // IMU callback
   void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
 
@@ -70,15 +68,16 @@ private:
                                    const sensor_msgs::ImageConstPtr& msgRight);
 
   // Message filters and to sync stereo images
+  typedef image_transport::SubscriberFilter ImageSubscriber;
   ImageSubscriber left_img_subscriber_;
   ImageSubscriber right_img_subscriber_;
 
-  // Declare Synchronization Policy for Stereo
-  typedef message_filters::sync_policies::ApproximateTime
-  <sensor_msgs::Image, sensor_msgs::Image> sync_pol;
-
-  // Declare synchronizer
-  message_filters::Synchronizer<sync_pol> sync;
+  // Declare Approx Synchronization Policy and Synchronizer for stereo images.
+  // TODO(Toni): should be exact sync policy
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
+                                                          sensor_msgs::Image>
+      sync_pol;
+  std::unique_ptr<message_filters::Synchronizer<sync_pol>> sync_;
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;
@@ -87,12 +86,8 @@ private:
   ros::Subscriber reinit_flag_subscriber_;
   ros::Subscriber reinit_pose_subscriber_;
 
-  // Define reinitialization topic
-  std::string reinit_flag_topic_;
-  std::string reinit_pose_topic_;
-
   // Print the parameters
   void print() const;
 };
 
-} // End of VIO Namespace
+}  // namespace VIO
