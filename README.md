@@ -1,5 +1,9 @@
 # SPARK_VIO_ROS
+
+Spark VIO ROS is open-source under the BSD license, see the `LICENSE.BSD` file.
+
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
+
 
 # Requirements
 
