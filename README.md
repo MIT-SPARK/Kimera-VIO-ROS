@@ -1,9 +1,11 @@
 # SPARK_VIO_ROS
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
-# Requirements
+# 1. Installation
 
-## ROS
+## A. Prerequisities
+
+### i. ROS
 Install [ROS Desktop-Full Install](http://wiki.ros.org/kinetic/Installation), below we prodive installation instructions:
 ```
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
@@ -42,12 +44,13 @@ Finally, install dependencies for building packages and catkin tools:
 sudo apt-get install python-rosinstall python-rosinstall-generator python-wstool build-essential python-catkin-tools
 ```
 
-## SparkVIO
+### ii. SparkVIO main library and its dependencies
 
 Follow installation instructions in [Spark VIO](https://github.mit.edu/SPARK/VIO).
-Make sure you install SparkVIO and all its dependencies.
+Make sure you install SparkVIO and **all its dependencies**.
 
-# Installation
+## B. SparkVIO ROS wrapper Installation
+
 If you have the above prerequisities and [Spark VIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should just be:
 
 ```
@@ -75,7 +78,7 @@ catkin build
 source ~/.bashrc
 ```
 
-# Usage
+# 2. Usage
 - Download the EuRoC dataset. (TODO provide a sliced rosbag of EUROC V1_01 for testing.)
 
   ## Online
@@ -110,9 +113,6 @@ You can also run this offline (the rosbag is parsed before starting the pipeline
 roslaunch spark_vio_ros spark_vio_ros_euroc_offline.launch data:="<path-to-rosbag>"
 ```
 You can use your own dataset, as explained above.
-
-# ToDo
-Check Issues and Projects tabs.
 
 # Notes/FAQ
 One possible source of confusion is the DUMMY_DATASET_PATH argument. This is needed because of the way the SparkVio architecture is currently setup. More precisely, it requires the ETH Parser to be passed into the pipeline, so the quick way around it is to give it a dummy eth dataset (placed in the temp folder), that it doesn't really use.
