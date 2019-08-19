@@ -79,8 +79,7 @@ roslaunch spark_vio_ros spark_vio_ros_euroc_offline.launch data:="<path-to-rosba
 You can use your own dataset, as explained above.
 
   ## Kitti example
-Here we also provide some [kitti rosbags for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, similar to Euroc,
-  -In one terminal , launch the spark vio ROS wrapper with the launch file we configured for kitti:
+Here we also provide some [kitti rosbags for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, in one terminal , launch the spark vio ROS wrapper with the launch file we configured for kitti:
 ```
 roslaunch spark_vio_ros spark_vio_ros_kitti.launch
 ```
