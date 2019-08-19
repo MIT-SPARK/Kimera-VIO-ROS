@@ -4,22 +4,57 @@ Spark VIO ROS is open-source under the BSD license, see the `LICENSE.BSD` file.
 
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
+# 1. Installation
 
-# Requirements
+## A. Prerequisities
 
-Install [ROS Desktop-Full Install](http://wiki.ros.org/kinetic/Installation), below we prodive installation instructions for :
+### i. ROS
+Install [ROS Desktop-Full Install](http://wiki.ros.org/kinetic/Installation), below we prodive installation instructions:
 ```
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
 sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 sudo apt-get update
-# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
-sudo apt-get install ros-melodic-desktop-full
 ```
 
-Install catkin tools.
+Now, you can install the ROS distribution corresponding to your system.
 
-# Installation
-If you have [Spark VIO](https://github.mit.edu/SPARK/VIO) installed and built, installation should just be:
+- If you have **Ubuntu 14.04**, run:
+```
+# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
+sudo apt-get install ros-kinetic-desktop-full
+# Automatically source ROS for convenience:
+echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+```
+
+- Otherwise, if you have **Ubuntu 16.04**, run:
+```
+# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
+sudo apt-get install ros-melodic-desktop-full
+# Automatically source ROS for convenience:
+echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+```
+
+Now, initialize rosdep:
+```
+sudo rosdep init
+rosdep update
+```
+
+Finally, install dependencies for building packages and catkin tools:
+```
+sudo apt-get install python-rosinstall python-rosinstall-generator python-wstool build-essential python-catkin-tools
+```
+
+### ii. SparkVIO main library and its dependencies
+
+Follow installation instructions in [Spark VIO](https://github.mit.edu/SPARK/VIO).
+Make sure you install SparkVIO and **all its dependencies**.
+
+## B. SparkVIO ROS wrapper Installation
+
+If you have the above prerequisities and [Spark VIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should just be:
 
 ```
 # Setup catkin workspace
@@ -46,7 +81,7 @@ catkin build
 source ~/.bashrc
 ```
 
-# Usage
+# 2. Usage
 - Download the EuRoC dataset. (TODO provide a sliced rosbag of EUROC V1_01 for testing.)
 
   ## Online
@@ -81,9 +116,6 @@ You can also run this offline (the rosbag is parsed before starting the pipeline
 roslaunch spark_vio_ros spark_vio_ros_euroc_offline.launch data:="<path-to-rosbag>"
 ```
 You can use your own dataset, as explained above.
-
-# ToDo
-Check Issues and Projects tabs.
 
 # Notes/FAQ
 One possible source of confusion is the DUMMY_DATASET_PATH argument. This is needed because of the way the SparkVio architecture is currently setup. More precisely, it requires the ETH Parser to be passed into the pipeline, so the quick way around it is to give it a dummy eth dataset (placed in the temp folder), that it doesn't really use.
