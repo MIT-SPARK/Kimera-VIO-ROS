@@ -12,12 +12,12 @@ Install ROS by following [our reference](./docs/ros_installation.md), or the off
 
 ### ii. SparkVIO main library and its dependencies
 
-Follow installation instructions in [Spark VIO](https://github.mit.edu/SPARK/VIO).
+Follow installation instructions in [SparkVIO](https://github.mit.edu/SPARK/VIO).
 Make sure you install SparkVIO and **all its dependencies** (GTSAM, OpenCV, OpenGV).
 
 ## B. SparkVIO ROS wrapper Installation
 
-If you have the above prerequisities and [Spark VIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should be:
+If you have the above prerequisities and [SparkVIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should be:
 
 ```
 # Setup catkin workspace
@@ -45,40 +45,25 @@ source ~/.bashrc
 ```
 
 # 2. Usage
-- Download the EuRoC dataset. (TODO provide a sliced rosbag of EUROC V1_01 for testing.)
+Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) rosbag: for example [V1_01_easy](http://robotics.ethz.ch/~asl-datasets/ijrr_euroc_mav_dataset/vicon_room1/V1_01_easy/V1_01_easy.bag).
 
-  ## Online
+## Online
+  - In one terminal, launch the SparkVIO ROS wrapper:
+  ```bash
+  roslaunch spark_vio_ros spark_vio_ros_euroc.launch
+  ```
+  - In another terminal, launch the downloaded Euroc rosbag: 
+  ```bash
+  rosbag play /PATH/TO/EUROC_ROSBAG --clock
+  ```
 
-- To run:
-  - In one terminal, launch the spark vio ROS wrapper:
-```
-roslaunch spark_vio_ros spark_vio_ros_euroc.launch
-```
-  - In another terminal, launch a Euroc rosbag: 
-```
-rosbag play /path/to/euroc_rosbag --clock
-```
-
-  ## Offline
-    In this mode, the provided rosbag will be first parsed and then sent to the VIO for processing.
-    This is particularly useful when debugging to avoid potential ROS networking issues.
-    - To run:
-      - Open a new terminal and launch the Spark VIO ROS wrapper with the `online` parameter set to `false`:
-      ```
-        roslaunch spark_vio_ros spark_vio_ros_euroc.launch online:=false
-      ```
-
-
-  ## Custom
-To use your own dataset, you can copy the param/EuRoC folder and exchange all the values within the folder to those corresponding to your dataset (calibration, topic name, tracker/vio values, etc. ). Then, copy the launch file and just exchange the argument for dataset name to the name of your new folder.
-
-For debugging, the VERBOSITY argument in the launch file can be toggled.
-
-You can also run this offline (the rosbag is parsed before starting the pipeline). To do this, type
-```
-roslaunch spark_vio_ros spark_vio_ros_euroc_offline.launch data:="<path-to-rosbag>"
-```
-You can use your own dataset, as explained above.
+## Offline
+  In this mode, the provided rosbag will be first parsed and then sent to the VIO for processing.
+  This is particularly useful when debugging to avoid potential ROS networking issues.
+  - To run, launch the SparkVIO ROS wrapper with the `online` parameter set to `false` and specify the rosbag's path inside the launch file:
+  ```bash
+  roslaunch spark_vio_ros spark_vio_ros_euroc.launch online:=false
+  ```
 
 # Notes/FAQ
 One possible source of confusion is the DUMMY_DATASET_PATH argument. This is needed because of the way the SparkVio architecture is currently setup. More precisely, it requires the ETH Parser to be passed into the pipeline, so the quick way around it is to give it a dummy eth dataset (placed in the temp folder), that it doesn't really use.
