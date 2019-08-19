@@ -52,7 +52,7 @@ source ~/.bashrc
 ```
 roslaunch spark_vio_ros spark_vio_ros_euroc.launch
 ```
-  - In another terminal, launch a Euroc rosbag: 
+  - In another terminal, launch a Euroc rosbag:
 ```
 rosbag play /path/to/euroc_rosbag --clock
 ```
@@ -77,6 +77,19 @@ You can also run this offline (the rosbag is parsed before starting the pipeline
 roslaunch spark_vio_ros spark_vio_ros_euroc_offline.launch data:="<path-to-rosbag>"
 ```
 You can use your own dataset, as explained above.
+
+  ## Kitti example
+Here we also provide some [kitti rosbags for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, similar to Euroc,
+  -In one terminal , launch the spark vio ROS wrapper with the launch file we configured for kitti:
+```
+roslaunch spark_vio_ros spark_vio_ros_kitti.launch
+```
+  - In another terminal, launch a Kitti rosbag:
+```
+rosbag play /path/to/kitti_rosbag --clock
+```
+  - In rviz, you can use the provided config file provided at spark_vio_ros/rviz/sparkvio_kitti.rviz
+
 
 # ToDo
 Check Issues and Projects tabs.
