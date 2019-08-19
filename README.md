@@ -1,6 +1,6 @@
 # SparkVIO_ROS
 
-ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
+ROS Wrapper for [SparkVIO](https://github.mit.edu/SPARK/VIO).
 
 # 1. Installation
 
