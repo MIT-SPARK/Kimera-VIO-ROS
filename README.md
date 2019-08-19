@@ -195,3 +195,6 @@ roslaunch spark_vio_ros spark_vio_ros_mynteye.launch camera:=JPL distortion:=equ
 Options for camera are ```MIT``` and ```JPL```. Options for distortion are ```equidistant``` and ```radtan```.
 
 Same goes for use offline, using the ```spark_vio_ros_mynteye_offline.launch``` file and an additional ```data``` argument with path to bagfile.
+
+# BSD License
+SparkVIO ROS wrapper is open source under the BSD license, see the [LICENSE.BSD](./LICENSE.BSD) file.
