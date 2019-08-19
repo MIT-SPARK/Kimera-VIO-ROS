@@ -1,4 +1,4 @@
-# SPARK_VIO_ROS
+# SparkVIO_ROS
 
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
