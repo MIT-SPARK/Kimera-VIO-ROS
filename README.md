@@ -3,19 +3,52 @@ ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
 # Requirements
 
-Install [ROS Desktop-Full Install](http://wiki.ros.org/kinetic/Installation), below we prodive installation instructions for :
+## ROS
+Install [ROS Desktop-Full Install](http://wiki.ros.org/kinetic/Installation), below we prodive installation instructions:
 ```
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
 sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 sudo apt-get update
-# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
-sudo apt-get install ros-melodic-desktop-full
 ```
 
-Install catkin tools.
+Now, you can install the ROS distribution corresponding to your system.
+
+- If you have **Ubuntu 14.04**, run:
+```
+# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
+sudo apt-get install ros-kinetic-desktop-full
+# Automatically source ROS for convenience:
+echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+```
+
+- Otherwise, if you have **Ubuntu 16.04**, run:
+```
+# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
+sudo apt-get install ros-melodic-desktop-full
+# Automatically source ROS for convenience:
+echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+```
+
+Now, initialize rosdep:
+```
+sudo rosdep init
+rosdep update
+```
+
+Finally, install dependencies for building packages and catkin tools:
+```
+sudo apt-get install python-rosinstall python-rosinstall-generator python-wstool build-essential python-catkin-tools
+```
+
+## SparkVIO
+
+Follow installation instructions in [Spark VIO](https://github.mit.edu/SPARK/VIO).
+Make sure you install SparkVIO and all its dependencies.
 
 # Installation
-If you have [Spark VIO](https://github.mit.edu/SPARK/VIO) installed and built, installation should just be:
+If you have the above prerequisities and [Spark VIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should just be:
 
 ```
 # Setup catkin workspace
