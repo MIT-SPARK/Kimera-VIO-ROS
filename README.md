@@ -1,4 +1,4 @@
-# SPARK_VIO_ROS
+# SparkVIO_ROS
 
 ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
@@ -10,16 +10,18 @@ ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
 
 Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
 
-### ii. SparkVIO main library and its dependencies
+### ii. SparkVIO's dependencies
 
-Follow installation instructions in [SparkVIO](https://github.mit.edu/SPARK/VIO).
-Make sure you install SparkVIO and **all its dependencies** (GTSAM, OpenCV, OpenGV).
+Follow installation instructions in [SparkVIO](https://github.mit.edu/SPARK/VIO/blob/master/docs/sparkvio_installation.md).
+Make sure you install **SparkVIO's dependencies**: GTSAM, OpenCV, OpenGV.
+
+SparkVIO itself can be installed by cloning the **[SparkVIO catkin wrapper](https://github.mit.edu/SPARK/spark_vio_catkin)** in your catkin workspace, so you can spare installing SparkVIO from source (its dependencies must be installed anyway).
 
 ## B. SparkVIO ROS wrapper Installation
 
 If you have the above prerequisities and [SparkVIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should be:
 
-```
+```bash
 # Setup catkin workspace
 mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/
@@ -29,14 +31,24 @@ catkin init
 echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
 
 # Clone repo
-cd src
+cd ~/catkin_ws/src
 git clone git@github.mit.edu:SPARK/spark_vio_ros.git
 
 # Install dependencies from rosinstall file using wstool
 wstool init
 wstool merge spark_vio_ros/install/spark_vio.rosinstall
 wstool update
+```
 
+Clone SparkVIO catkin wrapper (**only if you haven't installed SparkVIO already**).
+```bash
+# Clone SparkVIO catkin wrapper, useful if you don't want to build spark vio from source.
+git clone git@github.mit.edu:SPARK/spark_vio_catkin.git
+```
+
+Finally, compile:
+
+```bash
 # Compile code
 catkin build
 
@@ -60,15 +72,10 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
 ## Offline
   In this mode, the provided rosbag will be first parsed and then sent to the VIO for processing.
   This is particularly useful when debugging to avoid potential ROS networking issues.
-  - To run, launch the SparkVIO ROS wrapper with the `online` parameter set to `false` and specify the rosbag's path inside the launch file:
+  - To run, launch the SparkVIO ROS wrapper with the `online` parameter set to `false` and specify the rosbag's path:
   ```bash
-  roslaunch spark_vio_ros spark_vio_ros_euroc.launch online:=false
+  roslaunch spark_vio_ros spark_vio_ros_euroc.launch online:=false rosbag_path:="PATH/TO/ROSBAG"
   ```
-
-# Notes/FAQ
-One possible source of confusion is the DUMMY_DATASET_PATH argument. This is needed because of the way the SparkVio architecture is currently setup. More precisely, it requires the ETH Parser to be passed into the pipeline, so the quick way around it is to give it a dummy eth dataset (placed in the temp folder), that it doesn't really use.
-
-Another thing to note is that in regularVioParameters.yaml, autoinitialize needs to be set to 1, otherwise the pipeline will initialize according to the ground truth in the dummy data.
 
 # Hardware use
 ## RealSense D435i (Infrared)
