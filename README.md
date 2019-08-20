@@ -64,7 +64,7 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
   ```bash
   roslaunch spark_vio_ros spark_vio_ros_euroc.launch
   ```
-  - In another terminal, launch the downloaded Euroc rosbag: 
+  - In another terminal, launch the downloaded Euroc rosbag:
   ```bash
   rosbag play /PATH/TO/EUROC_ROSBAG --clock
   ```
@@ -76,6 +76,17 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
   ```bash
   roslaunch spark_vio_ros spark_vio_ros_euroc.launch online:=false rosbag_path:="PATH/TO/ROSBAG"
   ```
+
+## Other datasets
+The launch file and parameters can also be configured for other datasets. For example, here we provide a [kitti rosbag for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, in one terminal, launch the spark vio ROS wrapper with the launch file we configured for kitti:
+```
+roslaunch spark_vio_ros spark_vio_ros_kitti.launch
+```
+  - In another terminal, launch a Kitti rosbag:
+```
+rosbag play /path/to/kitti_rosbag --clock
+```
+  - In rviz, you can use the provided config file provided at spark_vio_ros/rviz/sparkvio_kitti.rviz
 
 # Hardware use
 ## RealSense D435i (Infrared)
