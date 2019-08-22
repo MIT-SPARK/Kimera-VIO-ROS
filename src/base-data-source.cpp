@@ -13,6 +13,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
+#include <nav_msgs/Path.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/image_encodings.h>
@@ -44,6 +45,7 @@ RosBaseDataProvider::RosBaseDataProvider()
   // Get ROS params
   ROS_ASSERT(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
   ROS_ASSERT(nh_private_.getParam("world_frame_id", world_frame_id_));
+  ROS_ASSERT(nh_private_.getParam("map_frame_id", map_frame_id_));
 
   // Publishers
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
@@ -52,6 +54,7 @@ RosBaseDataProvider::RosBaseDataProvider()
   resiliency_pub_ =
       nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 10);
   imu_bias_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 10);
+  trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 10);
   pointcloud_pub_ =
       nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10);
   mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5);
@@ -299,6 +302,9 @@ void RosBaseDataProvider::publishOutput(const SpinOutputPacket& vio_output) {
   }
   if (imu_bias_pub_.getNumSubscribers() > 0) {
     publishImuBias(vio_output);
+  }
+  if (trajectory_pub_.getNumSubscribers() > 0 ) {
+    publishOptimizedTrajectory(vio_output);
   }
 }
 
@@ -580,6 +586,23 @@ void RosBaseDataProvider::publishTf(const SpinOutputPacket& vio_output) {
   odom_tf.transform.rotation.y = quaternion.y();
   odom_tf.transform.rotation.z = quaternion.z();
   tf_broadcaster_.sendTransform(odom_tf);
+
+  const gtsam::Pose3& w_Pose_map = vio_output.getEstimatedMapPose();
+  const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
+  // Publish map TF.
+  geometry_msgs::TransformStamped map_tf;
+  map_tf.header.stamp.fromNSec(ts);
+  map_tf.header.frame_id = world_frame_id_;
+  map_tf.child_frame_id = map_frame_id_;
+
+  map_tf.transform.translation.x = w_Pose_map.x();
+  map_tf.transform.translation.y = w_Pose_map.y();
+  map_tf.transform.translation.z = w_Pose_map.z();
+  map_tf.transform.rotation.w = w_Quat_map.w();
+  map_tf.transform.rotation.x = w_Quat_map.x();
+  map_tf.transform.rotation.y = w_Quat_map.y();
+  map_tf.transform.rotation.z = w_Quat_map.z();
+  tf_broadcaster_.sendTransform(map_tf);
 }
 
 void RosBaseDataProvider::publishFrontendStats(
@@ -706,6 +729,40 @@ void RosBaseDataProvider::publishImuBias(
 
   // Publish Message
   imu_bias_pub_.publish(imu_bias_msg);
+}
+
+void RosBaseDataProvider::publishOptimizedTrajectory(
+    const SpinOutputPacket& vio_output) const {
+  // Get pgo-optimized trajectory
+  const Timestamp& ts = vio_output.getTimestamp();
+  const gtsam::Values& trajectory = vio_output.getOptimizedTrajectory();
+  // Create message type
+  nav_msgs::Path path;
+
+  // Fill path poses
+  path.poses.reserve(trajectory.size());
+  for (size_t i = 0; i < trajectory.size(); i++) {
+    gtsam::Pose3 pose = trajectory.at<gtsam::Pose3>(i);
+    gtsam::Point3 trans = pose.translation();
+    gtsam::Quaternion quat = pose.rotation().toQuaternion();
+
+    geometry_msgs::PoseStamped ps_msg;
+    ps_msg.header.frame_id = world_frame_id_;
+    ps_msg.pose.position.x = trans.x();
+    ps_msg.pose.position.y = trans.y();
+    ps_msg.pose.position.z = trans.z();
+    ps_msg.pose.orientation.x = quat.x();
+    ps_msg.pose.orientation.y = quat.y();
+    ps_msg.pose.orientation.z = quat.z();
+    ps_msg.pose.orientation.w = quat.w();
+
+    path.poses.push_back(ps_msg);
+  }
+
+  // Publish path message
+  path.header.stamp.fromNSec(ts);
+  path.header.frame_id = world_frame_id_;
+  trajectory_pub_.publish(path);
 }
 
 // VIO output callback at keyframe rate

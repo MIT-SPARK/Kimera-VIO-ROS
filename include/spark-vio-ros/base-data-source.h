@@ -90,6 +90,7 @@ class RosBaseDataProvider : public DataProvider {
   // Define frame ids for odometry message
   std::string world_frame_id_;
   std::string base_link_frame_id_;
+  std::string map_frame_id_;
 
   // Queue to store and retrieve VIO output in a thread-safe way.
   ThreadsafeQueue<SpinOutputPacket> vio_output_queue_;
@@ -106,6 +107,7 @@ class RosBaseDataProvider : public DataProvider {
   ros::Publisher resiliency_pub_;
   ros::Publisher frontend_stats_pub_;
   ros::Publisher imu_bias_pub_;
+  ros::Publisher trajectory_pub_;
 
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
 
@@ -120,6 +122,7 @@ class RosBaseDataProvider : public DataProvider {
   // Publish resiliency statistics
   void publishResiliency(const SpinOutputPacket& vio_output) const;
   void publishImuBias(const SpinOutputPacket& vio_output) const;
+  void publishOptimizedTrajectory(const SpinOutputPacket& vio_output) const;
   void publishDebugImage(const Timestamp& timestamp,
                          const cv::Mat& debug_image) const;
 
