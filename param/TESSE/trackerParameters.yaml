@@ -5,14 +5,15 @@ klt_max_iter: 30
 klt_max_level: 4
 klt_eps: 0.1
 maxFeatureAge: 10
-maxFeaturesPerFrame: 100
+maxFeaturesPerFrame: 400
 quality_level: 0.001
 min_distance: 20
 block_size: 3
 use_harris_detector: 0
 k: 0.04
 equalizeImage: 0
-nominalBaseline: -0.10
+nominalBaseline: 0.10
+visionSensorType: 0 # Stereo
 toleranceTemplateMatching: 0.15
 templ_cols: 101 #must be odd
 templ_rows: 11

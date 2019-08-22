@@ -3,31 +3,33 @@
 # Camera
 camera_model: pinhole
 distortion_model: radial-tangential
-camera_rate_hz: 20
-camera_resolution: [320, 240] # width, height
+camera_rate_hz: 13
+camera_resolution: [720, 480] # width, height
 
-left_camera_intrinsics: [250, 250, 160, 120] # fu, fv, cu, cv
+left_camera_intrinsics: [700, 700, 360, 240] # fu, fv, cu, cv
 left_camera_distortion_coefficients: [0,0,0,0,0] # k1, k2, k3, p1, p2
-left_camera_extrinsics: [-1.0, 0.0, 0.0, -0.05,
-                         0.0, 0.0, 1.0, 0.0,
+left_camera_extrinsics: [1.0, 0.0, 0.0, -0.05,
                          0.0, 1.0, 0.0, 0.0,
+                         0.0, 0.0, 1.0, 0.0,
                          0.0, 0.0, 0.0, 1.0]
 
-right_camera_intrinsics: [250, 250, 160, 120] # fu, fv, cu, cv
+right_camera_intrinsics: [700, 700, 360, 240] # fu, fv, cu, cv
 right_camera_distortion_coefficients: [0,0,0,0,0] # k1, k2, k3, p1, p2
-right_camera_extrinsics: [-1.0, 0.0, 0.0, 0.05,
-                           0.0, 0.0, 1.0, 0.0,
-                           0.0, 1.0, 0.0, 0.0,
-                           0.0, 0.0, 0.0, 1.0]
+right_camera_extrinsics: [1.0, 0.0, 0.0, 0.05,
+                          0.0, 1.0, 0.0, 0.0,
+                          0.0, 0.0, 1.0, 0.0,
+                          0.0, 0.0, 0.0, 1.0]
 
-# If extrinsics is not in body frame (in this case it is so identity )
+# If extrinsics is not in body frame (in this case it is so identity)
 calibration_to_body_frame: [1.0, 0.0, 0.0, 0.0,
                             0.0, 1.0, 0.0, 0.0,
                             0.0, 0.0, 1.0, 0.0,
                             0.0, 0.0, 0.0, 1.0]
 
 # IMU calibrations
-imu_rate_hz: 100
+imu_rate_hz: 71
+# Timeshift:
+imu_shift: 0.0 # t_imu0 = t_cam0 + imu_shift
 imu_extrinsics: [1.0, 0.0, 0.0, 0.0,
                  0.0, 1.0, 0.0, 0.0,
                  0.0, 0.0, 1.0, 0.0,
