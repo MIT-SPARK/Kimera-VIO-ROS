@@ -11,6 +11,19 @@
   <param name="use_sim_time" value="true"/>
   <arg name="rosbag_path" unless="$(arg online)"/>
 
+  <!-- If true, SparkVio will log output of all modules to the
+       'log_output_path' location. -->
+  <arg name="log_output" default="false"/>
+  <arg name="log_output_path"
+       default="$(find spark_vio_ros)/output_logs/"
+       if="$(arg log_output)"/>
+  <!-- If true, log ground-truth poses to a csv file using the
+       gt_logger_node, and processing data from the gt_topic rostopic -->
+  <arg name="log_gt_data" default="false"/>
+  <arg name="gt_topic"
+       if="$(arg log_gt_data)"
+       default="/vicon/firefly_sbx/firefly_sbx"/>
+
   <!-- Parameters -->
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
@@ -47,8 +60,8 @@
         --log_prefix=1
         --v=$(arg verbosity)
         --backend_type=$(arg backend_type)
-        --log_output=0
-        --output_path='.'
+        --log_output=$(arg log_output)
+        --output_path=$(arg log_output_path)
         --visualize=$(arg visualize)
         --parallel_run=$(arg parallel)
         --online_run=$(arg online)">
@@ -84,6 +97,14 @@
 
     <!-- Load calibration -->
     <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/>
+
+  </node>
+
+  <!-- If we want to log output, we should also log ground truth data -->
+  <node if="$(arg log_output)" name="gt_logger_node" pkg="spark_vio_ros"
+        type="gt_logger_node.py" output="screen">
+    <param name="gt_topic"   value="$(arg gt_topic)"/>
+    <param name="output_dir" value="$(arg log_output_path)"/>
 
   </node>
 </launch>

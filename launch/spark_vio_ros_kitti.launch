@@ -3,6 +3,14 @@
   <arg name="parallel" default="True" />
   <arg name="online" default="True" />
 
+  <arg name="log_output" default="false"/>
+  <arg name="log_output_path"
+       default="$(find spark_vio_ros)/output_logs/"
+       if="$(arg log_output)"/>
+  <arg name="log_gt_data" default="false"/>
+  <arg name="gt_topic" default=""
+       if="$(arg log_gt_data)"/>
+
   <!-- Only used when parsing a rosbag -->
   <arg name="rosbag_path" default="/home/yunchang/data/kitti_2011_09_26_drive_0005_unsynced.bag"
        unless="$(arg online)"/>
