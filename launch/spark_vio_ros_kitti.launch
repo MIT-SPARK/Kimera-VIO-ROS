@@ -7,6 +7,10 @@
   <arg name="rosbag_path" default="/home/yunchang/data/kitti_2011_09_26_drive_0005_unsynced.bag"
        unless="$(arg online)"/>
 
+   <!-- Specify the absolute path to the vocabulary file. -->
+   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
+   <arg name="path_to_vocab" value="/home/marcus/code/VIO/vocabulary/ORBvoc.yml"/>
+
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"  value="/kitti/camera_gray_left/image_raw"/>
   <arg name="right_cam_topic" value="/kitti/camera_gray_right/image_raw"/>

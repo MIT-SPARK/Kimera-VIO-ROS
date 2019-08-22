@@ -16,6 +16,10 @@
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
   <arg name="params_folder" value="$(find spark_vio_ros)/param/$(arg dataset_name)"/>
 
+  <!-- Specify the absolute path to the vocabulary file. -->
+  <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
+  <arg name="path_to_vocab" default="/SPECIFY_THIS_PATH_IN_LAUNCH_FILE"/>
+
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"  default="/cam0/image_raw"/>
   <arg name="right_cam_topic" default="/cam1/image_raw"/>
@@ -37,6 +41,8 @@
   <node name="spark_vio_ros" pkg="spark_vio_ros" type="spark_vio_ros" output="screen"
   args="--vio_params_path=$(arg params_folder)/regularVioParameters.yaml
         --tracker_params_path=$(arg params_folder)/trackerParameters.yaml
+        --lcd_params_path=$(arg params_folder)/LCDParameters.yaml
+        --vocabulary_path=$(arg path_to_vocab)
         --flagfile=$(arg params_folder)/flags/StereoVIO.flags
         --flagfile=$(arg params_folder)/flags/Mesher.flags
         --flagfile=$(arg params_folder)/flags/VioBackEnd.flags
