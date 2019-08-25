@@ -60,14 +60,31 @@ source ~/.bashrc
 Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) rosbag: for example [V1_01_easy](http://robotics.ethz.ch/~asl-datasets/ijrr_euroc_mav_dataset/vicon_room1/V1_01_easy/V1_01_easy.bag).
 
 ## Online
-  - In one terminal, launch the SparkVIO ROS wrapper:
+  - 1. Open a new terminal: run 
+  ```bash 
+  roscore
+  ```
+
+  - 2. In another terminal, launch SparkVIO ROS wrapper:
   ```bash
   roslaunch spark_vio_ros spark_vio_ros_euroc.launch
   ```
-  - In another terminal, launch the downloaded Euroc rosbag:
+
+  - 3. In another terminal, launch rviz for visualization:
+  ```bash
+  rviz -d $(rospack find spark_vio_ros)/rviz/spark_vio_euroc.rviz
+  ```
+
+  - 4. Finally, in another terminal, launch the downloaded Euroc rosbag:
   ```bash
   rosbag play --clock /PATH/TO/EUROC_ROSBAG 
   ```
+
+  > Note that you will need to both source ROS and the catkin_ws for each new terminal unless you added the following lines to your `~/.bashrc` file:
+  > ```bash
+  > source /opt/ros/melodic/setup.bash  # Change `melodic` for your ROS distribution.
+  > source ~/catkin_ws/devel/setup.bash # Change `bash` for your shell.
+  > ```
 
 ## Offline
   In this mode, the provided rosbag will be first parsed and then sent to the VIO for processing.
@@ -87,6 +104,9 @@ roslaunch spark_vio_ros spark_vio_ros_kitti.launch
 rosbag play --clock /PATH/TO/KITTI_ROSBAG 
 ```
   - In rviz, you can use the provided config file provided at spark_vio_ros/rviz/sparkvio_kitti.rviz
+  ```bash
+  rviz -d $(rospack find spark_vio_ros)/rviz/spark_vio_kitti.rviz
+  ```
 
 # Hardware use
 ## RealSense D435i (Infrared)
