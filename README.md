@@ -60,10 +60,7 @@ source ~/.bashrc
 Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) rosbag: for example [V1_01_easy](http://robotics.ethz.ch/~asl-datasets/ijrr_euroc_mav_dataset/vicon_room1/V1_01_easy/V1_01_easy.bag).
 
 ## Online
-  1. As a general good practice, run `roscore`. Open a new terminal and run:
-  ```bash 
-  roscore
-  ```
+  1. As a general good practice, open a new terminal and run: `roscore`
 
   2. In another terminal, launch SparkVIO ROS wrapper:
   ```bash
