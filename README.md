@@ -40,7 +40,7 @@ wstool merge spark_vio_ros/install/spark_vio.rosinstall
 wstool update
 ```
 
-Clone SparkVIO catkin wrapper (**only if you haven't installed SparkVIO already**).
+Clone [SparkVIO catkin wrapper](https://github.mit.edu/SPARK/spark_vio_catkin) (**only if you haven't installed SparkVIO from source**).
 ```bash
 # Clone SparkVIO catkin wrapper, useful if you don't want to build spark vio from source.
 git clone git@github.mit.edu:SPARK/spark_vio_catkin.git
@@ -66,7 +66,7 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
   ```
   - In another terminal, launch the downloaded Euroc rosbag:
   ```bash
-  rosbag play /PATH/TO/EUROC_ROSBAG --clock
+  rosbag play --clock /PATH/TO/EUROC_ROSBAG 
   ```
 
 ## Offline
