@@ -84,7 +84,7 @@ roslaunch spark_vio_ros spark_vio_ros_kitti.launch
 ```
   - In another terminal, launch a Kitti rosbag:
 ```
-rosbag play /path/to/kitti_rosbag --clock
+rosbag play --clock /PATH/TO/KITTI_ROSBAG 
 ```
   - In rviz, you can use the provided config file provided at spark_vio_ros/rviz/sparkvio_kitti.rviz
 
