@@ -77,7 +77,7 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
   rosbag play --clock /PATH/TO/EUROC_ROSBAG 
   ```
 
-  > Note that you will need to both source ROS and the catkin_ws for each new terminal unless you added the following lines to your `~/.bashrc` file:
+  > Note that you will need to both source ROS and your `catkin_ws` for each new terminal unless you added the following lines to your `~/.bashrc` file:
   > ```bash
   > source /opt/ros/melodic/setup.bash  # Change `melodic` for your ROS distribution.
   > source ~/catkin_ws/devel/setup.bash # Change `bash` to the shell you use.
