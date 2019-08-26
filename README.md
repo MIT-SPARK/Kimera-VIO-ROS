@@ -71,6 +71,7 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
   ```bash
   rviz -d $(rospack find spark_vio_ros)/rviz/spark_vio_euroc.rviz
   ```
+  > Note: this rviz configuration makes use of a rviz plugin: [mesh_rviz_plugins](https://github.com/ToniRV/mesh_rviz_plugins). To visualize the textured 3D mesh, clone this plugin to your catkin workspace and catkin build it (note that this should be done automatically via `wstool`).
 
   4. Finally, in another terminal, launch the downloaded Euroc rosbag:
   ```bash
