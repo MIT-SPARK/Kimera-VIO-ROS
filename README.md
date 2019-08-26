@@ -2,6 +2,8 @@
 
 ROS Wrapper for [SparkVIO](https://github.mit.edu/SPARK/VIO).
 
+![example_demo](./docs/media/SparkVIO_ROS_mesh.gif)
+
 # 1. Installation
 
 ## A. Prerequisities
