@@ -2,7 +2,9 @@
 
 ROS Wrapper for [SparkVIO](https://github.mit.edu/SPARK/VIO).
 
-![example_demo](./docs/media/SparkVIO_ROS_mesh.gif)
+<div align="center">
+    <img src="docs/media/SparkVIO_ROS_mesh.gif" width="100">
+</div>
 
 # 1. Installation
 
