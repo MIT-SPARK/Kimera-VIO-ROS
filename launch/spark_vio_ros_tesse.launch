@@ -10,7 +10,7 @@
        default="$(find spark_vio_ros)/output_logs/"
        if="$(arg log_output)"/>
   <arg name="log_gt_data" default="false"/>
-  <arg name="gt_topic" default="/tesse/gt_tf"
+  <arg name="gt_topic" default="/tesse/odom"
        if="$(arg log_gt_data)"/>
 
   <!-- Change rosbag path if online argument is false -->
