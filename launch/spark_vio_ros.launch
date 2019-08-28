@@ -84,9 +84,15 @@
     <remap from="reinit_pose" to="/sparkvio/reinit_pose"/>
 
     <!-- Remap publisher topics -->
-    <remap from="odometry"   to="/sparkvio/odometry"/>
-    <remap from="resiliency" to="/sparkvio/resiliency"/>
-    <remap from="imu_bias"   to="/sparkvio/imu_bias"/>
+    <!-- TODO(Toni): we should use a group ns="sparkvio" instead -->
+    <remap from="odometry"             to="/sparkvio/odometry"/>
+    <remap from="resiliency"           to="/sparkvio/resiliency"/>
+    <remap from="imu_bias"             to="/sparkvio/imu_bias"/>
+    <remap from="mesh"                 to="/sparkvio/mesh"/>
+    <remap from="frontend_stats"       to="/sparkvio/frontend_stats"/>
+    <remap from="debug_mesh_img"       to="/sparkvio/debug_mesh_img"/>
+    <remap from="time_horizon_pointcloud"
+                                       to="/sparkvio/time_horizon_pointcloud"/>
 
     <!-- Resiliency Thresholds: TODO(Sandro) document -->
     <param name="velocity_det_threshold"  value="0.1"/>
