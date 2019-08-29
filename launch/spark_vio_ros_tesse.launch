@@ -1,8 +1,8 @@
 <launch>
-  <arg name="dataset_name" value="TESSE"/>
-  <arg name="verbosity"    default="0"/>
-	<arg name="backend_type" default="1"/>
-  <arg name="online" default="true"/>
+  <arg name="dataset_name"   value="TESSE"/>
+  <arg name="verbosity"      default="0"/>
+  <arg name="backend_type"   default="1"/>
+  <arg name="online"         default="true"/>
   <param name="use_sim_time" value="true"/>
 
   <arg name="log_output" default="true"/>
@@ -10,21 +10,24 @@
        default="$(find spark_vio_ros)/output_logs/"
        if="$(arg log_output)"/>
   <arg name="log_gt_data" default="true"/>
-  <arg name="gt_topic" default="/tesse/odom"
+  <arg name="gt_topic"    default="/tesse/odom"
        if="$(arg log_gt_data)"/>
 
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path"
-		default="/home/marcus/datasets/tesse/tesse_vio_test_5.bag"
+    default="/home/tonirv/Code/ROS/tess_ws/src/TESSE_interface/ROS/tesse_ros_bridge/scripts/2019-08-28-16-57-09.bag"
     unless="$(arg online)"/>
 
   <!-- Frame IDs -->
   <arg name="base_link_frame_id" value="base_link_spark"/>
 
-	<!-- Subscriber Topics -->
+    <!-- Subscriber Topics -->
   <arg name="left_cam_topic"   value="/tesse/left_cam"/>
   <arg name="right_cam_topic"  value="/tesse/right_cam"/>
   <arg name="imu_topic"        value="/tesse/imu"/>
+  <!-- Empty string ("") means no ground-truth available. Used for init if
+   requested to do ground-truth initialization. -->
+  <arg name="odometry_ground_truth_topic" value="$(arg gt_topic)"/>
 
   <!-- Launch actual pipeline -->
   <include file="$(find spark_vio_ros)/launch/spark_vio_ros.launch"

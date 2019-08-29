@@ -29,9 +29,12 @@
   <arg name="params_folder" value="$(find spark_vio_ros)/param/$(arg dataset_name)"/>
 
   <!-- Subscribed Topics -->
-  <arg name="left_cam_topic"  default="/cam0/image_raw"/>
-  <arg name="right_cam_topic" default="/cam1/image_raw"/>
-  <arg name="imu_topic"       default="/imu0"/>
+  <arg name="left_cam_topic"                    default="/cam0/image_raw"/>
+  <arg name="right_cam_topic"                   default="/cam1/image_raw"/>
+  <arg name="imu_topic"                         default="/imu0"/>
+  <!-- Empty string ("") means no ground-truth available. Used for init if
+   requested to do ground-truth initialization. -->
+  <arg name="odometry_ground_truth_topic"       default=""/>
 
   <!-- Frame IDs -->
   <arg name="world_frame_id"     default="world"/>
@@ -43,7 +46,7 @@
   <arg name="backend_type" default="1" />
   <!-- Visualize pipeline output in OpenCV. -->
   <!-- Note that this is duplicated from the flags file -->
-  <arg name="visualize"    default="false" />
+  <arg name="visualize"    default="true" />
 
   <!-- Launch main node  -->
   <node name="spark_vio_ros" pkg="spark_vio_ros" type="spark_vio_ros" output="screen"
@@ -78,6 +81,10 @@
     <param name="left_cam_rosbag_topic"  value="$(arg left_cam_topic)"  unless="$(arg online)"/>
     <param name="right_cam_rosbag_topic" value="$(arg right_cam_topic)" unless="$(arg online)"/>
     <param name="imu_rosbag_topic"       value="$(arg imu_topic)"       unless="$(arg online)"/>
+    <param name="ground_truth_odometry_rosbag_topic"
+             value="$(arg odometry_ground_truth_topic)" unless="$(arg online)"/>
+
+ground_truth_odometry_rosbag_topic
 
     <!-- Other subscription topics -->
     <remap from="reinit_flag" to="/sparkvio/reinit_flag"/>

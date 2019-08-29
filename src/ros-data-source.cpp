@@ -23,9 +23,9 @@ RosDataProvider::RosDataProvider()
       right_img_subscriber_(),
       sync_(nullptr),
       // initialize last timestamp (img) to be 0
-      last_time_stamp_(0),
+      last_timestamp_(0),
       // initialize last timestamp (imu) to be 0
-      last_imu_time_stamp_(0),
+      last_imu_timestamp_(0),
       // keep track of number of frames processed
       frame_count_(1) {
   ROS_INFO("Starting SparkVIO wrapper for online");
@@ -108,15 +108,18 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr &msgIMU) {
 
   // add measurement to buffer
   // time strictly increasing
-  if (timestamp > last_imu_time_stamp_) {
+  if (timestamp > last_imu_timestamp_) {
     imu_data_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
+  } else {
+    ROS_ERROR("Current IMU timestamp is less or equal to previous timestamp.");
   }
 
-  if (last_time_stamp_ == 0) {  // initialize first img time stamp
-    last_time_stamp_ = timestamp;
+  if (last_timestamp_ == 0) {
+    // This is the first message we receive, initialize first timestamp.
+    last_timestamp_ = timestamp;
   }
 
-  last_imu_time_stamp_ = timestamp;
+  last_imu_timestamp_ = timestamp;
 }
 
 // Reinitialization callback
@@ -163,7 +166,7 @@ bool RosDataProvider::spin() {
     // StereoImuSyncPacket (Think of this as the spin of the other
     // parser/data-providers)
     const Timestamp &timestamp = stereo_buffer_.getEarliestTimestamp();
-    if (timestamp <= last_time_stamp_) {
+    if (timestamp <= last_timestamp_) {
       if (stereo_buffer_.size() != 0) {
         ROS_WARN(
             "Next frame in image buffer is from the same or "
@@ -180,7 +183,7 @@ bool RosDataProvider::spin() {
 
       utils::ThreadsafeImuBuffer::QueryResult imu_query =
           imu_data_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-              last_time_stamp_, timestamp, &imu_meas.timestamps_,
+              last_timestamp_, timestamp, &imu_meas.timestamps_,
               &imu_meas.measurements_);
       if (imu_query ==
           utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
@@ -220,7 +223,7 @@ bool RosDataProvider::spin() {
                         stereo_calib_.camL_Pose_camR_, stereo_matching_params),
             imu_meas.timestamps_, imu_meas.measurements_, reinit_packet_));
 
-        last_time_stamp_ = timestamp;
+        last_timestamp_ = timestamp;
         frame_count_++;
 
       } else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::
