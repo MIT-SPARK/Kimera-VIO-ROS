@@ -50,8 +50,10 @@ RosBaseDataProvider::RosBaseDataProvider()
   it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
 
   // Get ROS params
-  ROS_ASSERT(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
-  ROS_ASSERT(nh_private_.getParam("world_frame_id", world_frame_id_));
+  CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
+  CHECK(!base_link_frame_id_.empty());
+  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
+  CHECK(!world_frame_id_.empty());
 
   // Publishers
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
@@ -191,9 +193,13 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     nh_private_.getParam(camera_name + "distortion_coefficients", d_coeff);
     cv::Mat distortion_coeff;
 
+    // TODO(Toni): this is super prone to errors, do not rely only on d_coeff
+    // size to know what distortion params we are using...
     switch (d_coeff.size()) {
-      // if given 4 coefficients
-      case (4):
+      case (4): {
+        CHECK_EQ(camera_param_i.distortion_model_, "radial-tangential");
+        // If given 4 coefficients
+        // TODO(Toni): why 'or'? Should be only one no?
         ROS_INFO(
             "Using radtan or equidistant model (4 coefficients) for camera %d",
             i);
@@ -203,23 +209,28 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
         distortion_coeff.at<double>(0, 3) = d_coeff[2];  // p1 or k3
         distortion_coeff.at<double>(0, 4) = d_coeff[3];  // p2 or k4
         break;
-
-      case (5):  // if given 5 coefficients
+    }
+      case (5): {
+        CHECK_EQ(camera_param_i.distortion_model_, "radial-tangential");
+        // If given 5 coefficients
         ROS_INFO("Using radtan model (5 coefficients) for camera %d", i);
         distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
         for (int k = 0; k < 5; k++) {
           distortion_coeff.at<double>(0, k) = d_coeff[k];  // k1, k2, k3, p1, p2
         }
         break;
-
-      default:  // otherwise
+    }
+    default: { // otherwise
         ROS_FATAL("Unsupported distortion format.");
+    }
     }
 
     camera_param_i.distortion_coeff_ = distortion_coeff;
 
     // TODO(unknown): add skew (can add switch statement when parsing
     // intrinsics)
+    // TODO(TONI): wtf! before we parse 5 params if radial-tangential,
+    // but now we only use 4? We don't care or what?
     camera_param_i.calibration_ =
         gtsam::Cal3DS2(intrinsics[0],                       // fx
                        intrinsics[1],                       // fy
@@ -580,12 +591,12 @@ void RosBaseDataProvider::publishState(
 }
 
 void RosBaseDataProvider::publishTf(const SpinOutputPacket& vio_output) {
-  const Timestamp& ts = vio_output.getTimestamp();
+  const Timestamp& timestamp = vio_output.getTimestamp();
   const gtsam::Pose3& pose = vio_output.getEstimatedPose();
   const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
   // Publish base_link TF.
   geometry_msgs::TransformStamped odom_tf;
-  odom_tf.header.stamp.fromNSec(ts);
+  odom_tf.header.stamp.fromNSec(timestamp);
   odom_tf.header.frame_id = world_frame_id_;
   odom_tf.child_frame_id = base_link_frame_id_;
 
@@ -727,7 +738,7 @@ void RosBaseDataProvider::publishImuBias(
 
 void RosBaseDataProvider::printParsedParams() const {
   LOG(INFO) << std::string(80, '=') << '\n'
-            << ">>>>>>>>> RosbagDataProvider::print <<<<<<<<<<<" << '\n'
+            << ">>>>>>>>> RosDataProvider::print <<<<<<<<<<<" << '\n'
             << "camL_Pose_camR_: " << stereo_calib_.camL_Pose_camR_ << '\n'
             << " - Left camera params: ";
   stereo_calib_.left_camera_info_.print();
