@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 
+import os
+import csv
+
 import rospy
 from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
-import csv
 
 # TODO(marcus): add support for choosing EuRoC standard or SWE format.
-
 class GTLoggerNode:
     def __init__(self):
         self.gt_topic = rospy.get_param("~gt_topic")
         self.output_dir = rospy.get_param("~output_dir")
-        self.output_csv_file = self.output_dir + "output_gt_poses.csv"
+        self.output_csv_file = os.path.join(self.output_dir, "output_gt_poses.csv")
 
         # rospy.Subscriber(self.gt_topic, TransformStamped, self.gt_cb_tsf)
         rospy.Subscriber(self.gt_topic, Odometry, self.gt_cb_odom)
