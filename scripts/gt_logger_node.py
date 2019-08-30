@@ -29,6 +29,7 @@ class GTLoggerNode:
             is zero.
 
             Args:
+                // TODO: this should be a odometry msg...
                 msg: A geometry_msgs/TransformStamped object representing
                      the current ground-truth body transform.
         """
