@@ -40,7 +40,12 @@ RosBaseDataProvider::RosBaseDataProvider()
   parseCameraData(&stereo_calib_);
   parseImuData(&imu_data_, &pipeline_params_.imu_params_);
   // parse backend/frontend parameters
+  // Mind that parseBackendParams modifies the imu_params_ if using the default!
+  // TODO(TONI) the parseImuData is completely flawed, since parse backend
+  // is actually parsing the imu params!!
+
   parseBackendParams();
+
   CHECK(pipeline_params_.backend_params_);
   parseFrontendParams();
 
@@ -290,6 +295,7 @@ bool RosBaseDataProvider::parseImuData(ImuData* imu_data,
   imu_data->imu_rate_maxMismatch_ = 0.00500019;  // set to 0 for now
 
   // Gyroscope and accelerometer noise parameters
+  // TODO(Toni): why are we not parsing these from .yaml file????
   imu_params->gyro_noise_ = gyro_noise;
   imu_params->gyro_walk_ = gyro_walk;
   imu_params->acc_noise_ = acc_noise;
@@ -743,10 +749,18 @@ void RosBaseDataProvider::printParsedParams() const {
             << "camL_Pose_camR_: " << stereo_calib_.camL_Pose_camR_ << '\n'
             << " - Left camera params: ";
   stereo_calib_.left_camera_info_.print();
-  LOG(INFO) << " - Right camera params:";
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << " - Right camera params:";
   stereo_calib_.right_camera_info_.print();
-  LOG(INFO) << " - IMU info: ";
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << " - IMU info:";
   imu_data_.print();
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << " - IMU params:";
+  pipeline_params_.imu_params_.print();
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << " - Backend params";
+  pipeline_params_.backend_params_->print();
   LOG(INFO) << std::string(80, '=');
 }
 
