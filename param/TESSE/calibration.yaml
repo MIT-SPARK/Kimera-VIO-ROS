@@ -30,10 +30,6 @@ calibration_to_body_frame: [1.0, 0.0, 0.0, 0.0,
 imu_rate_hz: 71
 # Timeshift:
 imu_shift: 0.0 # t_imu0 = t_cam0 + imu_shift
-imu_extrinsics: [1.0, 0.0, 0.0, 0.0,
-                 0.0, 1.0, 0.0, 0.0,
-                 0.0, 0.0, 1.0, 0.0,
-                 0.0, 0.0, 0.0, 1.0]
 
 # inertial sensor noise model parameters (static)
 gyroscope_noise_density: 1.6968e-3     # [ rad / s / sqrt(Hz) ]   ( gyro "white noise" )
