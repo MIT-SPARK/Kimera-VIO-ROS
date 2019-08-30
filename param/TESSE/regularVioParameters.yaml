@@ -1,9 +1,11 @@
 %YAML:1.0
 #IMU PARAMETERS
-gyroNoiseDensity: 0.00016968
-accNoiseDensity: 0.002
-gyroBiasSigma: 1.9393e-05
-accBiasSigma: 0.003
+
+# THESE IMU PARAMS are not parsed in TESSE!!!
+# gyroNoiseDensity: 10000 #0.00000016968
+# accNoiseDensity: 0.000002
+# gyroBiasSigma: 1.9393e-08
+# accBiasSigma: 0.000003
 imuIntegrationSigma: 1.0e-8
 n_gravity: [0.0, 0.0, -9.81]
 nominalImuRate: 0.005
