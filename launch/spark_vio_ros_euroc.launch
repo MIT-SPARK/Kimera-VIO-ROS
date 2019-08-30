@@ -10,12 +10,12 @@
        the log_output_path location. -->
   <arg name="log_output" default="true"/>
   <arg name="log_output_path"
-       default="$(find spark_vio_ros)/output_logs/test_0/"
+    default="$(find spark_vio_ros)/output_logs/$(arg dataset_name)"
        if="$(arg log_output)"/>
   <!-- Set to true and specify gt_topic if you want to log ground-truth data -->
-  <arg name="log_gt_data" default="true"/>
-  <arg name="gt_topic" default="/vicon/firefly_sbx/firefly_sbx"
-       if="$(arg log_gt_data)"/>
+  <arg name="log_gt_data" default="false"/>
+  <arg name="gt_topic" if="$(arg log_gt_data)"
+       default="/vicon/firefly_sbx/firefly_sbx"/>
 
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path" default="/home/tonirv/datasets/euroc/V1_01_easy/V1_01_easy.bag"
