@@ -13,7 +13,6 @@ use_harris_detector: 0
 k: 0.04
 equalizeImage: 0
 nominalBaseline: 0.10
-#visionSensorType: 0 # Stereo
 toleranceTemplateMatching: 0.15
 templ_cols: 101 #must be odd
 templ_rows: 11
