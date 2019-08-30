@@ -239,34 +239,43 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
   return true;
 }
 
-bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
+bool RosBaseDataProvider::parseImuData(ImuData* imu_data,
+                                       ImuParams* imu_params) const {
+  CHECK_NOTNULL(imu_data);
+  CHECK_NOTNULL(imu_params);
   // Parse IMU calibration info (from param server)
-  double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise,
-      acc_walk, imu_shift;
+  double rate = 0.0;
+  CHECK(nh_private_.getParam("imu_rate_hz", rate));
+  double gyro_noise = 0.0;
+  CHECK(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
+  double gyro_walk = 0.0;
+  CHECK(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
+  double acc_noise = 0.0;
+  CHECK(nh_private_.getParam("accelerometer_noise_density", acc_noise));
+  double acc_walk = 0.0;
+  CHECK(nh_private_.getParam("accelerometer_random_walk", acc_walk));
+  double imu_shift = 0.0;
+  CHECK(nh_private_.getParam("imu_shift", imu_shift));
 
-  std::vector<double> extrinsics;
-
-  ROS_ASSERT(nh_private_.getParam("imu_rate_hz", rate));
-  ROS_ASSERT(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
-  ROS_ASSERT(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
-  ROS_ASSERT(nh_private_.getParam("accelerometer_noise_density", acc_noise));
-  ROS_ASSERT(nh_private_.getParam("accelerometer_random_walk", acc_walk));
-  ROS_ASSERT(nh_private_.getParam("imu_extrinsics", extrinsics));
-  ROS_ASSERT(nh_private_.getParam("imu_shift", imu_shift));
+  CHECK_GT(rate, 0.0);
+  CHECK_GT(gyro_noise, 0.0);
+  CHECK_GT(gyro_walk, 0.0);
+  CHECK_GT(acc_noise, 0.0);
+  CHECK_GT(acc_walk, 0.0);
 
   // TODO(Sandro): Do we need these parameters??
-  imudata->nominal_imu_rate_ = 1.0 / rate;
-  imudata->imu_rate_ = 1.0 / rate;
-  imudata->imu_rate_std_ = 0.00500009;          // set to 0 for now
-  imudata->imu_rate_maxMismatch_ = 0.00500019;  // set to 0 for now
+  imu_data->nominal_imu_rate_ = 1.0 / rate;
+  imu_data->imu_rate_ = 1.0 / rate;
+  imu_data->imu_rate_std_ = 0.00500009;          // set to 0 for now
+  imu_data->imu_rate_maxMismatch_ = 0.00500019;  // set to 0 for now
 
   // Gyroscope and accelerometer noise parameters
-  imuparams->gyro_noise_ = gyro_noise;
-  imuparams->gyro_walk_ = gyro_walk;
-  imuparams->acc_noise_ = acc_noise;
-  imuparams->acc_walk_ = acc_walk;
-  imuparams->imu_shift_ =
-      imu_shift;  // Defined as t_imu = t_cam + imu_shift (see: Kalibr)
+  imu_params->gyro_noise_ = gyro_noise;
+  imu_params->gyro_walk_ = gyro_walk;
+  imu_params->acc_noise_ = acc_noise;
+  imu_params->acc_walk_ = acc_walk;
+  // imu_shift is defined as t_imu = t_cam + imu_shift (see: Kalibr)
+  imu_params->imu_shift_ = imu_shift;
 
   ROS_INFO("Parsed IMU calibration");
   return true;

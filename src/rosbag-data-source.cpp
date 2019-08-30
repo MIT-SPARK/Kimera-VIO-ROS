@@ -34,7 +34,7 @@ RosbagDataProvider::RosbagDataProvider()
   gt_odometry_pub_ = nh_.advertise<nav_msgs::Odometry>(
         ground_truth_odometry_topic, 10);
 
-  parseImuData(&rosbag_data_, &pipeline_params_.imu_params_);
+  parseImuData(&rosbag_data_.imu_data_, &pipeline_params_.imu_params_);
   // parse backend/frontend parameters
   parseBackendParams();
   parseFrontendParams();
@@ -263,44 +263,6 @@ bool RosbagDataProvider::spin() {
     publishClock(vio_output.getTimestamp());
   }
 
-  return true;
-}
-
-bool RosbagDataProvider::parseImuData(RosbagData* rosbag_data,
-                                      ImuParams* imu_params) {
-  CHECK_NOTNULL(rosbag_data);
-  CHECK_NOTNULL(imu_params);
-  // Parse IMU calibration info (from param server)
-  double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise,
-      acc_walk;
-
-  std::vector<double> extrinsics;
-
-  CHECK(nh_private_.getParam("imu_rate_hz", rate));
-  CHECK(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
-  CHECK(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
-  CHECK(nh_private_.getParam("accelerometer_noise_density", acc_noise));
-  CHECK(nh_private_.getParam("accelerometer_random_walk", acc_walk));
-
-  // TODO: We should probably remove this! This is not parsed in anyway to the
-  // pipeline!!
-  CHECK(nh_private_.getParam("imu_extrinsics", extrinsics));
-
-  // TODO: Do we need these parameters??
-  // TODO: this is asking for rosbag_data which is super weird...
-  rosbag_data->imu_data_.nominal_imu_rate_ = 1.0 / rate;
-  rosbag_data->imu_data_.imu_rate_ = 1.0 / rate;
-  rosbag_data->imu_data_.imu_rate_std_ = 0.00500009;  // set to 0 for now
-  rosbag_data->imu_data_.imu_rate_maxMismatch_ =
-      0.00500019;  // set to 0 for now
-
-  // Gyroscope and accelerometer noise parameters
-  imu_params->gyro_noise_ = gyro_noise;
-  imu_params->gyro_walk_ = gyro_walk;
-  imu_params->acc_noise_ = acc_noise;
-  imu_params->acc_walk_ = acc_walk;
-
-  ROS_INFO("Parsed IMU calibration");
   return true;
 }
 
