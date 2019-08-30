@@ -273,9 +273,10 @@ bool RosBaseDataProvider::parseImuData(ImuData* imu_data,
   CHECK(nh_private_.getParam("accelerometer_noise_density", acc_noise));
   double acc_walk = 0.0;
   CHECK(nh_private_.getParam("accelerometer_random_walk", acc_walk));
-  double imu_shift = 0.0;
+  double imu_shift = 0.0;  // check the actual sign of how it is applied (weird)
   CHECK(nh_private_.getParam("imu_shift", imu_shift));
-
+  LOG_IF(WARNING, imu_shift != 0.0) << "Adding/Substracting a timestamp shift to"
+                                       " IMU of: " << imu_shift;
   CHECK_GT(rate, 0.0);
   CHECK_GT(gyro_noise, 0.0);
   CHECK_GT(gyro_walk, 0.0);
