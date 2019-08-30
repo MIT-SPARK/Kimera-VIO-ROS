@@ -28,6 +28,11 @@ RosbagDataProvider::RosbagDataProvider()
   CHECK(nh_private_.getParam("ground_truth_odometry_rosbag_topic",
                              ground_truth_odometry_topic));
 
+  CHECK(!rosbag_path.empty());
+  CHECK(!left_camera_topic.empty());
+  CHECK(!right_camera_topic.empty());
+  CHECK(!imu_topic.empty());
+
   // Ros publishers specific to rosbag data provider
   clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("/clock", 10);
   /// Advertise to the same topic than what it was writen in the rosbag.
@@ -286,9 +291,9 @@ VioNavState RosbagDataProvider::getGroundTruthVioNavState(
     gt_init.pose_ = gtsam::Pose3(W_R_B, position);
     gt_init.velocity_ = velocity;
     // TODO(Toni): how can we get the ground-truth biases? For sim, ins't it 0?
-    gtsam::Vector3 gyroBias = gtsam::Vector3(0, 0, 0);
-    gtsam::Vector3 accBias = gtsam::Vector3(0, 0, 0);
-    gt_init.imu_bias_ = gtsam::imuBias::ConstantBias(accBias, gyroBias);
+    gtsam::Vector3 gyro_bias (0.0, 0.0, 0.0);
+    gtsam::Vector3 acc_bias (0.0, 0.0, 0.0);
+    gt_init.imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
     return gt_init;
   }
 
