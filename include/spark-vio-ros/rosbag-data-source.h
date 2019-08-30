@@ -31,8 +31,6 @@ struct RosbagData {
   std::vector<sensor_msgs::ImageConstPtr> right_imgs_;
   // Vector of timestamps see issue in .cpp file
   std::vector<Timestamp> timestamps_;
-  // IMU data
-  ImuData imu_data_;
   // Ground-truth Odometry (only if available).
   std::vector<nav_msgs::OdometryConstPtr> gt_odometry_;
 };
@@ -57,9 +55,6 @@ class RosbagDataProvider : public RosBaseDataProvider {
                    const std::string& gt_odom_topic,
                    RosbagData* data);
 
-  // Parse IMU calibration info (for rosbag)
-  bool parseImuData(RosbagData* rosbag_data, ImuParams* imuparams);
-
   // Get ground-truth nav state for VIO initialization.
   // It uses odometry messages inside of the rosbag as ground-truth (indexed
   // by the sequential order in the rosbag).
@@ -71,9 +66,6 @@ class RosbagDataProvider : public RosBaseDataProvider {
   // Publish ground-truth odometry
   void publishGroundTruthOdometry(
       const nav_msgs::OdometryConstPtr& gt_odom) const;
-
-  // Print the parameters
-  void print() const;
 
  private:
   RosbagData rosbag_data_;

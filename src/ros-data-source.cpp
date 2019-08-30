@@ -30,13 +30,6 @@ RosDataProvider::RosDataProvider()
       frame_count_(1) {
   ROS_INFO("Starting SparkVIO wrapper for online");
 
-  parseImuData(&imu_data_, &pipeline_params_.imu_params_);
-  // parse backend/frontend parameters
-  parseBackendParams();
-  parseFrontendParams();
-  // print parameters for check
-  print();
-
   // Start IMU subscriber
   imu_subscriber_ =
       nh_imu_.subscribe("imu", 50, &RosDataProvider::callbackIMU, this);
@@ -255,20 +248,6 @@ bool RosDataProvider::spin() {
   vio_output_queue_.shutdown();
 
   return true;
-}
-
-void RosDataProvider::print() const {
-  LOG(INFO) << std::string(80, '=') << '\n'
-            << ">>>>>>>>> RosDataProvider::print <<<<<<<<<<<" << '\n'
-            << "camL_Pose_camR_: " << stereo_calib_.camL_Pose_camR_;
-  // For each of the 2 cameras.
-  LOG(INFO) << "- Left camera params:";
-  stereo_calib_.left_camera_info_.print();
-  LOG(INFO) << "- Right camera params:";
-  stereo_calib_.right_camera_info_.print();
-  LOG(INFO) << "- IMU info: ";
-  imu_data_.print();
-  LOG(INFO) << '\n' << std::string(80, '=');
 }
 
 }  // namespace VIO

@@ -38,6 +38,14 @@ RosBaseDataProvider::RosBaseDataProvider()
   // Parse calibration info for camera and IMU
   // Calibration info on parameter server (Parsed from yaml)
   parseCameraData(&stereo_calib_);
+  parseImuData(&imu_data_, &pipeline_params_.imu_params_);
+  // parse backend/frontend parameters
+  parseBackendParams();
+  CHECK(pipeline_params_.backend_params_);
+  parseFrontendParams();
+
+  // Print parameters to check.
+  printParsedParams();
 
   it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
 
@@ -715,6 +723,19 @@ void RosBaseDataProvider::publishImuBias(
 
   // Publish Message
   imu_bias_pub_.publish(imu_bias_msg);
+}
+
+void RosBaseDataProvider::printParsedParams() const {
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << ">>>>>>>>> RosbagDataProvider::print <<<<<<<<<<<" << '\n'
+            << "camL_Pose_camR_: " << stereo_calib_.camL_Pose_camR_ << '\n'
+            << " - Left camera params: ";
+  stereo_calib_.left_camera_info_.print();
+  LOG(INFO) << " - Right camera params:";
+  stereo_calib_.right_camera_info_.print();
+  LOG(INFO) << " - IMU info: ";
+  imu_data_.print();
+  LOG(INFO) << std::string(80, '=');
 }
 
 // VIO output callback at keyframe rate
