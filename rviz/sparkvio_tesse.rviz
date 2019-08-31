@@ -5,8 +5,10 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /TF1
+        - /TF1/Status1
         - /TF1/Frames1
         - /TF1/Tree1
+        - /3D Mesh Textured1
         - /Odometry2
       Splitter Ratio: 0.5
     Tree Height: 527
@@ -122,9 +124,6 @@ Visualization Manager:
       Show Names: true
       Tree:
         world:
-          base_link_gt:
-            right_cam:
-              {}
           base_link_spark:
             {}
       Update Interval: 0
@@ -142,7 +141,7 @@ Visualization Manager:
       Shader Program: TEXTURE
       Show Normals: false
       Texture Transport Hint: raw
-      Texture topic: /tesse/right_cam
+      Texture topic: /sparkvio/debug_mesh_img
       Value: true
     - Angle Tolerance: 0.10000000149011612
       Class: rviz/Odometry
@@ -240,25 +239,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 33.015052795410156
+      Distance: 8.306986808776855
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -7.615349769592285
-        Y: -3.2248544692993164
-        Z: 9.5367431640625e-6
+        X: -13.375054359436035
+        Y: -7.326694488525391
+        Z: 6.108919478720054e-6
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.1147962808609009
+      Pitch: 0.784796416759491
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 4.7185564041137695
+      Yaw: 1.6003519296646118
     Saved:
       - Class: rviz/ThirdPersonFollower
         Distance: 6.814720153808594
