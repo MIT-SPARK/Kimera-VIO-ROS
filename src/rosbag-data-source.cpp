@@ -74,7 +74,9 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   topics.push_back(right_imgs_topic);
   topics.push_back(imu_topic);
   if (!gt_odom_topic.empty()) {
-    CHECK(pipeline_params_.backend_params_->autoInitialize_ == 0);
+    CHECK(pipeline_params_.backend_params_->autoInitialize_ == 0)
+        << "Provided a gt_odom_topic; but autoInitialize is set to 0, meaning "
+           "no ground-truth initialization will be done...";
     topics.push_back(gt_odom_topic);
   } else {
     CHECK(pipeline_params_.backend_params_->autoInitialize_ != 0);
