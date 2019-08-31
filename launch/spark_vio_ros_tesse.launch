@@ -9,7 +9,7 @@
 
   <arg name="log_output" default="true"/>
   <arg name="log_output_path"
-       default="$(find spark_vio_ros)/output_logs/"
+       default="$(find spark_vio_ros)/output_logs/$(arg dataset_name)"
        if="$(arg log_output)"/>
   <arg name="log_gt_data" default="true"/>
   <arg name="gt_topic"    default="/tesse/odom"
