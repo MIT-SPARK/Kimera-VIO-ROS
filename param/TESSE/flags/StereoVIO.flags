@@ -13,8 +13,8 @@
 --visualize_plane_label=false
 --visualize_semantic_mesh=false
 --visualize_mesh_in_frustum=true
-#--visualize_load_mesh_filename=/home/tonirv/Downloads/tesse_multiscene_office1.ply
+#--visualize_load_mesh_filename=/home/tonirv/Downloads/tesse_multiscene_office1_3d_semantic_v4.ply
+--save_frontend_images_option=0
 --viz_type=3
---save_frontend_images_option=1
 --min_num_obs_for_mesher_points=3
 --extract_planes_from_the_scene=false
