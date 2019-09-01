@@ -244,6 +244,12 @@ bool RosDataProvider::spin() {
       publishOutput(vio_output);
     }
 
+    // Publish LCD output if any.
+    LoopClosureDetectorOutputPayload lcd_output;
+    if (lcd_output_queue_.pop(lcd_output)) {
+      publishLCDOutput(lcd_output);
+    }
+
     // spin loop
     ros::spinOnce();
   }

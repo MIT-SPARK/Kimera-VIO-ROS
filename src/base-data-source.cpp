@@ -33,7 +33,8 @@ RosBaseDataProvider::RosBaseDataProvider()
       vio_output_(),
       nh_(),
       nh_private_("~"),
-      vio_output_queue_("VIO output") {
+      vio_output_queue_("VIO output"),
+      lcd_output_queue_("LCD output") {
   ROS_INFO(">>>>>>> Initializing Spark-VIO-ROS <<<<<<<");
 
   // Parse calibration info for camera and IMU
@@ -586,23 +587,6 @@ void RosBaseDataProvider::publishTf(const SpinOutputPacket& vio_output) {
   odom_tf.transform.rotation.y = quaternion.y();
   odom_tf.transform.rotation.z = quaternion.z();
   tf_broadcaster_.sendTransform(odom_tf);
-
-  const gtsam::Pose3& w_Pose_map = vio_output.getEstimatedMapPose();
-  const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
-  // Publish map TF.
-  geometry_msgs::TransformStamped map_tf;
-  map_tf.header.stamp.fromNSec(ts);
-  map_tf.header.frame_id = world_frame_id_;
-  map_tf.child_frame_id = map_frame_id_;
-
-  map_tf.transform.translation.x = w_Pose_map.x();
-  map_tf.transform.translation.y = w_Pose_map.y();
-  map_tf.transform.translation.z = w_Pose_map.z();
-  map_tf.transform.rotation.w = w_Quat_map.w();
-  map_tf.transform.rotation.x = w_Quat_map.x();
-  map_tf.transform.rotation.y = w_Quat_map.y();
-  map_tf.transform.rotation.z = w_Quat_map.z();
-  tf_broadcaster_.sendTransform(map_tf);
 }
 
 void RosBaseDataProvider::publishFrontendStats(
@@ -732,10 +716,10 @@ void RosBaseDataProvider::publishImuBias(
 }
 
 void RosBaseDataProvider::publishOptimizedTrajectory(
-    const SpinOutputPacket& vio_output) const {
+    const LoopClosureDetectorOutputPayload& lcd_output) const {
   // Get pgo-optimized trajectory
-  const Timestamp& ts = vio_output.getTimestamp();
-  const gtsam::Values& trajectory = vio_output.getOptimizedTrajectory();
+  const Timestamp& ts = lcd_output.timestamp_kf_;
+  const gtsam::Values& trajectory = lcd_output.states_;
   // Create message type
   nav_msgs::Path path;
 
@@ -765,6 +749,27 @@ void RosBaseDataProvider::publishOptimizedTrajectory(
   trajectory_pub_.publish(path);
 }
 
+void RosBaseDataProvider::publishTf(
+    const LoopClosureDetectorOutputPayload& lcd_output) {
+  const Timestamp& ts = lcd_output.timestamp_kf_();
+  const gtsam::Pose3& w_Pose_map = lcd_output.W_Pose_Map_;
+  const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
+  // Publish map TF.
+  geometry_msgs::TransformStamped map_tf;
+  map_tf.header.stamp.fromNSec(ts);
+  map_tf.header.frame_id = world_frame_id_;
+  map_tf.child_frame_id = map_frame_id_;
+
+  map_tf.transform.translation.x = w_Pose_map.x();
+  map_tf.transform.translation.y = w_Pose_map.y();
+  map_tf.transform.translation.z = w_Pose_map.z();
+  map_tf.transform.rotation.w = w_Quat_map.w();
+  map_tf.transform.rotation.x = w_Quat_map.x();
+  map_tf.transform.rotation.y = w_Quat_map.y();
+  map_tf.transform.rotation.z = w_Quat_map.z();
+  tf_broadcaster_.sendTransform(map_tf);
+}
+
 // VIO output callback at keyframe rate
 void RosBaseDataProvider::callbackKeyframeRateVioOutput(
     const SpinOutputPacket& vio_output) {
@@ -772,6 +777,11 @@ void RosBaseDataProvider::callbackKeyframeRateVioOutput(
   // thread in the VIO. This is actually running in the backend thread, as
   // such do not modify things other than thread-safe stuff.
   vio_output_queue_.push(vio_output);
+}
+
+void RosBaseDataProvider::callbackLoopClosureOutput(
+    const LoopClosureDetectorOutputPayload& lcd_output) {
+  lcd_output_queue_.push(lcd_output);
 }
 
 }  // namespace VIO

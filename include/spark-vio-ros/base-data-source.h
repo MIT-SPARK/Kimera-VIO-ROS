@@ -25,6 +25,7 @@
 // I doubt we are using the imu frontend and the pipeline!
 #include <StereoFrame.h>
 #include <StereoImuSyncPacket.h>
+#include <loopclosure/LoopClosureDetector-definitions.h>
 #include <VioFrontEndParams.h>
 #include <common/vio_types.h>
 #include <datasource/DataSource.h>
@@ -53,6 +54,10 @@ class RosBaseDataProvider : public DataProvider {
   // VIO output callback at keyframe rate.
   void callbackKeyframeRateVioOutput(const SpinOutputPacket& vio_output);
 
+  // LCD/PGO output callback.
+  void callbackLoopClosureOutput(
+      const LoopClosureDetectorOutputPayload&lcd_output);
+
  protected:
   // Stereo info
   struct StereoCalibration {
@@ -75,6 +80,9 @@ class RosBaseDataProvider : public DataProvider {
   // Publish all outputs by calling individual functions below
   void publishOutput(const SpinOutputPacket& vio_output);
 
+  // Publish all outputs for LCD
+  void publishLCDOutput(const LoopClosureDetectorOutputPayload& lcd_output);
+
  protected:
   VioFrontEndParams frontend_params_;
   StereoCalibration stereo_calib_;
@@ -94,6 +102,7 @@ class RosBaseDataProvider : public DataProvider {
 
   // Queue to store and retrieve VIO output in a thread-safe way.
   ThreadsafeQueue<SpinOutputPacket> vio_output_queue_;
+  ThreadsafeQueue<LoopClosureDetectorOutputPayload> lcd_output_queue_;
 
  private:
   // Define publisher for debug images.
@@ -122,7 +131,9 @@ class RosBaseDataProvider : public DataProvider {
   // Publish resiliency statistics
   void publishResiliency(const SpinOutputPacket& vio_output) const;
   void publishImuBias(const SpinOutputPacket& vio_output) const;
-  void publishOptimizedTrajectory(const SpinOutputPacket& vio_output) const;
+  void publishOptimizedTrajectory(
+      const LoopClosureDetectorOutputPayload& lcd_output) const;
+  void publishTf(const LoopClosureDetectorOutputPayload& lcd_output) const;
   void publishDebugImage(const Timestamp& timestamp,
                          const cv::Mat& debug_image) const;
 

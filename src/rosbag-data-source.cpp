@@ -208,6 +208,10 @@ bool RosbagDataProvider::spin() {
     CHECK(vio_output_queue_.popBlocking(vio_output))
         << "Vio output queue was shutdown...";
     publishOutput(vio_output);
+
+    LoopClosureDetectorOutputPayload lcd_output;
+    lcd_output_queue_.pop(lcd_output);
+    publishLCDOutput(lcd_output);
   }
 
   return true;

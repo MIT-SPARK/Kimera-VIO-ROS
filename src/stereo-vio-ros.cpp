@@ -60,6 +60,10 @@ int main(int argc, char *argv[]) {
       std::bind(&VIO::RosBaseDataProvider::callbackKeyframeRateVioOutput,
                 dataset_parser, std::placeholders::_1));
 
+  vio_pipeline.registerLoopClosureCallback(
+      std::bind(&VIO::RosBaseDataProvider::callbackLoopClosureOutput,
+                dataset_parser, std::placeholders::_1));
+
   // Spin dataset.
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
