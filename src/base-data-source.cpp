@@ -56,6 +56,7 @@ RosBaseDataProvider::RosBaseDataProvider()
       nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 10);
   imu_bias_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 10);
   trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 10);
+  posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 10);
   pointcloud_pub_ =
       nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10);
   mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5);
@@ -751,6 +752,78 @@ void RosBaseDataProvider::publishOptimizedTrajectory(
   path.header.stamp.fromNSec(ts);
   path.header.frame_id = world_frame_id_;
   trajectory_pub_.publish(path);
+}
+
+pose_graph_tools::PoseGraph RosBaseDataProvider::GtsamToPosegraphMsg(
+    const gtsam::NonlinearFactorGraph& nfg,
+    const gtsam::Values& values) {
+  // pose graph getter
+  pose_graph_tools::PoseGraph pose_graph;
+
+  // first store the factors as edges
+  for (size_t i = 0; i < nfg.size(); i++) {
+    // check if between factor
+    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(nfg[i])) {
+      // convert to between factor
+      gtsam::BetweenFactor<gtsam::Pose3> factor =
+            *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(nfg[i]);
+      // convert between factor to PoseGraphEdge type
+      pose_graph_tools::PoseGraphEdge edge;
+      edge.header.frame_id = world_frame_id_;
+      edge.key_from = factor.front();
+      edge.key_to = factor.back();
+      if (edge.key_to == edge.key_from + 1) { // check if odom
+        edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
+      } else {
+        edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
+      }
+      // transforms - translation
+      edge.pose.position.x = factor.measured().translation().x();
+      edge.pose.position.y = factor.measured().translation().y();
+      edge.pose.position.z = factor.measured().translation().z();
+      // transforms - rotation (to quaternion)
+      edge.pose.orientation.x = factor.measured().rotation().toQuaternion().x();
+      edge.pose.orientation.y = factor.measured().rotation().toQuaternion().y();
+      edge.pose.orientation.z = factor.measured().rotation().toQuaternion().z();
+      edge.pose.orientation.w = factor.measured().rotation().toQuaternion().w();
+
+      // TODO: add covariance
+      pose_graph.edges.push_back(edge);
+    }
+  }
+
+  // Then store the values as nodes
+  gtsam::KeyVector key_list = values.keys();
+  for (size_t i = 0; i < key_list.size(); i++) {
+    pose_graph_tools::PoseGraphNode node;
+    node.key = key_list[i];
+    // pose - translation
+    node.pose.position.x = values.at<gtsam::Pose3>(i).translation().x();
+    node.pose.position.y = values.at<gtsam::Pose3>(i).translation().y();
+    node.pose.position.z = values.at<gtsam::Pose3>(i).translation().z();
+    // pose - rotation (to quaternion)
+    node.pose.orientation.x = values.at<gtsam::Pose3>(i).rotation().toQuaternion().x();
+    node.pose.orientation.y = values.at<gtsam::Pose3>(i).rotation().toQuaternion().y();
+    node.pose.orientation.z = values.at<gtsam::Pose3>(i).rotation().toQuaternion().z();
+    node.pose.orientation.w = values.at<gtsam::Pose3>(i).rotation().toQuaternion().w();
+
+    pose_graph.nodes.push_back(node);
+  }
+
+  return pose_graph;
+}
+
+void RosBaseDataProvider::publishPoseGraph(
+    const LoopClosureDetectorOutputPayload& lcd_output) { 
+  // Get the factor graph 
+  const Timestamp& ts = lcd_output.timestamp_kf_;
+  const gtsam::NonlinearFactorGraph& nfg = lcd_output.nfg_;
+  const gtsam::Values& values = lcd_output.states_;
+
+  pose_graph_tools::PoseGraph graph = GtsamToPosegraphMsg(nfg, values);
+  graph.header.stamp.fromNSec(ts);
+  graph.header.frame_id = world_frame_id_;
+  posegraph_pub_.publish(graph);
 }
 
 void RosBaseDataProvider::publishTf(

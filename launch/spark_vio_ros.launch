@@ -83,6 +83,7 @@
     <remap from="odometry"   to="/sparkvio/odometry"/>
     <remap from="resiliency" to="/sparkvio/resiliency"/>
     <remap from="imu_bias"   to="/sparkvio/imu_bias"/>
+    <remap from="pose_graph" to="/sparkvio/pose_graph"/>
 
     <!-- Resiliency Thresholds: TODO(Sandro) document -->
     <param name="velocity_det_threshold"  value="0.1"/>
@@ -94,4 +95,10 @@
     <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/>
 
   </node>
+
+  <!-- visualizer node -->
+  <node name="posegraph_viewer" pkg="pose_graph_tools" type="visualizer_node" output="screen" >
+    <remap from="graph" to="/sparkvio/pose_graph" />
+  </node>
+
 </launch>

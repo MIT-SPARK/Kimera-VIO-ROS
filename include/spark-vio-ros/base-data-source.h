@@ -20,6 +20,7 @@
 #include <image_transport/subscriber_filter.h>
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
+#include <pose_graph_tools/PoseGraph.h>
 
 // TODO(Toni): do we really need all these includes??
 // I doubt we are using the imu frontend and the pipeline!
@@ -117,6 +118,7 @@ class RosBaseDataProvider : public DataProvider {
   ros::Publisher frontend_stats_pub_;
   ros::Publisher imu_bias_pub_;
   ros::Publisher trajectory_pub_;
+  ros::Publisher posegraph_pub_;
 
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
 
@@ -133,7 +135,16 @@ class RosBaseDataProvider : public DataProvider {
   void publishImuBias(const SpinOutputPacket& vio_output) const;
   void publishOptimizedTrajectory(
       const LoopClosureDetectorOutputPayload& lcd_output) const;
+
+  void publishPoseGraph(
+      const LoopClosureDetectorOutputPayload& lcd_output);
+
+  pose_graph_tools::PoseGraph GtsamToPosegraphMsg(
+      const gtsam::NonlinearFactorGraph& nfg,
+      const gtsam::Values& values);
+
   void publishTf(const LoopClosureDetectorOutputPayload& lcd_output);
+
   void publishDebugImage(const Timestamp& timestamp,
                          const cv::Mat& debug_image) const;
 
