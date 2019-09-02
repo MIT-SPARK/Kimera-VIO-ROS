@@ -304,8 +304,12 @@ void RosBaseDataProvider::publishOutput(const SpinOutputPacket& vio_output) {
   if (imu_bias_pub_.getNumSubscribers() > 0) {
     publishImuBias(vio_output);
   }
+}
+
+void RosBaseDataProvider::publishLCDOutput(const LoopClosureDetectorOutputPayload& lcd_output) {
+  publishTf(lcd_output);
   if (trajectory_pub_.getNumSubscribers() > 0 ) {
-    publishOptimizedTrajectory(vio_output);
+    publishOptimizedTrajectory(lcd_output);
   }
 }
 
@@ -751,7 +755,7 @@ void RosBaseDataProvider::publishOptimizedTrajectory(
 
 void RosBaseDataProvider::publishTf(
     const LoopClosureDetectorOutputPayload& lcd_output) {
-  const Timestamp& ts = lcd_output.timestamp_kf_();
+  const Timestamp& ts = lcd_output.timestamp_kf_;
   const gtsam::Pose3& w_Pose_map = lcd_output.W_Pose_Map_;
   const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
   // Publish map TF.

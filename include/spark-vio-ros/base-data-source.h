@@ -133,7 +133,7 @@ class RosBaseDataProvider : public DataProvider {
   void publishImuBias(const SpinOutputPacket& vio_output) const;
   void publishOptimizedTrajectory(
       const LoopClosureDetectorOutputPayload& lcd_output) const;
-  void publishTf(const LoopClosureDetectorOutputPayload& lcd_output) const;
+  void publishTf(const LoopClosureDetectorOutputPayload& lcd_output);
   void publishDebugImage(const Timestamp& timestamp,
                          const cv::Mat& debug_image) const;
 
