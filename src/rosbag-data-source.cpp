@@ -193,6 +193,12 @@ bool RosbagDataProvider::spin() {
       } else {
         LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
       }
+
+      // Publish LCD output if any.
+      LoopClosureDetectorOutputPayload lcd_output;
+      if (lcd_output_queue_.pop(lcd_output)) {
+        publishLCDOutput(lcd_output);
+      }
       ros::spinOnce();
     } else {
       LOG(ERROR) << "ROS SHUTDOWN requested, stopping rosbag spin.";

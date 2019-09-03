@@ -312,6 +312,9 @@ void RosBaseDataProvider::publishLCDOutput(const LoopClosureDetectorOutputPayloa
   if (trajectory_pub_.getNumSubscribers() > 0 ) {
     publishOptimizedTrajectory(lcd_output);
   }
+  if (posegraph_pub_.getNumSubscribers() > 0 ) {
+    publishPoseGraph(lcd_output);
+  }
 }
 
 void RosBaseDataProvider::publishTimeHorizonPointCloud(
@@ -814,12 +817,11 @@ pose_graph_tools::PoseGraph RosBaseDataProvider::GtsamToPosegraphMsg(
 }
 
 void RosBaseDataProvider::publishPoseGraph(
-    const LoopClosureDetectorOutputPayload& lcd_output) { 
-  // Get the factor graph 
+    const LoopClosureDetectorOutputPayload& lcd_output) {
+  // Get the factor graph
   const Timestamp& ts = lcd_output.timestamp_kf_;
   const gtsam::NonlinearFactorGraph& nfg = lcd_output.nfg_;
   const gtsam::Values& values = lcd_output.states_;
-
   pose_graph_tools::PoseGraph graph = GtsamToPosegraphMsg(nfg, values);
   graph.header.stamp.fromNSec(ts);
   graph.header.frame_id = world_frame_id_;
