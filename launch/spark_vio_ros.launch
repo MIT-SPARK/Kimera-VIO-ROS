@@ -97,7 +97,7 @@
   </node>
 
   <!-- visualizer node -->
-  <node name="posegraph_viewer" pkg="pose_graph_tools" type="visualizer_node" output="screen" >
+  <node name="posegraph_viewer" pkg="pose_graph_tools" type="visualizer_node" output="screen" ns="/sparkvio" >
     <remap from="graph" to="/sparkvio/pose_graph" />
   </node>
 
