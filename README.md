@@ -41,6 +41,7 @@ catkin build
 # Refresh workspace
 source ~/.bashrc
 ```
+Note that some ros package dependencies include: [catkin_simple](https://github.com/catkin/catkin_simple) and [pose_graph_tools](https://github.mit.edu/SPARK/pose_graph_tools)
 
 # Usage
 - Download the EuRoC dataset. (TODO provide a sliced rosbag of EUROC V1_01 for testing.)
@@ -52,7 +53,7 @@ source ~/.bashrc
 ```
 roslaunch spark_vio_ros spark_vio_ros_euroc.launch
 ```
-  - In another terminal, launch a Euroc rosbag: 
+  - In another terminal, launch a Euroc rosbag:
 ```
 rosbag play /path/to/euroc_rosbag --clock
 ```
