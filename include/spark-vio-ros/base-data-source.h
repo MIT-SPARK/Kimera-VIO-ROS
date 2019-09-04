@@ -70,10 +70,11 @@ class RosBaseDataProvider : public DataProvider {
   bool parseCameraData(StereoCalibration* stereo_calib);
 
   // Parse IMU calibration info (for ros online)
-  bool parseImuData(ImuData* imudata, ImuParams* imuparams);
+  bool parseImuData(ImuData* imu_data, ImuParams* imu_params) const;
 
   // Publish all outputs by calling individual functions below
   void publishOutput(const SpinOutputPacket& vio_output);
+
 
  protected:
   VioFrontEndParams frontend_params_;
@@ -93,6 +94,10 @@ class RosBaseDataProvider : public DataProvider {
 
   // Queue to store and retrieve VIO output in a thread-safe way.
   ThreadsafeQueue<SpinOutputPacket> vio_output_queue_;
+
+  // Store IMU data from last frame
+  // TODO(Toni) I don't see where this is used!?
+  ImuData imu_data_;
 
  private:
   // Define publisher for debug images.
@@ -122,6 +127,8 @@ class RosBaseDataProvider : public DataProvider {
   void publishImuBias(const SpinOutputPacket& vio_output) const;
   void publishDebugImage(const Timestamp& timestamp,
                          const cv::Mat& debug_image) const;
+
+  void printParsedParams() const;
 
   // Define tf broadcaster for world to base_link (IMU).
   tf::TransformBroadcaster tf_broadcaster_;

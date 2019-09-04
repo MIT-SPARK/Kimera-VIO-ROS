@@ -38,12 +38,27 @@ RosBaseDataProvider::RosBaseDataProvider()
   // Parse calibration info for camera and IMU
   // Calibration info on parameter server (Parsed from yaml)
   parseCameraData(&stereo_calib_);
+  parseImuData(&imu_data_, &pipeline_params_.imu_params_);
+  // parse backend/frontend parameters
+  // Mind that parseBackendParams modifies the imu_params_ if using the default!
+  // TODO(TONI) the parseImuData is completely flawed, since parse backend
+  // is actually parsing the imu params!!
+
+  parseBackendParams();
+
+  CHECK(pipeline_params_.backend_params_);
+  parseFrontendParams();
+
+  // Print parameters to check.
+  printParsedParams();
 
   it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
 
   // Get ROS params
-  ROS_ASSERT(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
-  ROS_ASSERT(nh_private_.getParam("world_frame_id", world_frame_id_));
+  CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
+  CHECK(!base_link_frame_id_.empty());
+  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
+  CHECK(!world_frame_id_.empty());
 
   // Publishers
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
@@ -183,9 +198,13 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     nh_private_.getParam(camera_name + "distortion_coefficients", d_coeff);
     cv::Mat distortion_coeff;
 
+    // TODO(Toni): this is super prone to errors, do not rely only on d_coeff
+    // size to know what distortion params we are using...
     switch (d_coeff.size()) {
-      // if given 4 coefficients
-      case (4):
+      case (4): {
+        CHECK_EQ(camera_param_i.distortion_model_, "radial-tangential");
+        // If given 4 coefficients
+        // TODO(Toni): why 'or'? Should be only one no?
         ROS_INFO(
             "Using radtan or equidistant model (4 coefficients) for camera %d",
             i);
@@ -195,23 +214,28 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
         distortion_coeff.at<double>(0, 3) = d_coeff[2];  // p1 or k3
         distortion_coeff.at<double>(0, 4) = d_coeff[3];  // p2 or k4
         break;
-
-      case (5):  // if given 5 coefficients
+    }
+      case (5): {
+        CHECK_EQ(camera_param_i.distortion_model_, "radial-tangential");
+        // If given 5 coefficients
         ROS_INFO("Using radtan model (5 coefficients) for camera %d", i);
         distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
         for (int k = 0; k < 5; k++) {
           distortion_coeff.at<double>(0, k) = d_coeff[k];  // k1, k2, k3, p1, p2
         }
         break;
-
-      default:  // otherwise
+    }
+    default: { // otherwise
         ROS_FATAL("Unsupported distortion format.");
+    }
     }
 
     camera_param_i.distortion_coeff_ = distortion_coeff;
 
     // TODO(unknown): add skew (can add switch statement when parsing
     // intrinsics)
+    // TODO(TONI): wtf! before we parse 5 params if radial-tangential,
+    // but now we only use 4? We don't care or what?
     camera_param_i.calibration_ =
         gtsam::Cal3DS2(intrinsics[0],                       // fx
                        intrinsics[1],                       // fy
@@ -239,34 +263,45 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
   return true;
 }
 
-bool RosBaseDataProvider::parseImuData(ImuData* imudata, ImuParams* imuparams) {
+bool RosBaseDataProvider::parseImuData(ImuData* imu_data,
+                                       ImuParams* imu_params) const {
+  CHECK_NOTNULL(imu_data);
+  CHECK_NOTNULL(imu_params);
   // Parse IMU calibration info (from param server)
-  double rate, rate_std, rate_maxMismatch, gyro_noise, gyro_walk, acc_noise,
-      acc_walk, imu_shift;
-
-  std::vector<double> extrinsics;
-
-  ROS_ASSERT(nh_private_.getParam("imu_rate_hz", rate));
-  ROS_ASSERT(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
-  ROS_ASSERT(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
-  ROS_ASSERT(nh_private_.getParam("accelerometer_noise_density", acc_noise));
-  ROS_ASSERT(nh_private_.getParam("accelerometer_random_walk", acc_walk));
-  ROS_ASSERT(nh_private_.getParam("imu_extrinsics", extrinsics));
-  ROS_ASSERT(nh_private_.getParam("imu_shift", imu_shift));
+  double rate = 0.0;
+  CHECK(nh_private_.getParam("imu_rate_hz", rate));
+  double gyro_noise = 0.0;
+  CHECK(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
+  double gyro_walk = 0.0;
+  CHECK(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
+  double acc_noise = 0.0;
+  CHECK(nh_private_.getParam("accelerometer_noise_density", acc_noise));
+  double acc_walk = 0.0;
+  CHECK(nh_private_.getParam("accelerometer_random_walk", acc_walk));
+  double imu_shift = 0.0;  // check the actual sign of how it is applied (weird)
+  CHECK(nh_private_.getParam("imu_shift", imu_shift));
+  LOG_IF(WARNING, imu_shift != 0.0) << "Adding/Substracting a timestamp shift to"
+                                       " IMU of: " << imu_shift;
+  CHECK_GT(rate, 0.0);
+  CHECK_GT(gyro_noise, 0.0);
+  CHECK_GT(gyro_walk, 0.0);
+  CHECK_GT(acc_noise, 0.0);
+  CHECK_GT(acc_walk, 0.0);
 
   // TODO(Sandro): Do we need these parameters??
-  imudata->nominal_imu_rate_ = 1.0 / rate;
-  imudata->imu_rate_ = 1.0 / rate;
-  imudata->imu_rate_std_ = 0.00500009;          // set to 0 for now
-  imudata->imu_rate_maxMismatch_ = 0.00500019;  // set to 0 for now
+  imu_data->nominal_imu_rate_ = 1.0 / rate;
+  imu_data->imu_rate_ = 1.0 / rate;
+  imu_data->imu_rate_std_ = 0.00500009;          // set to 0 for now
+  imu_data->imu_rate_maxMismatch_ = 0.00500019;  // set to 0 for now
 
   // Gyroscope and accelerometer noise parameters
-  imuparams->gyro_noise_ = gyro_noise;
-  imuparams->gyro_walk_ = gyro_walk;
-  imuparams->acc_noise_ = acc_noise;
-  imuparams->acc_walk_ = acc_walk;
-  imuparams->imu_shift_ =
-      imu_shift;  // Defined as t_imu = t_cam + imu_shift (see: Kalibr)
+  // TODO(Toni): why are we not parsing these from .yaml file????
+  imu_params->gyro_noise_ = gyro_noise;
+  imu_params->gyro_walk_ = gyro_walk;
+  imu_params->acc_noise_ = acc_noise;
+  imu_params->acc_walk_ = acc_walk;
+  // imu_shift is defined as t_imu = t_cam + imu_shift (see: Kalibr)
+  imu_params->imu_shift_ = imu_shift;
 
   ROS_INFO("Parsed IMU calibration");
   return true;
@@ -563,12 +598,12 @@ void RosBaseDataProvider::publishState(
 }
 
 void RosBaseDataProvider::publishTf(const SpinOutputPacket& vio_output) {
-  const Timestamp& ts = vio_output.getTimestamp();
+  const Timestamp& timestamp = vio_output.getTimestamp();
   const gtsam::Pose3& pose = vio_output.getEstimatedPose();
   const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
   // Publish base_link TF.
   geometry_msgs::TransformStamped odom_tf;
-  odom_tf.header.stamp.fromNSec(ts);
+  odom_tf.header.stamp.fromNSec(timestamp);
   odom_tf.header.frame_id = world_frame_id_;
   odom_tf.child_frame_id = base_link_frame_id_;
 
@@ -706,6 +741,27 @@ void RosBaseDataProvider::publishImuBias(
 
   // Publish Message
   imu_bias_pub_.publish(imu_bias_msg);
+}
+
+void RosBaseDataProvider::printParsedParams() const {
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << ">>>>>>>>> RosDataProvider::print <<<<<<<<<<<" << '\n'
+            << "camL_Pose_camR_: " << stereo_calib_.camL_Pose_camR_ << '\n'
+            << " - Left camera params: ";
+  stereo_calib_.left_camera_info_.print();
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << " - Right camera params:";
+  stereo_calib_.right_camera_info_.print();
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << " - IMU info:";
+  imu_data_.print();
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << " - IMU params:";
+  pipeline_params_.imu_params_.print();
+  LOG(INFO) << std::string(80, '=') << '\n'
+            << " - Backend params";
+  pipeline_params_.backend_params_->print();
+  LOG(INFO) << std::string(80, '=');
 }
 
 // VIO output callback at keyframe rate
