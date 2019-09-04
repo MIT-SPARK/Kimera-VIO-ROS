@@ -21,6 +21,8 @@
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
 #include <pose_graph_tools/PoseGraph.h>
+#include <pose_graph_tools/PoseGraphEdge.h>
+#include <pose_graph_tools/PoseGraphNode.h>
 
 // TODO(Toni): do we really need all these includes??
 // I doubt we are using the imu frontend and the pipeline!
@@ -120,6 +122,12 @@ class RosBaseDataProvider : public DataProvider {
   ros::Publisher trajectory_pub_;
   ros::Publisher posegraph_pub_;
 
+  // Stored pose graph related objects
+  std::vector<pose_graph_tools::PoseGraphEdge> loop_closure_edges_;
+  std::vector<pose_graph_tools::PoseGraphEdge> odometry_edges_;
+  std::vector<pose_graph_tools::PoseGraphEdge> inlier_edges_;
+  std::vector<pose_graph_tools::PoseGraphNode> pose_graph_nodes_;
+
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
 
   void publishTimeHorizonPointCloud(
@@ -139,9 +147,13 @@ class RosBaseDataProvider : public DataProvider {
   void publishPoseGraph(
       const LoopClosureDetectorOutputPayload& lcd_output);
 
-  pose_graph_tools::PoseGraph GtsamToPosegraphMsg(
+  void UpdateNodesAndEdges(
       const gtsam::NonlinearFactorGraph& nfg,
       const gtsam::Values& values);
+
+  void UpdateRejectedEdges();
+
+  pose_graph_tools::PoseGraph GetPosegraphMsg();
 
   void publishTf(const LoopClosureDetectorOutputPayload& lcd_output);
 
