@@ -1,23 +1,31 @@
-# SPARK_VIO_ROS
-ROS Wrapper for [SPARK VIO](https://github.mit.edu/SPARK/VIO).
+# SparkVIO_ROS
 
-# Requirements
+ROS Wrapper for [SparkVIO](https://github.mit.edu/SPARK/VIO).
 
-Install [ROS Desktop-Full Install](http://wiki.ros.org/kinetic/Installation), below we prodive installation instructions for :
-```
-sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
-sudo apt-get update
-# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
-sudo apt-get install ros-melodic-desktop-full
-```
+<div align="center">
+    <img src="docs/media/SparkVIO_ROS_mesh.gif">
+</div>
 
-Install catkin tools.
+# 1. Installation
 
-# Installation
-If you have [Spark VIO](https://github.mit.edu/SPARK/VIO) installed and built, installation should just be:
+## A. Prerequisities
 
-```
+### i. ROS
+
+Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
+
+### ii. SparkVIO's dependencies
+
+Follow installation instructions in [SparkVIO](https://github.mit.edu/SPARK/VIO/blob/master/docs/sparkvio_installation.md).
+Make sure you install **SparkVIO's dependencies**: GTSAM, OpenCV, OpenGV.
+
+SparkVIO itself can be installed by cloning the **[SparkVIO catkin wrapper](https://github.mit.edu/SPARK/spark_vio_catkin)** in your catkin workspace, so you can spare installing SparkVIO from source (its dependencies must be installed anyway).
+
+## B. SparkVIO ROS wrapper Installation
+
+If you have the above prerequisities and [SparkVIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should be:
+
+```bash
 # Setup catkin workspace
 mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/
@@ -27,14 +35,24 @@ catkin init
 echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
 
 # Clone repo
-cd src
+cd ~/catkin_ws/src
 git clone git@github.mit.edu:SPARK/spark_vio_ros.git
 
 # Install dependencies from rosinstall file using wstool
 wstool init
 wstool merge spark_vio_ros/install/spark_vio.rosinstall
 wstool update
+```
 
+Clone [SparkVIO catkin wrapper](https://github.mit.edu/SPARK/spark_vio_catkin) (**only if you haven't installed SparkVIO from source**).
+```bash
+# Clone SparkVIO catkin wrapper, useful if you don't want to build spark vio from source.
+git clone git@github.mit.edu:SPARK/spark_vio_catkin.git
+```
+
+Finally, compile:
+
+```bash
 # Compile code
 catkin build
 
@@ -42,49 +60,55 @@ catkin build
 source ~/.bashrc
 ```
 
-# Usage
-- Download the EuRoC dataset. (TODO provide a sliced rosbag of EUROC V1_01 for testing.)
+# 2. Usage
+Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) rosbag: for example [V1_01_easy](http://robotics.ethz.ch/~asl-datasets/ijrr_euroc_mav_dataset/vicon_room1/V1_01_easy/V1_01_easy.bag).
 
-  ## Online
+## Online
+  1. As a general good practice, open a new terminal and run: `roscore`
 
-- To run:
-  - In one terminal, launch the spark vio ROS wrapper:
+  2. In another terminal, launch SparkVIO ROS wrapper:
+  ```bash
+  roslaunch spark_vio_ros spark_vio_ros_euroc.launch
+  ```
+
+  3. In another terminal, launch rviz for visualization:
+  ```bash
+  rviz -d $(rospack find spark_vio_ros)/rviz/spark_vio_euroc.rviz
+  ```
+  > Note: this rviz configuration makes use of a rviz plugin: [mesh_rviz_plugins](https://github.com/ToniRV/mesh_rviz_plugins). To visualize the textured 3D mesh, clone this plugin to your catkin workspace and catkin build it (note that this should be done automatically via `wstool`).
+
+  4. Finally, in another terminal, launch the downloaded Euroc rosbag:
+  ```bash
+  rosbag play --clock /PATH/TO/EUROC_ROSBAG 
+  ```
+
+  > Note that you will need to both source ROS and your `catkin_ws` for each new terminal unless you added the following lines to your `~/.bashrc` file:
+  > ```bash
+  > source /opt/ros/melodic/setup.bash  # Change `melodic` for your ROS distribution.
+  > source ~/catkin_ws/devel/setup.bash # Change `bash` to the shell you use.
+  > ```
+
+## Offline
+  In this mode, the provided rosbag will be first parsed and then sent to the VIO for processing.
+  This is particularly useful when debugging to avoid potential ROS networking issues.
+  - To run, launch the SparkVIO ROS wrapper with the `online` parameter set to `false` and specify the rosbag's path:
+  ```bash
+  roslaunch spark_vio_ros spark_vio_ros_euroc.launch online:=false rosbag_path:="PATH/TO/ROSBAG"
+  ```
+
+## Other datasets
+The launch file and parameters can also be configured for other datasets. For example, here we provide a [kitti rosbag for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, in one terminal, launch the spark vio ROS wrapper with the launch file we configured for kitti:
 ```
-roslaunch spark_vio_ros spark_vio_ros_euroc.launch
+roslaunch spark_vio_ros spark_vio_ros_kitti.launch
 ```
-  - In another terminal, launch a Euroc rosbag: 
+  - In another terminal, launch a Kitti rosbag:
 ```
-rosbag play /path/to/euroc_rosbag --clock
+rosbag play --clock /PATH/TO/KITTI_ROSBAG 
 ```
-
-  ## Offline
-    In this mode, the provided rosbag will be first parsed and then sent to the VIO for processing.
-    This is particularly useful when debugging to avoid potential ROS networking issues.
-    - To run:
-      - Open a new terminal and launch the Spark VIO ROS wrapper with the `online` parameter set to `false`:
-      ```
-        roslaunch spark_vio_ros spark_vio_ros_euroc.launch online:=false
-      ```
-
-
-  ## Custom
-To use your own dataset, you can copy the param/EuRoC folder and exchange all the values within the folder to those corresponding to your dataset (calibration, topic name, tracker/vio values, etc. ). Then, copy the launch file and just exchange the argument for dataset name to the name of your new folder.
-
-For debugging, the VERBOSITY argument in the launch file can be toggled.
-
-You can also run this offline (the rosbag is parsed before starting the pipeline). To do this, type
-```
-roslaunch spark_vio_ros spark_vio_ros_euroc_offline.launch data:="<path-to-rosbag>"
-```
-You can use your own dataset, as explained above.
-
-# ToDo
-Check Issues and Projects tabs.
-
-# Notes/FAQ
-One possible source of confusion is the DUMMY_DATASET_PATH argument. This is needed because of the way the SparkVio architecture is currently setup. More precisely, it requires the ETH Parser to be passed into the pipeline, so the quick way around it is to give it a dummy eth dataset (placed in the temp folder), that it doesn't really use.
-
-Another thing to note is that in regularVioParameters.yaml, autoinitialize needs to be set to 1, otherwise the pipeline will initialize according to the ground truth in the dummy data.
+  - In rviz, you can use the provided config file provided at spark_vio_ros/rviz/sparkvio_kitti.rviz
+  ```bash
+  rviz -d $(rospack find spark_vio_ros)/rviz/spark_vio_kitti.rviz
+  ```
 
 # Hardware use
 ## RealSense D435i (Infrared)
@@ -159,3 +183,6 @@ roslaunch spark_vio_ros spark_vio_ros_mynteye.launch camera:=JPL distortion:=equ
 Options for camera are ```MIT``` and ```JPL```. Options for distortion are ```equidistant``` and ```radtan```.
 
 Same goes for use offline, using the ```spark_vio_ros_mynteye_offline.launch``` file and an additional ```data``` argument with path to bagfile.
+
+# BSD License
+SparkVIO ROS wrapper is open source under the BSD license, see the [LICENSE.BSD](./LICENSE.BSD) file.
