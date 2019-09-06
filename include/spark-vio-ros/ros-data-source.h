@@ -42,9 +42,8 @@ class RosDataProvider : public RosBaseDataProvider {
   // Define Node Handler for Cam Callback (and Queue)
   ros::NodeHandle nh_cam_;
 
-  ImuData imu_data_;               // store IMU data from last frame
-  Timestamp last_time_stamp_;      // Timestamp correponding to last frame
-  Timestamp last_imu_time_stamp_;  // Timestamp corresponding to last imu meas
+  Timestamp last_timestamp_;      // Timestamp correponding to last frame
+  Timestamp last_imu_timestamp_;  // Timestamp corresponding to last imu meas
   int frame_count_;                // Keep track of number of frames processed
 
   StereoBuffer stereo_buffer_;
@@ -85,9 +84,6 @@ class RosDataProvider : public RosBaseDataProvider {
   // Define subscriber for Reinit data
   ros::Subscriber reinit_flag_subscriber_;
   ros::Subscriber reinit_pose_subscriber_;
-
-  // Print the parameters
-  void print() const;
 };
 
 }  // namespace VIO

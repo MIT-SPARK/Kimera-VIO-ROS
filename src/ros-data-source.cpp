@@ -23,19 +23,12 @@ RosDataProvider::RosDataProvider()
       right_img_subscriber_(),
       sync_(nullptr),
       // initialize last timestamp (img) to be 0
-      last_time_stamp_(0),
+      last_timestamp_(0),
       // initialize last timestamp (imu) to be 0
-      last_imu_time_stamp_(0),
+      last_imu_timestamp_(0),
       // keep track of number of frames processed
       frame_count_(1) {
   ROS_INFO("Starting SparkVIO wrapper for online");
-
-  parseImuData(&imu_data_, &pipeline_params_.imu_params_);
-  // parse backend/frontend parameters
-  parseBackendParams();
-  parseFrontendParams();
-  // print parameters for check
-  print();
 
   // Start IMU subscriber
   imu_subscriber_ =
@@ -101,22 +94,25 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr &msgIMU) {
   imu_accgyr(4) = msgIMU->angular_velocity.y;
   imu_accgyr(5) = msgIMU->angular_velocity.z;
   // Adapt imu timestamp to account for time shift in IMU-cam
-  ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
+  static const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
   Timestamp timestamp = msgIMU->header.stamp.toNSec() - imu_shift.toNSec();
   // t_imu = t_cam + imu_shift (see: Kalibr)
   // ROS_INFO("Recieved message at time %ld", timestamp);
 
   // add measurement to buffer
   // time strictly increasing
-  if (timestamp > last_imu_time_stamp_) {
+  if (timestamp > last_imu_timestamp_) {
     imu_data_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
+  } else {
+    ROS_ERROR("Current IMU timestamp is less or equal to previous timestamp.");
   }
 
-  if (last_time_stamp_ == 0) {  // initialize first img time stamp
-    last_time_stamp_ = timestamp;
+  if (last_timestamp_ == 0) {
+    // This is the first message we receive, initialize first timestamp.
+    last_timestamp_ = timestamp;
   }
 
-  last_imu_time_stamp_ = timestamp;
+  last_imu_timestamp_ = timestamp;
 }
 
 // Reinitialization callback
@@ -163,7 +159,7 @@ bool RosDataProvider::spin() {
     // StereoImuSyncPacket (Think of this as the spin of the other
     // parser/data-providers)
     const Timestamp &timestamp = stereo_buffer_.getEarliestTimestamp();
-    if (timestamp <= last_time_stamp_) {
+    if (timestamp <= last_timestamp_) {
       if (stereo_buffer_.size() != 0) {
         ROS_WARN(
             "Next frame in image buffer is from the same or "
@@ -180,7 +176,7 @@ bool RosDataProvider::spin() {
 
       utils::ThreadsafeImuBuffer::QueryResult imu_query =
           imu_data_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-              last_time_stamp_, timestamp, &imu_meas.timestamps_,
+              last_timestamp_, timestamp, &imu_meas.timestamps_,
               &imu_meas.measurements_);
       if (imu_query ==
           utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
@@ -220,7 +216,7 @@ bool RosDataProvider::spin() {
                         stereo_calib_.camL_Pose_camR_, stereo_matching_params),
             imu_meas.timestamps_, imu_meas.measurements_, reinit_packet_));
 
-        last_time_stamp_ = timestamp;
+        last_timestamp_ = timestamp;
         frame_count_++;
 
       } else if (imu_query == utils::ThreadsafeImuBuffer::QueryResult::
@@ -258,20 +254,6 @@ bool RosDataProvider::spin() {
   vio_output_queue_.shutdown();
 
   return true;
-}
-
-void RosDataProvider::print() const {
-  LOG(INFO) << std::string(80, '=') << '\n'
-            << ">>>>>>>>> RosDataProvider::print <<<<<<<<<<<" << '\n'
-            << "camL_Pose_camR_: " << stereo_calib_.camL_Pose_camR_;
-  // For each of the 2 cameras.
-  LOG(INFO) << "- Left camera params:";
-  stereo_calib_.left_camera_info_.print();
-  LOG(INFO) << "- Right camera params:";
-  stereo_calib_.right_camera_info_.print();
-  LOG(INFO) << "- IMU info: ";
-  imu_data_.print();
-  LOG(INFO) << '\n' << std::string(80, '=');
 }
 
 }  // namespace VIO
