@@ -56,7 +56,7 @@ class RosBaseDataProvider : public DataProvider {
 
   // LCD/PGO output callback.
   void callbackLoopClosureOutput(
-      const LoopClosureDetectorOutputPayload&lcd_output);
+      const LoopClosureDetectorOutputPayload& lcd_output);
 
  protected:
   // Stereo info
