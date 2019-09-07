@@ -246,7 +246,7 @@ bool RosbagDataProvider::spin() {
       // TODO(Toni) this could go faster if running in another thread or node...
       SpinOutputPacket vio_output;
       if (vio_output_queue_.pop(vio_output)) {
-        publishOutput(vio_output);
+        publishVioOutput(vio_output);
         publishClock(vio_output.getTimestamp());
       } else {
         LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
@@ -255,7 +255,7 @@ bool RosbagDataProvider::spin() {
       // Publish LCD output if any.
       LoopClosureDetectorOutputPayload lcd_output;
       if (lcd_output_queue_.pop(lcd_output)) {
-        publishLCDOutput(lcd_output);
+        publishLcdOutput(lcd_output);
       }
       ros::spinOnce();
     } else {
@@ -271,12 +271,12 @@ bool RosbagDataProvider::spin() {
     SpinOutputPacket vio_output;
     CHECK(vio_output_queue_.popBlocking(vio_output))
         << "Vio output queue was shutdown...";
-    publishOutput(vio_output);
+    publishVioOutput(vio_output);
     publishClock(vio_output.getTimestamp());
 
     LoopClosureDetectorOutputPayload lcd_output;
     lcd_output_queue_.pop(lcd_output);
-    publishLCDOutput(lcd_output);
+    publishLcdOutput(lcd_output);
   }
 
   return true;

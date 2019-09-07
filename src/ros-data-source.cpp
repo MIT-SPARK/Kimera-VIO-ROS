@@ -237,13 +237,13 @@ bool RosDataProvider::spin() {
     // Publish VIO output if any.
     SpinOutputPacket vio_output;
     if (vio_output_queue_.pop(vio_output)) {
-      publishOutput(vio_output);
+      publishVioOutput(vio_output);
     }
 
     // Publish LCD output if any.
     LoopClosureDetectorOutputPayload lcd_output;
     if (lcd_output_queue_.pop(lcd_output)) {
-      publishLCDOutput(lcd_output);
+      publishLcdOutput(lcd_output);
     }
 
     // spin loop

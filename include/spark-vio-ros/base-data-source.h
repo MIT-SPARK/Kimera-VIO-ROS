@@ -81,10 +81,10 @@ class RosBaseDataProvider : public DataProvider {
   bool parseImuData(ImuData* imu_data, ImuParams* imu_params) const;
 
   // Publish all outputs by calling individual functions below
-  void publishOutput(const SpinOutputPacket& vio_output);
+  void publishVioOutput(const SpinOutputPacket& vio_output);
 
   // Publish all outputs for LCD
-  void publishLCDOutput(const LoopClosureDetectorOutputPayload& lcd_output);
+  void publishLcdOutput(const LoopClosureDetectorOutputPayload& lcd_output);
 
  protected:
   VioFrontEndParams frontend_params_;
@@ -112,6 +112,36 @@ class RosBaseDataProvider : public DataProvider {
   ImuData imu_data_;
 
  private:
+  // Publish VIO outputs.
+  void publishTf(const SpinOutputPacket& vio_output);
+  void publishTimeHorizonPointCloud(
+      const Timestamp& timestamp, const PointsWithIdMap& points_with_id,
+      const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const;
+  void publishPerFrameMesh3D(const SpinOutputPacket& vio_output) const;
+  void publishTimeHorizonMesh3D(const SpinOutputPacket& vio_output) const;
+  void publishState(const SpinOutputPacket& vio_output) const;
+  void publishFrontendStats(const SpinOutputPacket& vio_output) const;
+  void publishResiliency(const SpinOutputPacket& vio_output) const;
+  void publishImuBias(const SpinOutputPacket& vio_output) const;
+
+  // Publish LCD/PGO outputs.
+  void publishTf(const LoopClosureDetectorOutputPayload& lcd_output);
+  void publishOptimizedTrajectory(
+      const LoopClosureDetectorOutputPayload& lcd_output) const;
+  void publishPoseGraph(
+      const LoopClosureDetectorOutputPayload& lcd_output);
+  void UpdateNodesAndEdges(
+      const gtsam::NonlinearFactorGraph& nfg,
+      const gtsam::Values& values);
+  void UpdateRejectedEdges();
+  pose_graph_tools::PoseGraph GetPosegraphMsg();
+
+  // Publish/print debugging information.
+  void publishDebugImage(const Timestamp& timestamp,
+                         const cv::Mat& debug_image) const;
+  void printParsedParams() const;
+
+ private:
   // Define publisher for debug images.
   image_transport::Publisher debug_img_pub_;
 
@@ -126,48 +156,17 @@ class RosBaseDataProvider : public DataProvider {
   ros::Publisher trajectory_pub_;
   ros::Publisher posegraph_pub_;
 
+  // Define tf broadcaster for world to base_link (IMU) and to map (PGO).
+  tf::TransformBroadcaster tf_broadcaster_;
+
   // Stored pose graph related objects
   std::vector<pose_graph_tools::PoseGraphEdge> loop_closure_edges_;
   std::vector<pose_graph_tools::PoseGraphEdge> odometry_edges_;
   std::vector<pose_graph_tools::PoseGraphEdge> inlier_edges_;
   std::vector<pose_graph_tools::PoseGraphNode> pose_graph_nodes_;
 
+  // Typedefs
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
-
-  void publishTimeHorizonPointCloud(
-      const Timestamp& timestamp, const PointsWithIdMap& points_with_id,
-      const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const;
-  void publishPerFrameMesh3D(const SpinOutputPacket& vio_output) const;
-  void publishTimeHorizonMesh3D(const SpinOutputPacket& vio_output) const;
-  void publishState(const SpinOutputPacket& vio_output) const;
-  void publishTf(const SpinOutputPacket& vio_output);
-  void publishFrontendStats(const SpinOutputPacket& vio_output) const;
-  // Publish resiliency statistics
-  void publishResiliency(const SpinOutputPacket& vio_output) const;
-  void publishImuBias(const SpinOutputPacket& vio_output) const;
-  void publishOptimizedTrajectory(
-      const LoopClosureDetectorOutputPayload& lcd_output) const;
-
-  void publishPoseGraph(
-      const LoopClosureDetectorOutputPayload& lcd_output);
-
-  void UpdateNodesAndEdges(
-      const gtsam::NonlinearFactorGraph& nfg,
-      const gtsam::Values& values);
-
-  void UpdateRejectedEdges();
-
-  pose_graph_tools::PoseGraph GetPosegraphMsg();
-
-  void publishTf(const LoopClosureDetectorOutputPayload& lcd_output);
-
-  void publishDebugImage(const Timestamp& timestamp,
-                         const cv::Mat& debug_image) const;
-
-  void printParsedParams() const;
-
-  // Define tf broadcaster for world to base_link (IMU).
-  tf::TransformBroadcaster tf_broadcaster_;
 };
 
 }  // namespace VIO

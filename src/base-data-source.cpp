@@ -57,9 +57,9 @@ RosBaseDataProvider::RosBaseDataProvider()
   it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
 
   // Get ROS params
-  ROS_ASSERT(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
-  ROS_ASSERT(nh_private_.getParam("world_frame_id", world_frame_id_));
-  ROS_ASSERT(nh_private_.getParam("map_frame_id", map_frame_id_));
+  CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
+  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
+  CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
   CHECK(!base_link_frame_id_.empty());
   CHECK(!world_frame_id_.empty());
   CHECK(!map_frame_id_.empty());
@@ -313,7 +313,7 @@ bool RosBaseDataProvider::parseImuData(ImuData* imu_data,
   return true;
 }
 
-void RosBaseDataProvider::publishOutput(const SpinOutputPacket& vio_output) {
+void RosBaseDataProvider::publishVioOutput(const SpinOutputPacket& vio_output) {
   publishTf(vio_output);
   if (odometry_pub_.getNumSubscribers() > 0) {
     publishState(vio_output);
@@ -343,7 +343,7 @@ void RosBaseDataProvider::publishOutput(const SpinOutputPacket& vio_output) {
   }
 }
 
-void RosBaseDataProvider::publishLCDOutput(const LoopClosureDetectorOutputPayload& lcd_output) {
+void RosBaseDataProvider::publishLcdOutput(const LoopClosureDetectorOutputPayload& lcd_output) {
   publishTf(lcd_output);
   if (trajectory_pub_.getNumSubscribers() > 0 ) {
     publishOptimizedTrajectory(lcd_output);
@@ -963,6 +963,7 @@ void RosBaseDataProvider::printParsedParams() const {
             << " - Backend params";
   pipeline_params_.backend_params_->print();
   LOG(INFO) << std::string(80, '=');
+}
 
 // VIO output callback at keyframe rate
 void RosBaseDataProvider::callbackKeyframeRateVioOutput(
