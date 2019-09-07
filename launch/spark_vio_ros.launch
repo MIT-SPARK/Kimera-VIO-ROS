@@ -22,6 +22,9 @@
   <arg name="gt_topic" if="$(arg log_gt_data)"
        default="ground_truth_odometry_topic"/>
 
+  <!-- If true, SparkVio will enable the LoopClosureDetector module. -->
+  <arg name="use_lcd" default="false"/>
+
   <!-- Parameters -->
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
@@ -54,26 +57,28 @@
   <arg name="visualize"    default="true" />
 
   <!-- Launch main node  -->
-  <node name="spark_vio_ros" pkg="spark_vio_ros" type="spark_vio_ros" output="screen"
-  args="--vio_params_path=$(arg params_folder)/regularVioParameters.yaml
-        --tracker_params_path=$(arg params_folder)/trackerParameters.yaml
-        --lcd_params_path=$(arg params_folder)/LCDParameters.yaml
-        --vocabulary_path=$(arg path_to_vocab)
-        --flagfile=$(arg params_folder)/flags/StereoVIO.flags
-        --flagfile=$(arg params_folder)/flags/Mesher.flags
-        --flagfile=$(arg params_folder)/flags/VioBackEnd.flags
-        --flagfile=$(arg params_folder)/flags/RegularVioBackEnd.flags
-        --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
-        --logtostderr=1
-        --colorlogtostderr=1
-        --log_prefix=1
-        --v=$(arg verbosity)
-        --backend_type=$(arg backend_type)
-        --log_output=$(arg log_output)
-        --output_path=$(arg log_output_path)
-        --visualize=$(arg visualize)
-        --parallel_run=$(arg parallel)
-        --online_run=$(arg online)">
+  <node name="spark_vio_ros" pkg="spark_vio_ros" type="spark_vio_ros"
+        output="screen" ns="/sparkvio"
+        args="--vio_params_path=$(arg params_folder)/regularVioParameters.yaml
+              --tracker_params_path=$(arg params_folder)/trackerParameters.yaml
+              --lcd_params_path=$(arg params_folder)/LCDParameters.yaml
+              --vocabulary_path=$(arg path_to_vocab)
+              --use_lcd=$(arg use_lcd)
+              --flagfile=$(arg params_folder)/flags/StereoVIO.flags
+              --flagfile=$(arg params_folder)/flags/Mesher.flags
+              --flagfile=$(arg params_folder)/flags/VioBackEnd.flags
+              --flagfile=$(arg params_folder)/flags/RegularVioBackEnd.flags
+              --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+              --logtostderr=1
+              --colorlogtostderr=1
+              --log_prefix=1
+              --v=$(arg verbosity)
+              --backend_type=$(arg backend_type)
+              --log_output=$(arg log_output)
+              --output_path=$(arg log_output_path)
+              --visualize=$(arg visualize)
+              --parallel_run=$(arg parallel)
+              --online_run=$(arg online)">
     <!-- Frame IDs for Odometry -->
     <param name="world_frame_id"     value="$(arg world_frame_id)"/>
     <param name="base_link_frame_id" value="$(arg base_link_frame_id)"/>
@@ -99,16 +104,15 @@ ground_truth_odometry_rosbag_topic
     <remap from="reinit_pose" to="/sparkvio/reinit_pose"/>
 
     <!-- Remap publisher topics -->
-    <!-- TODO(Toni): we should use a group ns="sparkvio" instead -->
-    <remap from="odometry"             to="/sparkvio/odometry"/>
-    <remap from="resiliency"           to="/sparkvio/resiliency"/>
-    <remap from="imu_bias"             to="/sparkvio/imu_bias"/>
-    <remap from="pose_graph" to="/sparkvio/pose_graph"/>
-    <remap from="mesh"                 to="/sparkvio/mesh"/>
-    <remap from="frontend_stats"       to="/sparkvio/frontend_stats"/>
-    <remap from="debug_mesh_img"       to="/sparkvio/debug_mesh_img"/>
-    <remap from="time_horizon_pointcloud"
-                                       to="/sparkvio/time_horizon_pointcloud"/>
+    <remap from="odometry"                to="odometry"/>
+    <remap from="resiliency"              to="resiliency"/>
+    <remap from="imu_bias"                to="imu_bias"/>
+    <remap from="optimized_trajectory"    to="optimized_trajectory"/>
+    <remap from="pose_graph"              to="pose_graph"/>
+    <remap from="mesh"                    to="mesh"/>
+    <remap from="frontend_stats"          to="frontend_stats"/>
+    <remap from="debug_mesh_img"          to="debug_mesh_img"/>
+    <remap from="time_horizon_pointcloud" to="time_horizon_pointcloud"/>
 
     <!-- Resiliency Thresholds: TODO(Sandro) document -->
     <param name="velocity_det_threshold"  value="0.1"/>
@@ -118,19 +122,19 @@ ground_truth_odometry_rosbag_topic
 
     <!-- Load calibration -->
     <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/>
-
   </node>
+
   <!-- visualizer node -->
   <node name="posegraph_viewer" pkg="pose_graph_tools" type="visualizer_node"
-        output="screen" ns="/sparkvio" >
-    <remap from="graph" to="/sparkvio/pose_graph" />
+        output="screen" ns="/sparkvio">
+    <remap from="graph" to="pose_graph" />
   </node>
 
-  </node>
   <!-- Log ground-truth data only if requested-->
   <node if="$(arg log_gt_data)" name="gt_logger_node" pkg="spark_vio_ros"
         type="gt_logger_node.py" output="screen">
     <param name="gt_topic"   value="$(arg gt_topic)"/>
     <param name="output_dir" value="$(arg log_output_path)"/>
   </node>
+
 </launch>
