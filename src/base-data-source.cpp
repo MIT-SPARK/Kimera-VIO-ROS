@@ -793,44 +793,44 @@ void RosBaseDataProvider::publishOptimizedTrajectory(
   trajectory_pub_.publish(path);
 }
 
-void RosBaseDataProvider::UpdateRejectedEdges() {
+void RosBaseDataProvider::updateRejectedEdges() {
   // first update the rejected edges
-  for (size_t i = 0; i < loop_closure_edges_.size(); i++) {
+  for(pose_graph_tools::PoseGraphEdge& loop_closure_edge: loop_closure_edges_) {
     bool is_inlier = false;
-    for (size_t j = 0; j < inlier_edges_.size(); j++) {
-      if (loop_closure_edges_[i].key_from == inlier_edges_[j].key_from &&
-          loop_closure_edges_[i].key_to == inlier_edges_[j].key_to) {
+    for (pose_graph_tools::PoseGraphEdge& inlier_edge: inlier_edges_) {
+      if (loop_closure_edge.key_from == inlier_edge.key_from &&
+          loop_closure_edge.key_to == inlier_edge.key_to) {
         is_inlier = true;
-        loop_closure_edges_[i].type =
+        loop_closure_edge.type =
             pose_graph_tools::PoseGraphEdge::REJECTED_LOOPCLOSE;
         continue;
       }
     }
     if (!is_inlier) {
       // set as rejected loop closure
-      loop_closure_edges_[i].type =
+      loop_closure_edge.type =
           pose_graph_tools::PoseGraphEdge::REJECTED_LOOPCLOSE;
     }
   }
 
   // Then update the loop edges
-  for (size_t i = 0; i < inlier_edges_.size(); i++) {
+  for (pose_graph_tools::PoseGraphEdge& inlier_edge: inlier_edges_) {
     bool previously_stored = false;
-    for (size_t j = 0; j < loop_closure_edges_.size(); j++) {
-      if (inlier_edges_[i].key_from == loop_closure_edges_[j].key_from &&
-          inlier_edges_[i].key_to == loop_closure_edges_[j].key_to) {
+    for (pose_graph_tools::PoseGraphEdge& loop_closure_edge: loop_closure_edges_) {
+      if (inlier_edge.key_from == loop_closure_edge.key_from &&
+          inlier_edge.key_to == loop_closure_edge.key_to) {
         previously_stored = true;
         continue;
       }
     }
     if (!previously_stored) {
       // add to the vector of all loop clousres
-      loop_closure_edges_.push_back(inlier_edges_[i]);
+      loop_closure_edges_.push_back(inlier_edge);
     }
   }
 }
 
-void RosBaseDataProvider::UpdateNodesAndEdges(
+void RosBaseDataProvider::updateNodesAndEdges(
     const gtsam::NonlinearFactorGraph& nfg,
     const gtsam::Values& values) {
 
@@ -873,7 +873,7 @@ void RosBaseDataProvider::UpdateNodesAndEdges(
   }
 
   // update inliers and rejected closures
-  UpdateRejectedEdges();
+  updateRejectedEdges();
 
   pose_graph_nodes_.clear();
   // Then store the values as nodes
@@ -897,7 +897,7 @@ void RosBaseDataProvider::UpdateNodesAndEdges(
   return;
 }
 
-pose_graph_tools::PoseGraph RosBaseDataProvider::GetPosegraphMsg() {
+pose_graph_tools::PoseGraph RosBaseDataProvider::getPosegraphMsg() {
   // pose graph getter
   pose_graph_tools::PoseGraph pose_graph;
   pose_graph.edges = odometry_edges_; // add odometry edges to pg
@@ -916,8 +916,8 @@ void RosBaseDataProvider::publishPoseGraph(
   const Timestamp& ts = lcd_output.timestamp_kf_;
   const gtsam::NonlinearFactorGraph& nfg = lcd_output.nfg_;
   const gtsam::Values& values = lcd_output.states_;
-  UpdateNodesAndEdges(nfg, values);
-  pose_graph_tools::PoseGraph graph = GetPosegraphMsg();
+  updateNodesAndEdges(nfg, values);
+  pose_graph_tools::PoseGraph graph = getPosegraphMsg();
   graph.header.stamp.fromNSec(ts);
   graph.header.frame_id = world_frame_id_;
   posegraph_pub_.publish(graph);

@@ -23,7 +23,13 @@ SparkVIO itself can be installed by cloning the **[SparkVIO catkin wrapper](http
 
 ## B. SparkVIO ROS wrapper Installation
 
-If you have the above prerequisities and [SparkVIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should be:
+### Dependencies
+ROS package dependencies are automatically downloaded using rosinstall:
+- (catkin simple)[https://github.com/catkin/catkin_simple]
+- (pose_graph_tools)[https://github.mit.edu/SPARK/pose_graph_tools] [Required: for visualization of Loop Closures]
+- (mesh_rviz_plugins)[https://github.com/ToniRV/mesh_rviz_plugins] [Optional: for visualization of textured 3D Mesh]
+
+If you have the above prerequisites and [SparkVIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should be:
 
 ```bash
 # Setup catkin workspace
@@ -59,7 +65,6 @@ catkin build
 # Refresh workspace
 source ~/.bashrc
 ```
-Note that some ros package dependencies include: [catkin_simple](https://github.com/catkin/catkin_simple) and [pose_graph_tools](https://github.mit.edu/SPARK/pose_graph_tools)
 
 # 2. Usage
 Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) rosbag: for example [V1_01_easy](http://robotics.ethz.ch/~asl-datasets/ijrr_euroc_mav_dataset/vicon_room1/V1_01_easy/V1_01_easy.bag).

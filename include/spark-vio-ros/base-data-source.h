@@ -130,11 +130,11 @@ class RosBaseDataProvider : public DataProvider {
       const LoopClosureDetectorOutputPayload& lcd_output) const;
   void publishPoseGraph(
       const LoopClosureDetectorOutputPayload& lcd_output);
-  void UpdateNodesAndEdges(
+  void updateNodesAndEdges(
       const gtsam::NonlinearFactorGraph& nfg,
       const gtsam::Values& values);
-  void UpdateRejectedEdges();
-  pose_graph_tools::PoseGraph GetPosegraphMsg();
+  void updateRejectedEdges();
+  pose_graph_tools::PoseGraph getPosegraphMsg();
 
   // Publish/print debugging information.
   void publishDebugImage(const Timestamp& timestamp,
