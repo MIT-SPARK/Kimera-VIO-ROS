@@ -801,8 +801,6 @@ void RosBaseDataProvider::updateRejectedEdges() {
       if (loop_closure_edge.key_from == inlier_edge.key_from &&
           loop_closure_edge.key_to == inlier_edge.key_to) {
         is_inlier = true;
-        loop_closure_edge.type =
-            pose_graph_tools::PoseGraphEdge::REJECTED_LOOPCLOSE;
         continue;
       }
     }
