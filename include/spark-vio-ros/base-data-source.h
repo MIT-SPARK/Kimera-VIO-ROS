@@ -20,6 +20,9 @@
 #include <image_transport/subscriber_filter.h>
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
+#include <pose_graph_tools/PoseGraph.h>
+#include <pose_graph_tools/PoseGraphEdge.h>
+#include <pose_graph_tools/PoseGraphNode.h>
 
 // TODO(Toni): do we really need all these includes??
 // I doubt we are using the imu frontend and the pipeline!
@@ -75,13 +78,13 @@ class RosBaseDataProvider : public DataProvider {
   bool parseCameraData(StereoCalibration* stereo_calib);
 
   // Parse IMU calibration info (for ros online)
-  bool parseImuData(ImuData* imudata, ImuParams* imuparams);
+  bool parseImuData(ImuData* imu_data, ImuParams* imu_params) const;
 
   // Publish all outputs by calling individual functions below
-  void publishOutput(const SpinOutputPacket& vio_output);
+  void publishVioOutput(const SpinOutputPacket& vio_output);
 
   // Publish all outputs for LCD
-  void publishLCDOutput(const LoopClosureDetectorOutputPayload& lcd_output);
+  void publishLcdOutput(const LoopClosureDetectorOutputPayload& lcd_output);
 
  protected:
   VioFrontEndParams frontend_params_;
@@ -104,6 +107,40 @@ class RosBaseDataProvider : public DataProvider {
   ThreadsafeQueue<SpinOutputPacket> vio_output_queue_;
   ThreadsafeQueue<LoopClosureDetectorOutputPayload> lcd_output_queue_;
 
+  // Store IMU data from last frame
+  // TODO(Toni) I don't see where this is used!?
+  ImuData imu_data_;
+
+ private:
+  // Publish VIO outputs.
+  void publishTf(const SpinOutputPacket& vio_output);
+  void publishTimeHorizonPointCloud(
+      const Timestamp& timestamp, const PointsWithIdMap& points_with_id,
+      const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const;
+  void publishPerFrameMesh3D(const SpinOutputPacket& vio_output) const;
+  void publishTimeHorizonMesh3D(const SpinOutputPacket& vio_output) const;
+  void publishState(const SpinOutputPacket& vio_output) const;
+  void publishFrontendStats(const SpinOutputPacket& vio_output) const;
+  void publishResiliency(const SpinOutputPacket& vio_output) const;
+  void publishImuBias(const SpinOutputPacket& vio_output) const;
+
+  // Publish LCD/PGO outputs.
+  void publishTf(const LoopClosureDetectorOutputPayload& lcd_output);
+  void publishOptimizedTrajectory(
+      const LoopClosureDetectorOutputPayload& lcd_output) const;
+  void publishPoseGraph(
+      const LoopClosureDetectorOutputPayload& lcd_output);
+  void updateNodesAndEdges(
+      const gtsam::NonlinearFactorGraph& nfg,
+      const gtsam::Values& values);
+  void updateRejectedEdges();
+  pose_graph_tools::PoseGraph getPosegraphMsg();
+
+  // Publish/print debugging information.
+  void publishDebugImage(const Timestamp& timestamp,
+                         const cv::Mat& debug_image) const;
+  void printParsedParams() const;
+
  private:
   // Define publisher for debug images.
   image_transport::Publisher debug_img_pub_;
@@ -117,28 +154,19 @@ class RosBaseDataProvider : public DataProvider {
   ros::Publisher frontend_stats_pub_;
   ros::Publisher imu_bias_pub_;
   ros::Publisher trajectory_pub_;
+  ros::Publisher posegraph_pub_;
 
-  typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
-
-  void publishTimeHorizonPointCloud(
-      const Timestamp& timestamp, const PointsWithIdMap& points_with_id,
-      const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const;
-  void publishPerFrameMesh3D(const SpinOutputPacket& vio_output) const;
-  void publishTimeHorizonMesh3D(const SpinOutputPacket& vio_output) const;
-  void publishState(const SpinOutputPacket& vio_output) const;
-  void publishTf(const SpinOutputPacket& vio_output);
-  void publishFrontendStats(const SpinOutputPacket& vio_output) const;
-  // Publish resiliency statistics
-  void publishResiliency(const SpinOutputPacket& vio_output) const;
-  void publishImuBias(const SpinOutputPacket& vio_output) const;
-  void publishOptimizedTrajectory(
-      const LoopClosureDetectorOutputPayload& lcd_output) const;
-  void publishTf(const LoopClosureDetectorOutputPayload& lcd_output) const;
-  void publishDebugImage(const Timestamp& timestamp,
-                         const cv::Mat& debug_image) const;
-
-  // Define tf broadcaster for world to base_link (IMU).
+  // Define tf broadcaster for world to base_link (IMU) and to map (PGO).
   tf::TransformBroadcaster tf_broadcaster_;
+
+  // Stored pose graph related objects
+  std::vector<pose_graph_tools::PoseGraphEdge> loop_closure_edges_;
+  std::vector<pose_graph_tools::PoseGraphEdge> odometry_edges_;
+  std::vector<pose_graph_tools::PoseGraphEdge> inlier_edges_;
+  std::vector<pose_graph_tools::PoseGraphNode> pose_graph_nodes_;
+
+  // Typedefs
+  typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
 };
 
 }  // namespace VIO

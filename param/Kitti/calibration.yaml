@@ -1,6 +1,6 @@
 # Kitti Calibration File
 
-# Camera  
+# Camera
 camera_model: pinhole
 distortion_model: radial-tangential
 camera_rate_hz: 10
@@ -20,19 +20,15 @@ right_camera_extrinsics: [0.9993513, -0.01860866, 0.03083487, 0.5370000,
                           -0.03067156, -0.008998467, 0.9994890, 0.01252488,
                           0.0, 0.0, 0.0, 1.0]
 
-# If extrinsics is not in body frame (in this case it is so identity ) 
+# If extrinsics is not in body frame (in this case it is so identity )
 calibration_to_body_frame: [0.0083 , 0.0128, 0.9999, 1.0833,
                             -0.9999, -0.0141, 0.0085, -0.3099,
                             0.0142, -0.9998, 0.0127, 0.7299,
                             0, 0, 0, 1.0]
 
-# IMU calibrations 
-imu_rate_hz: 100 
+# IMU calibrations
+imu_rate_hz: 100
 imu_shift: 0.0 # t_imu0 = t_cam0 + imu_shift
-imu_extrinsics: [1.0, 0.0, 0.0, 0.0,
-                 0.0, 1.0, 0.0, 0.0,
-                 0.0, 0.0, 1.0, 0.0,
-                 0.0, 0.0, 0.0, 1.0]
 
 # inertial sensor noise model parameters (static)
 gyroscope_noise_density: 1.6968e-3     # [ rad / s / sqrt(Hz) ]   ( gyro "white noise" )
