@@ -22,6 +22,8 @@
 
   <!-- Frame IDs -->
   <arg name="base_link_frame_id" value="base_link_spark"/>
+  <arg name="left_cam_frame_id"  value="left_cam_spark"/>
+  <arg name="right_cam_frame_id" value="right_cam_spark"/>
 
     <!-- Subscriber Topics -->
   <arg name="left_cam_topic"   value="/tesse/left_cam"/>

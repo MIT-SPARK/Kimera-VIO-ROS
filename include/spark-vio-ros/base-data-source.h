@@ -75,6 +75,9 @@ class RosBaseDataProvider : public DataProvider {
   // Publish all outputs by calling individual functions below
   void publishOutput(const SpinOutputPacket& vio_output);
 
+  void publishStaticTf(const gtsam::Pose3& pose,
+                       const std::string& parent_frame_id,
+                       const std::string& child_frame_id);
 
  protected:
   VioFrontEndParams frontend_params_;
@@ -91,6 +94,9 @@ class RosBaseDataProvider : public DataProvider {
   // Define frame ids for odometry message
   std::string world_frame_id_;
   std::string base_link_frame_id_;
+  std::string left_cam_frame_id_;
+  std::string right_cam_frame_id_;
+
 
   // Queue to store and retrieve VIO output in a thread-safe way.
   ThreadsafeQueue<SpinOutputPacket> vio_output_queue_;
