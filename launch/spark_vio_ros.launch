@@ -127,7 +127,8 @@ ground_truth_odometry_rosbag_topic
   <!-- visualizer node -->
   <node name="posegraph_viewer" pkg="pose_graph_tools" type="visualizer_node"
         output="screen" ns="/sparkvio">
-    <remap from="graph" to="pose_graph" />
+    <param name="frame_id"    value="$(arg world_frame_id)"/>
+    <remap from="graph"       to="pose_graph" />
   </node>
 
   <!-- Log ground-truth data only if requested-->
