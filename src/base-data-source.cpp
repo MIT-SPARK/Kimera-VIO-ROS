@@ -51,6 +51,9 @@ RosBaseDataProvider::RosBaseDataProvider()
   CHECK(pipeline_params_.backend_params_);
   parseFrontendParams();
 
+  parseLCDParams();
+  CHECK_NOTNULL(&pipeline_params_.lcd_params_);
+
   // Print parameters to check.
   printParsedParams();
 
@@ -960,6 +963,8 @@ void RosBaseDataProvider::printParsedParams() const {
   LOG(INFO) << std::string(80, '=') << '\n'
             << " - Backend params";
   pipeline_params_.backend_params_->print();
+  LOG(INFO) << std::string(80, '=');
+  pipeline_params_.lcd_params_.print();
   LOG(INFO) << std::string(80, '=');
 }
 
