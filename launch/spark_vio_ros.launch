@@ -124,12 +124,11 @@ ground_truth_odometry_rosbag_topic
     <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/>
   </node>
 
-  <!-- visualizer node -->
-  <node name="posegraph_viewer" pkg="pose_graph_tools" type="visualizer_node"
-        output="screen" ns="/sparkvio">
-    <param name="frame_id"    value="$(arg world_frame_id)"/>
-    <remap from="graph"       to="pose_graph" />
-  </node>
+  <!-- Launch visualizer -->
+  <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
+    <arg name="frame" value="$(arg world_frame_id)" />
+    <arg name="graph_topic" value="pose_graph" />
+  </include>
 
   <!-- Log ground-truth data only if requested-->
   <node if="$(arg log_gt_data)" name="gt_logger_node" pkg="spark_vio_ros"
