@@ -19,7 +19,7 @@ Install ROS by following [our reference](./docs/ros_installation.md), or the off
 Follow installation instructions in [SparkVIO](https://github.mit.edu/SPARK/VIO/blob/master/docs/sparkvio_installation.md).
 Make sure you install **SparkVIO's dependencies**: GTSAM, OpenCV, OpenGV.
 
-SparkVIO itself can be installed by cloning the **[SparkVIO catkin wrapper](https://github.mit.edu/SPARK/spark_vio_catkin)** in your catkin workspace, so you can spare installing SparkVIO from source (its dependencies must be installed anyway).
+SparkVIO itself can be installed by cloning **[SparkVIO](https://github.mit.edu/SPARK/VIO)** in your catkin workspace, so you can spare installing SparkVIO from source (its dependencies must be installed anyway).
 
 ## B. SparkVIO ROS wrapper Installation
 
