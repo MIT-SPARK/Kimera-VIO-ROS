@@ -24,6 +24,8 @@
 #include <pcl_msgs/PolygonMesh.h>
 #include <pcl_ros/point_cloud.h>
 
+#include <tf2_ros/static_transform_broadcaster.h>
+
 namespace VIO {
 
 RosBaseDataProvider::RosBaseDataProvider()
@@ -61,14 +63,18 @@ RosBaseDataProvider::RosBaseDataProvider()
 
   // Get ROS params
   CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
-  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
-  CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
   CHECK(!base_link_frame_id_.empty());
+  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
   CHECK(!world_frame_id_.empty());
+  CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
   CHECK(!map_frame_id_.empty());
+  CHECK(nh_private_.getParam("left_cam_frame_id", left_cam_frame_id_));
+  CHECK(!left_cam_frame_id_.empty());
+  CHECK(nh_private_.getParam("right_cam_frame_id", right_cam_frame_id_));
+  CHECK(!right_cam_frame_id_.empty());
 
   // Publishers
-  odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10);
+  odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10, true);
   frontend_stats_pub_ =
       nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 10);
   resiliency_pub_ =
@@ -77,9 +83,21 @@ RosBaseDataProvider::RosBaseDataProvider()
   trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 10);
   posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 10);
   pointcloud_pub_ =
-      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10);
-  mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5);
-  debug_img_pub_ = it_->advertise("debug_mesh_img", 10);
+      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10, true);
+  mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5, true);
+  debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
+
+  // Static TFs for left/right cameras
+  const gtsam::Pose3& body_Pose_left_cam =
+      stereo_calib_.left_camera_info_.body_Pose_cam_;
+  const gtsam::Pose3& body_Pose_right_cam =
+      stereo_calib_.right_camera_info_.body_Pose_cam_;
+  publishStaticTf(body_Pose_left_cam,
+                  base_link_frame_id_,
+                  left_cam_frame_id_);
+  publishStaticTf(body_Pose_right_cam,
+                  base_link_frame_id_,
+                  right_cam_frame_id_);
 }
 
 RosBaseDataProvider::~RosBaseDataProvider() {}
@@ -944,6 +962,25 @@ void RosBaseDataProvider::publishTf(
   map_tf.transform.rotation.z = w_Quat_map.z();
   tf_broadcaster_.sendTransform(map_tf);
 }
+
+void RosBaseDataProvider::publishStaticTf(const gtsam::Pose3& pose,
+                                          const std::string& parent_frame_id,
+                                          const std::string& child_frame_id) {
+  static tf2_ros::StaticTransformBroadcaster static_broadcaster;
+  geometry_msgs::TransformStamped static_transform_stamped;
+  // TODO(Toni): Warning: using ros::Time::now(), will that bring issues?
+  static_transform_stamped.header.stamp = ros::Time::now();
+  static_transform_stamped.header.frame_id = parent_frame_id;
+  static_transform_stamped.child_frame_id = child_frame_id;
+  static_transform_stamped.transform.translation.x = pose.x();
+  static_transform_stamped.transform.translation.y = pose.y();
+  static_transform_stamped.transform.translation.z = pose.z();
+  const gtsam::Quaternion& quat = pose.rotation().toQuaternion();
+  static_transform_stamped.transform.rotation.x = quat.x();
+  static_transform_stamped.transform.rotation.y = quat.y();
+  static_transform_stamped.transform.rotation.z = quat.z();
+  static_transform_stamped.transform.rotation.w = quat.w();
+  static_broadcaster.sendTransform(static_transform_stamped);
 
 void RosBaseDataProvider::printParsedParams() const {
   LOG(INFO) << std::string(80, '=') << '\n'

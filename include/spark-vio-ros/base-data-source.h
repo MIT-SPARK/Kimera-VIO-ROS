@@ -86,6 +86,11 @@ class RosBaseDataProvider : public DataProvider {
   // Publish all outputs for LCD
   void publishLcdOutput(const LoopClosureDetectorOutputPayload& lcd_output);
 
+  // Publish static transforms (for camera frames) to the tf tree
+  void publishStaticTf(const gtsam::Pose3& pose,
+                       const std::string& parent_frame_id,
+                       const std::string& child_frame_id);
+
  protected:
   VioFrontEndParams frontend_params_;
   StereoCalibration stereo_calib_;
@@ -102,6 +107,8 @@ class RosBaseDataProvider : public DataProvider {
   std::string world_frame_id_;
   std::string base_link_frame_id_;
   std::string map_frame_id_;
+  std::string left_cam_frame_id_;
+  std::string right_cam_frame_id_;
 
   // Queue to store and retrieve VIO output in a thread-safe way.
   ThreadsafeQueue<SpinOutputPacket> vio_output_queue_;
