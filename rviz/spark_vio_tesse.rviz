@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /TF1
-        - /TF1/Status1
         - /TF1/Frames1
         - /TF1/Tree1
         - /3D Mesh Textured1
@@ -113,6 +112,8 @@ Visualization Manager:
           Value: true
         base_link_spark:
           Value: true
+        left_cam:
+          Value: true
         right_cam:
           Value: true
         world:
@@ -124,6 +125,11 @@ Visualization Manager:
       Show Names: true
       Tree:
         world:
+          base_link_gt:
+            left_cam:
+              {}
+            right_cam:
+              {}
           base_link_spark:
             {}
       Update Interval: 0
@@ -239,7 +245,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 8.306986808776855
+      Distance: 93.48534393310547
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -254,10 +260,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.784796416759491
+      Pitch: 1.329796552658081
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 1.6003519296646118
+      Yaw: 4.328537464141846
     Saved:
       - Class: rviz/ThirdPersonFollower
         Distance: 6.814720153808594
