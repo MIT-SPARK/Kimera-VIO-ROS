@@ -36,7 +36,7 @@ echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
 
 # Clone repo
 cd ~/catkin_ws/src
-git clone git@github.mit.edu:SPARK/spark_vio_ros.git
+git clone git@github.edu:MIT-SPARK/Kimera-VIO-ROS.git
 
 # Install dependencies from rosinstall file using wstool
 wstool init
@@ -44,7 +44,12 @@ wstool merge spark_vio_ros/install/spark_vio.rosinstall
 wstool update
 ```
 
-Clone [SparkVIO catkin wrapper](https://github.mit.edu/SPARK/spark_vio_catkin) (**only if you haven't installed SparkVIO from source**).
+**Option 1:** Clone [SparkVIO](https://github.com/MIT-SPARK/Kimera-VIO) in the catkin workspace, the `package.xml` inside SparkVIO will let catkin know that it must be installed using cmake:
+```bash
+git clone git@github.com:MIT-SPARK/Kimera-VIO.git
+```
+
+**Option 2:** Clone [SparkVIO catkin wrapper](https://github.mit.edu/SPARK/spark_vio_catkin) (**only if you haven't installed SparkVIO from source**).
 ```bash
 # Clone SparkVIO catkin wrapper, useful if you don't want to build spark vio from source.
 git clone git@github.mit.edu:SPARK/spark_vio_catkin.git
