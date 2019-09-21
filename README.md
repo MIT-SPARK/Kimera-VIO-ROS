@@ -1,6 +1,6 @@
 # SparkVIO_ROS
 
-ROS Wrapper for [SparkVIO](https://github.mit.edu/SPARK/VIO).
+ROS Wrapper for [SparkVIO](https://github.com/MIT-SPARK/Kimera-VIO).
 
 <div align="center">
     <img src="docs/media/SparkVIO_ROS_mesh.gif">
@@ -16,14 +16,14 @@ Install ROS by following [our reference](./docs/ros_installation.md), or the off
 
 ### ii. SparkVIO's dependencies
 
-Follow installation instructions in [SparkVIO](https://github.mit.edu/SPARK/VIO/blob/master/docs/sparkvio_installation.md).
+Follow installation instructions in [SparkVIO](https://github.com/MIT-SPARK/Kimera-VIO).
 Make sure you install **SparkVIO's dependencies**: GTSAM, OpenCV, OpenGV.
 
-SparkVIO itself can be installed by cloning **[SparkVIO](https://github.mit.edu/SPARK/VIO)** in your catkin workspace, so you can spare installing SparkVIO from source (its dependencies must be installed anyway).
+SparkVIO itself can be installed by cloning **[SparkVIO](https://github.com/MIT-SPARK/Kimera-VIO)** in your catkin workspace, so you can spare installing SparkVIO from source (its dependencies must be installed anyway).
 
 ## B. SparkVIO ROS wrapper Installation
 
-If you have the above prerequisities and [SparkVIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should be:
+If you have the above prerequisities and [SparkVIO](https://github.com/MIT-SPARK/Kimera-VIO) installed and built, installation of the SparkVIO ROS wrapper should be:
 
 ```bash
 # Setup catkin workspace
