@@ -981,6 +981,7 @@ void RosBaseDataProvider::publishStaticTf(const gtsam::Pose3& pose,
   static_transform_stamped.transform.rotation.z = quat.z();
   static_transform_stamped.transform.rotation.w = quat.w();
   static_broadcaster.sendTransform(static_transform_stamped);
+}
 
 void RosBaseDataProvider::printParsedParams() const {
   LOG(INFO) << std::string(80, '=') << '\n'
