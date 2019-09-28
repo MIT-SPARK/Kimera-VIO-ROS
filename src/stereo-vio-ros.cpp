@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
       std::bind(&VIO::RosBaseDataProvider::callbackKeyframeRateVioOutput,
                 dataset_parser, std::placeholders::_1));
 
-  vio_pipeline.registerLoopClosureCallback(
+  vio_pipeline.registerLcdPgoOutputCallback(
       std::bind(&VIO::RosBaseDataProvider::callbackLoopClosureOutput,
                 dataset_parser, std::placeholders::_1));
 
