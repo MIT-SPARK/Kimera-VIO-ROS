@@ -5,7 +5,7 @@
  * @author Antoni Rosinol
  */
 
-#include "spark-vio-ros/ros-data-source.h"
+#include "kimera-vio-ros/ros-data-source.h"
 
 #include <string>
 #include <vector>

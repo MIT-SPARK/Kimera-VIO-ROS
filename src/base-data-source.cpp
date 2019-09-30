@@ -1,11 +1,11 @@
 ﻿/**
  * @file   base-data-source.cpp
- * @brief  Base class for ROS wrappers for spark vio.
+ * @brief  Base class for ROS wrappers for KimeraVIO.
  * @author Yun Chang
  * @author Antoni Rosinol
  */
 
-#include "spark-vio-ros/ros-data-source.h"
+#include "kimera-vio-ros/ros-data-source.h"
 
 #include <string>
 #include <vector>

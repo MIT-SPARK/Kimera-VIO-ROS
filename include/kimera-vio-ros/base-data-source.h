@@ -1,6 +1,6 @@
 /**
  * @file   base-data-source.h
- * @brief  Base class for ROS wrappers for spark vio.
+ * @brief  Base class for ROS wrappers for KimeraVIO.
  * @author Yun Chang
  * @author Antoni Rosinol
  */
@@ -30,7 +30,7 @@
 #include <datasource/DataSource.h>
 #include <utils/ThreadsafeQueue.h>
 
-#include "spark-vio-ros/stereo-image-buffer.h"
+#include "kimera-vio-ros/stereo-image-buffer.h"
 
 namespace VIO {
 

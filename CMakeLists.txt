@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(spark_vio_ros)
+project(KimeraVIO_ros)
 
 find_package(catkin_simple REQUIRED)
 
@@ -11,7 +11,7 @@ cs_add_executable(${PROJECT_NAME}
   src/rosbag-data-source.cpp
   src/ros-data-source.cpp
   src/stereo-image-buffer.cpp)
-target_link_libraries(${PROJECT_NAME} SparkVio)
+target_link_libraries(${PROJECT_NAME} KimeraVIO)
 
 cs_install()
 

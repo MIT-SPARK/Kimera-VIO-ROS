@@ -19,7 +19,7 @@
 #include <sensor_msgs/Image.h>
 #include <nav_msgs/Odometry.h>
 
-#include "spark-vio-ros/base-data-source.h"
+#include "kimera-vio-ros/base-data-source.h"
 
 namespace VIO {
 

@@ -18,9 +18,9 @@
 #include <utils/Timer.h>
 
 // Dependencies from this repository
-#include "spark-vio-ros/base-data-source.h"
-#include "spark-vio-ros/ros-data-source.h"
-#include "spark-vio-ros/rosbag-data-source.h"
+#include "kimera-vio-ros/base-data-source.h"
+#include "kimera-vio-ros/ros-data-source.h"
+#include "kimera-vio-ros/rosbag-data-source.h"
 
 DEFINE_bool(parallel_run, true, "Run VIO parallel or sequential");
 DEFINE_bool(online_run, true, "RUN VIO ROS online or offline");
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
   google::InitGoogleLogging(argv[0]);
 
   // Initialize ROS node
-  ros::init(argc, argv, "spark_vio");
+  ros::init(argc, argv, "kimera_vio");
 
   // Create dataset parser.
   std::shared_ptr<VIO::RosBaseDataProvider> dataset_parser;

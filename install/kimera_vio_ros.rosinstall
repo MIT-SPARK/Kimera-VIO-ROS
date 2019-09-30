@@ -6,7 +6,3 @@
     local-name: mesh_rviz_plugins
     uri: https://github.com/ToniRV/mesh_rviz_plugins.git
     version: master
-- git:
-   local-name: spark_vio_catkin
-   uri: https://github.mit.edu/SPARK/spark_vio_catkin
-   version: master
