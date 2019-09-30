@@ -204,7 +204,7 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     }
 
     camera_param_i.body_Pose_cam_ =
-        UtilsOpenCV::Vec2pose(extrinsics_body, 4, 4);
+        UtilsOpenCV::poseVectorToGtsamPose3(extrinsics_body);
 
     // Distortion model
     std::string distortion_model;
