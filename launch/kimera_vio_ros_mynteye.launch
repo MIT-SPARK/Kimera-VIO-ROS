@@ -1,0 +1,31 @@
+<launch>
+  <arg name="dataset_name" value="MyntEye"/>
+  <arg name="parallel" default="True" />
+  <arg name="online" default="True" />
+
+  <arg name="log_output" default="false"/>
+  <arg name="log_output_path"
+       default="$(find kimera_vio_ros)/output_logs/"
+       if="$(arg log_output)"/>
+  <arg name="log_gt_data" default="false"/>
+  <arg name="gt_topic" default=""
+       if="$(arg log_gt_data)"/>
+  <!-- Set use_sim_time to true if you use rosbag with clock argument -->
+  <param name="use_sim_time" value="true" if="$(arg online)"/>
+
+  <!-- Only used when parsing a rosbag -->
+  <arg name="rosbag_path" default="/home/yunchang/data/kitti_2011_09_26_drive_0005_unsynced.bag"
+       unless="$(arg online)"/>
+
+  <!-- Subscribed Topics -->
+  <arg name="left_cam_topic"  value="/mynteye/left/image_raw"/>
+  <arg name="right_cam_topic" value="/mynteye/right/image_raw"/>
+  <arg name="imu_topic"       value="/mynteye/imu/data_raw"/>
+
+  <!-- Frame IDs for Odometry -->
+  <arg name="base_link_frame_id" value="base_link" />
+
+  <!-- Launch actual pipeline -->
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
+           pass_all_args="true"/>
+</launch>
