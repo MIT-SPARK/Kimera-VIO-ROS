@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>KimeraVIO_ros</name>
+  <name>kimera_ros</name>
   <version>4.0.0</version>
   <description>KimeraVIO ROS Wrapper</description>
 

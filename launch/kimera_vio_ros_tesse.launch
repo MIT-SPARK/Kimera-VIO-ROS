@@ -9,7 +9,7 @@
 
   <arg name="log_output" default="true"/>
   <arg name="log_output_path"
-       default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
+       default="$(find kimera_ros)/output_logs/$(arg dataset_name)"
        if="$(arg log_output)"/>
   <arg name="log_gt_data" default="true"/>
   <arg name="gt_topic"    default="/tesse/odom"
@@ -34,7 +34,7 @@
   <arg name="odometry_ground_truth_topic" value="$(arg gt_topic)"/>
 
   <!-- Launch actual pipeline -->
-  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
+  <include file="$(find kimera_ros)/launch/kimera_ros.launch"
     pass_all_args="true"/>
 
 </launch>

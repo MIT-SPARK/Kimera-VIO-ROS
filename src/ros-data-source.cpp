@@ -5,7 +5,7 @@
  * @author Antoni Rosinol
  */
 
-#include "kimera-vio-ros/ros-data-source.h"
+#include "kimera-ros/ros-data-source.h"
 
 #include <string>
 #include <vector>

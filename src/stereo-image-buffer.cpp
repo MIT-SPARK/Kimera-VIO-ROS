@@ -4,7 +4,7 @@
  * @author Yun Chang
  * @author Antoni Rosinol
  */
-#include "kimera-vio-ros/stereo-image-buffer.h"
+#include "kimera-ros/stereo-image-buffer.h"
 
 namespace VIO {
 

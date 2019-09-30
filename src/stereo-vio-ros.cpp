@@ -18,9 +18,9 @@
 #include <utils/Timer.h>
 
 // Dependencies from this repository
-#include "kimera-vio-ros/base-data-source.h"
-#include "kimera-vio-ros/ros-data-source.h"
-#include "kimera-vio-ros/rosbag-data-source.h"
+#include "kimera-ros/base-data-source.h"
+#include "kimera-ros/ros-data-source.h"
+#include "kimera-ros/rosbag-data-source.h"
 
 DEFINE_bool(parallel_run, true, "Run VIO parallel or sequential");
 DEFINE_bool(online_run, true, "RUN VIO ROS online or offline");

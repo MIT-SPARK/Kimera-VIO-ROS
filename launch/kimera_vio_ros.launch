@@ -15,7 +15,7 @@
        'log_output_path' location. -->
   <arg name="log_output" default="false"/>
   <arg name="log_output_path"
-       default="$(find kimera_vio_ros)/output_logs/"/>
+       default="$(find kimera_ros)/output_logs/"/>
   <!-- If true, log ground-truth poses to a csv file using the
        gt_logger_node, and processing data from the gt_topic rostopic -->
   <arg name="log_gt_data" default="false"/>
@@ -26,7 +26,7 @@
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
   <arg name="params_folder"
-                       value="$(find kimera_vio_ros)/param/$(arg dataset_name)"/>
+                       value="$(find kimera_ros)/param/$(arg dataset_name)"/>
 
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"                    default="/cam0/image_raw"/>
@@ -51,7 +51,7 @@
   <arg name="visualize"    default="false" />
 
   <!-- Launch main node  -->
-  <node name="kimera_vio_ros" pkg="kimera_vio_ros" type="kimera_vio_ros" output="screen"
+  <node name="kimera_ros" pkg="kimera_ros" type="kimera_ros" output="screen"
   args="--vio_params_path=$(arg params_folder)/regularVioParameters.yaml
         --tracker_params_path=$(arg params_folder)/trackerParameters.yaml
         --flagfile=$(arg params_folder)/flags/StereoVIO.flags
@@ -115,7 +115,7 @@
   </node>
 
   <!-- Log ground-truth data only if requested-->
-  <node if="$(arg log_gt_data)" name="gt_logger_node" pkg="kimera_vio_ros"
+  <node if="$(arg log_gt_data)" name="gt_logger_node" pkg="kimera_ros"
         type="gt_logger_node.py" output="screen">
     <param name="gt_topic"   value="$(arg gt_topic)"/>
     <param name="output_dir" value="$(arg log_output_path)"/>

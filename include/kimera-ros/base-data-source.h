@@ -30,7 +30,7 @@
 #include <datasource/DataSource.h>
 #include <utils/ThreadsafeQueue.h>
 
-#include "kimera-vio-ros/stereo-image-buffer.h"
+#include "kimera-ros/stereo-image-buffer.h"
 
 namespace VIO {
 

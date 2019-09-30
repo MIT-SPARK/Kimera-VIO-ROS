@@ -5,7 +5,7 @@
  * @author Antoni Rosinol
  */
 
-#include "kimera-vio-ros/rosbag-data-source.h"
+#include "kimera-ros/rosbag-data-source.h"
 
 #include <sensor_msgs/Imu.h>
 #include <rosgraph_msgs/Clock.h>
