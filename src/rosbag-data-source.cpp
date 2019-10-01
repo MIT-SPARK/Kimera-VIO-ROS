@@ -1,11 +1,11 @@
 /**
  * @file   rosbag-data-source.cpp
- * @brief  Parse rosbad and run spark vio
+ * @brief  Parse rosbad and run KimeraVIO
  * @author Yun Chang
  * @author Antoni Rosinol
  */
 
-#include "spark-vio-ros/rosbag-data-source.h"
+#include "kimera-ros/rosbag-data-source.h"
 
 #include <sensor_msgs/Imu.h>
 #include <rosgraph_msgs/Clock.h>

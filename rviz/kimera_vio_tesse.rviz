@@ -62,14 +62,14 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.009999999776482582
       Style: Flat Squares
-      Topic: /sparkvio/time_horizon_pointcloud
+      Topic: /kimera_vio/time_horizon_pointcloud
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /sparkvio/debug_mesh_img
+      Image Topic: /kimera_vio/debug_mesh_img
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -110,7 +110,7 @@ Visualization Manager:
         All Enabled: false
         base_link_gt:
           Value: true
-        base_link_spark:
+        base_link_kimera:
           Value: true
         left_cam:
           Value: true
@@ -130,7 +130,7 @@ Visualization Manager:
               {}
             right_cam:
               {}
-          base_link_spark:
+          base_link_kimera:
             {}
       Update Interval: 0
       Value: true
@@ -141,13 +141,13 @@ Visualization Manager:
       Phong Shading: true
       Point Size: 1
       Polygon Mode: SOLID
-      PolygonMesh Topic: /sparkvio/mesh
+      PolygonMesh Topic: /kimera_vio/mesh
       Queue Size: 25
       Scene Color Scale: 1
       Shader Program: TEXTURE
       Show Normals: false
       Texture Transport Hint: raw
-      Texture topic: /sparkvio/debug_mesh_img
+      Texture topic: /kimera_vio/debug_mesh_img
       Value: true
     - Angle Tolerance: 0.10000000149011612
       Class: rviz/Odometry
@@ -214,7 +214,7 @@ Visualization Manager:
         Shaft Length: 1
         Shaft Radius: 0.05000000074505806
         Value: Axes
-      Topic: /sparkvio/odometry
+      Topic: /kimera_vio/odometry
       Unreliable: false
       Value: true
   Enabled: true
