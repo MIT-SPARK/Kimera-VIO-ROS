@@ -40,7 +40,10 @@ git clone git@github.com:MIT-SPARK/Kimera-VIO-ROS.git
 
 # Install dependencies from rosinstall file using wstool
 wstool init
-wstool merge kimera_ros/install/kimera_ros.rosinstall
+# For ssh:
+wstool merge kimera_ros/install/kimera_ros_ssh.rosinstall
+# For https
+wstool merge kimera_ros/install/kimera_ros_https.rosinstall
 wstool update
 ```
 
