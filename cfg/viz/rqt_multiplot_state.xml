@@ -35,7 +35,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -48,7 +48,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -86,7 +86,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -99,7 +99,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -137,7 +137,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -150,7 +150,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -211,7 +211,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -224,7 +224,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -262,7 +262,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -275,7 +275,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -313,7 +313,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -326,7 +326,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -389,7 +389,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -402,7 +402,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -440,7 +440,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -453,7 +453,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -491,7 +491,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -504,7 +504,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -565,7 +565,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -578,7 +578,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -616,7 +616,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -629,7 +629,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -667,7 +667,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </x_axis>
                                 <y_axis>
@@ -680,7 +680,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/odometry</topic>
+                                    <topic>/kimera_vio/odometry</topic>
                                     <type>nav_msgs/Odometry</type>
                                 </y_axis>
                             </axes>
@@ -743,7 +743,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </x_axis>
                                 <y_axis>
@@ -756,7 +756,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </y_axis>
                             </axes>
@@ -794,7 +794,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </x_axis>
                                 <y_axis>
@@ -807,7 +807,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </y_axis>
                             </axes>
@@ -845,7 +845,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </x_axis>
                                 <y_axis>
@@ -858,7 +858,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </y_axis>
                             </axes>
@@ -919,7 +919,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </x_axis>
                                 <y_axis>
@@ -932,7 +932,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </y_axis>
                             </axes>
@@ -970,7 +970,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </x_axis>
                                 <y_axis>
@@ -983,7 +983,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </y_axis>
                             </axes>
@@ -1021,7 +1021,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </x_axis>
                                 <y_axis>
@@ -1034,7 +1034,7 @@
                                         <relative_minimum>-1000</relative_minimum>
                                         <type>0</type>
                                     </scale>
-                                    <topic>/sparkvio/imu_bias</topic>
+                                    <topic>/kimera_vio/imu_bias</topic>
                                     <type>std_msgs/Float64MultiArray</type>
                                 </y_axis>
                             </axes>

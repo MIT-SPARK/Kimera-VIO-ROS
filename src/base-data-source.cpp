@@ -1,11 +1,11 @@
 ﻿/**
  * @file   base-data-source.cpp
- * @brief  Base class for ROS wrappers for spark vio.
+ * @brief  Base class for ROS wrappers for KimeraVIO.
  * @author Yun Chang
  * @author Antoni Rosinol
  */
 
-#include "spark-vio-ros/ros-data-source.h"
+#include "kimera-ros/ros-data-source.h"
 
 #include <string>
 #include <vector>
@@ -213,7 +213,7 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     }
 
     camera_param_i.body_Pose_cam_ =
-        UtilsOpenCV::Vec2pose(extrinsics_body, 4, 4);
+        UtilsOpenCV::poseVectorToGtsamPose3(extrinsics_body);
 
     // Distortion model
     std::string distortion_model;

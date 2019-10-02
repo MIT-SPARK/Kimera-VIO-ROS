@@ -1,9 +1,9 @@
-# SparkVIO_ROS
+# Kimera-VIO-ROS
 
-ROS Wrapper for [SparkVIO](https://github.com/MIT-SPARK/Kimera-VIO).
+ROS Wrapper for [Kimera](https://github.com/MIT-SPARK/Kimera).
 
 <div align="center">
-    <img src="docs/media/SparkVIO_ROS_mesh.gif">
+    <img src="docs/media/Kimera-VIO-ROS_mesh.gif">
 </div>
 
 # 1. Installation
@@ -14,14 +14,14 @@ ROS Wrapper for [SparkVIO](https://github.com/MIT-SPARK/Kimera-VIO).
 
 Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
 
-### ii. SparkVIO's dependencies
+### ii. KimeraVIO's dependencies
 
-Follow installation instructions in [SparkVIO](https://github.com/MIT-SPARK/Kimera-VIO).
-Make sure you install **SparkVIO's dependencies**: GTSAM, OpenCV, OpenGV.
+Follow installation instructions in [KimeraVIO](https://github.com/MIT-SPARK/Kimera-VIO).
+Make sure you install **KimeraVIO's dependencies**: GTSAM, OpenCV, OpenGV.
 
-SparkVIO itself can be installed by cloning **[SparkVIO](https://github.com/MIT-SPARK/Kimera-VIO)** in your catkin workspace, so you can spare installing SparkVIO from source (its dependencies must be installed anyway).
+KimeraVIO itself can be installed by cloning **[KimeraVIO](https://github.com/MIT-SPARK/Kimera-VIO)** in your catkin workspace, so you can spare installing KimeraVIO from source (its dependencies must be installed anyway).
 
-## B. SparkVIO ROS wrapper Installation
+## B. KimeraVIO ROS wrapper Installation
 
 ### Dependencies
 ROS package dependencies are automatically downloaded using rosinstall:
@@ -42,23 +42,17 @@ echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
 
 # Clone repo
 cd ~/catkin_ws/src
-git clone git@github.edu:MIT-SPARK/Kimera-VIO-ROS.git
+git clone git@github.com:MIT-SPARK/Kimera-VIO-ROS.git
 
 # Install dependencies from rosinstall file using wstool
 wstool init
-wstool merge spark_vio_ros/install/spark_vio.rosinstall
+wstool merge kimera_ros/install/kimera_ros.rosinstall
 wstool update
 ```
 
-**Option 1:** Clone [SparkVIO](https://github.com/MIT-SPARK/Kimera-VIO) in the catkin workspace, the `package.xml` inside SparkVIO will let catkin know that it must be installed using cmake:
+**Option 1:** Clone [KimeraVIO](https://github.com/MIT-SPARK/Kimera-VIO) in the catkin workspace, the `package.xml` inside KimeraVIO will let catkin know that it must be installed using cmake:
 ```bash
 git clone git@github.com:MIT-SPARK/Kimera-VIO.git
-```
-
-**Option 2:** Clone [SparkVIO catkin wrapper](https://github.mit.edu/SPARK/spark_vio_catkin) (**only if you haven't installed SparkVIO from source**).
-```bash
-# Clone SparkVIO catkin wrapper, useful if you don't want to build spark vio from source.
-git clone git@github.mit.edu:SPARK/spark_vio_catkin.git
 ```
 
 Finally, compile:
@@ -68,7 +62,7 @@ Finally, compile:
 catkin build
 
 # Refresh workspace
-source ~/.bashrc
+source ~/catkin_ws/devel/setup.bash
 ```
 
 # 2. Usage
@@ -77,14 +71,14 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
 ## Online
   1. As a general good practice, open a new terminal and run: `roscore`
 
-  2. In another terminal, launch SparkVIO ROS wrapper:
+  2. In another terminal, launch KimeraVIO ROS wrapper:
   ```bash
-  roslaunch spark_vio_ros spark_vio_ros_euroc.launch
+  roslaunch kimera_ros kimera_ros_euroc.launch
   ```
 
   3. In another terminal, launch rviz for visualization:
   ```bash
-  rviz -d $(rospack find spark_vio_ros)/rviz/spark_vio_euroc.rviz
+  rviz -d $(rospack find kimera_ros)/rviz/kimera_vio_euroc.rviz
   ```
   > Note: this rviz configuration makes use of a rviz plugin: [mesh_rviz_plugins](https://github.com/ToniRV/mesh_rviz_plugins). To visualize the textured 3D mesh, clone this plugin to your catkin workspace and catkin build it (note that this should be done automatically via `wstool`).
 
@@ -102,98 +96,28 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
 ## Offline
   In this mode, the provided rosbag will be first parsed and then sent to the VIO for processing.
   This is particularly useful when debugging to avoid potential ROS networking issues.
-  - To run, launch the SparkVIO ROS wrapper with the `online` parameter set to `false` and specify the rosbag's path:
+  - To run, launch the KimeraVIO ROS wrapper with the `online` parameter set to `false` and specify the rosbag's path:
   ```bash
-  roslaunch spark_vio_ros spark_vio_ros_euroc.launch online:=false rosbag_path:="PATH/TO/ROSBAG"
+  roslaunch kimera_ros kimera_ros_euroc.launch online:=false rosbag_path:="PATH/TO/ROSBAG"
   ```
 
 ## Other datasets
 The launch file and parameters can also be configured for other datasets. For example, here we provide a [kitti rosbag for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, in one terminal, launch the spark vio ROS wrapper with the launch file we configured for kitti:
 ```
-roslaunch spark_vio_ros spark_vio_ros_kitti.launch
+roslaunch kimera_ros kimera_ros_kitti.launch
 ```
   - In another terminal, launch a Kitti rosbag:
 ```
 rosbag play --clock /PATH/TO/KITTI_ROSBAG
 ```
-  - In rviz, you can use the provided config file provided at spark_vio_ros/rviz/sparkvio_kitti.rviz
+  - In rviz, you can use the provided config file provided at rviz/kimera_vio_kitti.rviz
   ```bash
-  rviz -d $(rospack find spark_vio_ros)/rviz/spark_vio_kitti.rviz
+  rviz -d $(rospack find kimera_ros)/rviz/spark_vio_kitti.rviz
   ```
 
 # Hardware use
-## RealSense D435i (Infrared)
 
-Why do we use the infrared cameras on the D435i?
-The infrared cameras offer the option to run the SparkVIO stereo version on monochrome global shutter cameras, which are generally better suited for visual tracking.
-
-### Setup
-
-1. Download and install the [Intel RealSense SDK](https://github.com/IntelRealSense/librealsense/blob/development/doc/distribution_linux.md)
-
-2. Download and install the [Intel RealSense ROS wrapper](https://github.com/IntelRealSense/realsense-ros)
-
-3. Adapt the RealSense ROS wrapper to publish a single interpolated IMU message [(see nodelet xml)](https://github.com/IntelRealSense/realsense-ros/blob/c2448916218ccfe49b0d642563493cb4e9bdcc3b/realsense2_camera/launch/includes/nodelet.launch.xml#L82)
-
-4. Make sure to properly cover the infrared projector on the RealSense (this otherwise affects the quality of the infrared image with dots)
-
-5. Collect calibration bagfiles for camera intrinsics and extrinsics [(see instructions)](https://www.youtube.com/watch?v=puNXsnrYWTY&app=desktop)
-
-6. Calibrate camera intrinsics and extrinsics using [Kalibr](https://github.com/ethz-asl/kalibr)
-
-7. Create configuration files for SparkVIO ROS wrapper using [Kalibr2SparkVIO-pinhole-radtan](https://github.mit.edu/SPARK/VIO/blob/feature/parallelization/jpl/kalibr/kalibr2sparkvio_stereo_pinhole-radtan.py)
-
-8. Create/adapt your own specific launch file, similar to [example RealSense IR](https://github.mit.edu/SPARK/spark_vio_ros/blob/jpl/launch/spark_vio_ros_realsense_IR.launch)
-
-### Testing
-
-1. Launch RealSense camera using ```roslaunch realsense2_camera [name of your launch file]```
-
-2. Visualize image stream using ```rosrun image_view image_view image:=[name of camera topic]```
-
-3. Launch SparkVIO ROS wrapper using ```roslaunch spark_vio_ros [name of your launch file]```
-
-4. Visualize trajectory with RVIZ using ```rviz```, [(see example config)](https://github.mit.edu/SPARK/spark_vio_ros/blob/jpl/viz/visualize_sparkvio.rviz)
-
-5. Visualize state and statistics using ```rqt_multiplot```, [(see example config)](https://github.mit.edu/SPARK/spark_vio_ros/blob/jpl/viz/rqt_multiplot_state.xml)
-
-It is important to remember that when launching the VIO, the camera should be standing still and upward (camera fov forward looking).
-
-## MyntEye S
-
-### Setup
-
-1. Download and install the [MyntEye SDK and ROS wrapper](https://github.com/slightech/MYNT-EYE-S-SDK)
-
-2. Collect calibration bagfiles for camera intrinsics and extrinsics [(see instructions)](https://www.youtube.com/watch?v=puNXsnrYWTY&app=desktop)
-
-3. Calibrate camera intrinsics and extrinsics using [Kalibr](https://github.com/ethz-asl/kalibr), recommended model is: ```pinhole-equi``` [(see OpenCV documentation)](https://docs.opencv.org/3.3.1/db/d58/group__calib3d__fisheye.html)
-
-4. Create configuration files for SparkVIO ROS wrapper using [Kalibr2SparkVIO-pinhole-equi](https://github.mit.edu/SPARK/VIO/blob/feature/parallelization/jpl/kalibr/kalibr2sparkvio_stereo_pinhole-equi.py) or [[Kalibr2SparkVIO-pinhole-radtan](https://github.mit.edu/SPARK/VIO/blob/feature/parallelization/jpl/kalibr/kalibr2sparkvio_stereo_pinhole-equi.py)]
-
-5. Create/adapt your own specific launch file, similar to [example MyntEye S](https://github.mit.edu/SPARK/spark_vio_ros/blob/jpl/launch/spark_vio_ros_mynteye.launch)
-
-### Testing
-
-1. Launch MyntEye camera using ```roslaunch mynt_eye_ros_wrapper [name of your launch file]```
-
-2. Visualize image stream using ```rosrun image_view image_view image:=[name of camera topic]```
-
-3. Launch SparkVIO ROS wrapper using ```roslaunch spark_vio_ros [name of your launch file]``` (example, see below)
-
-4. Visualize trajectory with RVIZ using ```rviz```, [(see example config)](https://github.mit.edu/SPARK/spark_vio_ros/blob/jpl/viz/visualize_sparkvio.rviz)
-
-5. Visualize state and statistics using ```rqt_multiplot```, [(see example config)](https://github.mit.edu/SPARK/spark_vio_ros/blob/jpl/viz/rqt_multiplot_state.xml)
-
-#### Example
-
-For the MyntEyes used in SubT: (online)
-```
-roslaunch spark_vio_ros spark_vio_ros_mynteye.launch camera:=JPL distortion:=equidistant
-```
-Options for camera are ```MIT``` and ```JPL```. Options for distortion are ```equidistant``` and ```radtan```.
-
-Same goes for use offline, using the ```spark_vio_ros_mynteye_offline.launch``` file and an additional ```data``` argument with path to bagfile.
+See the [documentation on hardware setup](docs/hardware_setup.md) for instructions on running KimeraROS on supported hardware platforms, as well as guides on how to develop for other platforms.
 
 # BSD License
-SparkVIO ROS wrapper is open source under the BSD license, see the [LICENSE.BSD](./LICENSE.BSD) file.
+KimeraVIO ROS wrapper is open source under the BSD license, see the [LICENSE.BSD](./LICENSE.BSD) file.

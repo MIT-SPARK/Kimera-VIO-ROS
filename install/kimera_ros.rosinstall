@@ -7,10 +7,6 @@
     uri: https://github.com/ToniRV/mesh_rviz_plugins.git
     version: master
 - git:
-   local-name: spark_vio_catkin
-   uri: https://github.mit.edu/SPARK/spark_vio_catkin.git
-   version: master
-- git:
    local-name: pose_graph_tools
    uri: https://github.mit.edu/SPARK/pose_graph_tools.git
    version: master
