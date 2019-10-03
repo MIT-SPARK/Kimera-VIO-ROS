@@ -23,7 +23,13 @@ KimeraVIO itself can be installed by cloning **[KimeraVIO](https://github.com/MI
 
 ## B. KimeraVIO ROS wrapper Installation
 
-If you have the above prerequisities and [KimeraVIO](https://github.com/MIT-SPARK/Kimera-VIO) installed and built, installation of the KimeraVIO ROS wrapper should be:
+### Dependencies
+ROS package dependencies are automatically downloaded using rosinstall:
+- (catkin simple)[https://github.com/catkin/catkin_simple]
+- (pose_graph_tools)[https://github.mit.edu/SPARK/pose_graph_tools] [Required: for visualization of Loop Closures]
+- (mesh_rviz_plugins)[https://github.com/ToniRV/mesh_rviz_plugins] [Optional: for visualization of textured 3D Mesh]
+
+If you have the above prerequisites and [SparkVIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should be:
 
 ```bash
 # Setup catkin workspace
@@ -78,7 +84,7 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
 
   4. Finally, in another terminal, launch the downloaded Euroc rosbag:
   ```bash
-  rosbag play --clock /PATH/TO/EUROC_ROSBAG 
+  rosbag play --clock /PATH/TO/EUROC_ROSBAG
   ```
 
   > Note that you will need to both source ROS and your `catkin_ws` for each new terminal unless you added the following lines to your `~/.bashrc` file:
@@ -102,7 +108,7 @@ roslaunch kimera_ros kimera_ros_kitti.launch
 ```
   - In another terminal, launch a Kitti rosbag:
 ```
-rosbag play --clock /PATH/TO/KITTI_ROSBAG 
+rosbag play --clock /PATH/TO/KITTI_ROSBAG
 ```
   - In rviz, you can use the provided config file provided at rviz/kimera_vio_kitti.rviz
   ```bash
