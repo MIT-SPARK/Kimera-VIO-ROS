@@ -17,9 +17,16 @@
   <arg name="gt_topic" if="$(arg log_gt_data)"
        default="/vicon/firefly_sbx/firefly_sbx"/>
 
+  <arg name="use_lcd" default="true"/>
+  <arg name="visualize" default="false"/>
+
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path" default="/home/tonirv/datasets/euroc/V1_01_easy/V1_01_easy.bag"
     unless="$(arg online)"/>
+
+  <!-- Specify the absolute path to the vocabulary file. -->
+  <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
+  <arg name="path_to_vocab" value="/home/marcus/code/SparkVIO/vocabulary/ORBvoc.yml"/>
 
   <!-- Frame IDs -->
   <arg name="base_link_frame_id" value="base_link"/>

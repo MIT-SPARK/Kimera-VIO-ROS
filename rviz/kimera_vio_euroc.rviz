@@ -1,14 +1,13 @@
 Panels:
   - Class: rviz/Displays
-    Help Height: 78
+    Help Height: 70
     Name: Displays
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /PointCloud Time Horizon1
-        - /Odometry1/Shape1
+        - /PoseGraph1
       Splitter Ratio: 0.5
-    Tree Height: 495
+    Tree Height: 380
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -27,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Left Img
+    SyncSource: 2D Mesh
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -36,19 +35,32 @@ Visualization Manager:
   Class: ""
   Displays:
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
+        base_link:
+          Value: true
+        cam0:
+          Value: false
+        map:
+          Value: true
+        world:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        world:
+          base_link:
+            cam0:
+              {}
+          map:
+            {}
       Update Interval: 0
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -80,7 +92,7 @@ Visualization Manager:
       Use rainbow: true
       Value: true
     - Class: rviz/Image
-      Enabled: false
+      Enabled: true
       Image Topic: /cam0/image_raw
       Max Value: 1
       Median window: 5
@@ -90,7 +102,7 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: false
+      Value: true
     - Class: rviz/Image
       Enabled: false
       Image Topic: /cam1/image_raw
@@ -114,7 +126,7 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: false
+      Value: true
     - Class: mesh_rviz_plugins/TexturedMesh
       Enabled: true
       Name: 3D Mesh Textured
@@ -164,11 +176,70 @@ Visualization Manager:
       Topic: /kimera_vio/odometry
       Unreliable: false
       Value: true
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /sparkvio/graph_nodes
+          Name: Nodes
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /sparkvio/loop_edges
+          Name: Loop Edges
+          Namespaces:
+            map: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /sparkvio/rejected_loop_edges
+          Name: Rejected Edges
+          Namespaces:
+            map: true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /sparkvio/odometry_edges
+          Name: Odometry Edges
+          Namespaces:
+            map: true
+          Queue Size: 100
+          Value: true
+        - Alpha: 1
+          Buffer Length: 1
+          Class: rviz/Path
+          Color: 25; 255; 0
+          Enabled: true
+          Head Diameter: 0.30000001192092896
+          Head Length: 0.20000000298023224
+          Length: 0.30000001192092896
+          Line Style: Lines
+          Line Width: 0.029999999329447746
+          Name: PGO Trajectory
+          Offset:
+            X: 0
+            Y: 0
+            Z: 0
+          Pose Color: 255; 85; 255
+          Pose Style: None
+          Radius: 0.029999999329447746
+          Shaft Diameter: 0.10000000149011612
+          Shaft Length: 0.10000000149011612
+          Topic: /sparkvio/optimized_trajectory
+          Unreliable: false
+          Value: true
+      Enabled: true
+      Name: PoseGraph
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
     Default Light: true
-    Fixed Frame: cam0
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
@@ -192,25 +263,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 4.299954891204834
+      Distance: 8.613879203796387
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.21489989757537842
-        Y: 0.13931719958782196
-        Z: 3.5762786865234375e-7
+        X: -1.2851462364196777
+        Y: -0.8764123916625977
+        Z: 3.1241393116943073e-6
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -1.2947965860366821
+      Pitch: 0.8197969794273376
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 6.133594989776611
+      Yaw: 3.8786556720733643
     Saved:
       - Class: rviz/ThirdPersonFollower
         Distance: 6.814720153808594
@@ -234,17 +305,17 @@ Visualization Manager:
         Yaw: 3.0454001426696777
 Window Geometry:
   2D Mesh:
-    collapsed: true
+    collapsed: false
   Displays:
-    collapsed: true
-  Height: 1545
-  Hide Left Dock: true
+    collapsed: false
+  Height: 1050
+  Hide Left Dock: false
   Hide Right Dock: true
   Left Img:
-    collapsed: true
-  QMainWindow State: 000000ff00000000fd0000000400000000000002040000056bfc020000000cfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000003d0000027a000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000016004c006500660074002000430061006d0065007200610000000222000001490000000000000000fb00000010004c00650066007400200049006d006700000002bd0000003a0000001600fffffffb000000120052006900670068007400200049006d006700000002fd000002650000001600fffffffb0000000e003200440020004d0065007300680000000568000000400000001600ffffff000000010000019000000569fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d00000569000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000075f0000003efc0100000002fb0000000800540069006d006501000000000000075f000002eb00fffffffb0000000800540069006d006501000000000000045000000000000000000000075f0000056b00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+    collapsed: false
+  QMainWindow State: 000000ff00000000fd0000000400000000000002040000037cfc020000000cfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000001ff000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000016004c006500660074002000430061006d0065007200610000000222000001490000000000000000fb00000010004c00650066007400200049006d00670100000242000000af0000001600fffffffb000000120052006900670068007400200049006d006700000001c8000001ba0000001600fffffffb0000000e003200440020004d00650073006801000002f7000000c20000001600ffffff000000010000019000000569fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d00000569000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d0065010000000000000780000002eb00fffffffb0000000800540069006d00650100000000000004500000000000000000000005760000037c00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Right Img:
-    collapsed: true
+    collapsed: false
   Selection:
     collapsed: false
   Time:
@@ -253,6 +324,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: true
-  Width: 1887
-  X: 1953
-  Y: 27
+  Width: 1920
+  X: 1920
+  Y: 0

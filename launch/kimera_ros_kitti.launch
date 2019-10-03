@@ -17,9 +17,9 @@
   <arg name="rosbag_path" default="/home/yunchang/data/kitti_2011_09_26_drive_0005_unsynced.bag"
        unless="$(arg online)"/>
 
-  <!-- Launch static TF node from base_link to velo_link -->
-  <node pkg="tf" type="static_transform_publisher" name="velo_link_broadcaster"
-    args="0 0 0 0 0 0 1 base_link velo_link 100"/>
+ <!-- Specify the absolute path to the vocabulary file. -->
+ <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
+ <arg name="path_to_vocab" value="/home/marcus/code/VIO/vocabulary/ORBvoc.yml"/>
 
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"  value="/kitti/camera_gray_left/image_raw"/>
@@ -29,4 +29,9 @@
   <!-- Launch actual pipeline -->
   <include file="$(find kimera_ros)/launch/kimera_ros.launch"
            pass_all_args="true"/>
+
+ <!-- Launch static TF node from base_link to velo_link -->
+ <node pkg="tf" type="static_transform_publisher" name="velo_link_broadcaster"
+   args="0 0 0 0 0 0 1 base_link velo_link 100"/>
+
 </launch>

@@ -24,6 +24,7 @@
   <depend>rosbag</depend>
   <depend>cv_bridge</depend>
   <depend>tf</depend>
+  <depend>pose_graph_tools</depend>
 
   <depend>pcl_ros</depend>
   <depend>pcl_msgs</depend>
