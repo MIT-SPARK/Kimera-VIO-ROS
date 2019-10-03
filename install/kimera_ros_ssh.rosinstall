@@ -9,3 +9,8 @@
     local-name: kimera_rviz_markers
     uri: git@github.com:ToniRV/kimera_rviz_markers.git
     version: master
+- git:
+    local-name: pose_graph_tools
+    uri: git@github.com:MIT-SPARK/pose_graph_tools.git
+    version: master
+
