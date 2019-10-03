@@ -6,3 +6,7 @@
     local-name: mesh_rviz_plugins
     uri: https://github.com/ToniRV/mesh_rviz_plugins.git
     version: master
+- git:
+    local-name: kimera_rviz_markers
+    uri: https://github.com/ToniRV/kimera_rviz_markers.git
+    version: master
