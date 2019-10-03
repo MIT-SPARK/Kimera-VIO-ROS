@@ -46,7 +46,12 @@ git clone git@github.com:MIT-SPARK/Kimera-VIO-ROS.git
 
 # Install dependencies from rosinstall file using wstool
 wstool init
-wstool merge kimera_ros/install/kimera_ros.rosinstall
+# For ssh:
+wstool merge kimera_ros/install/kimera_ros_ssh.rosinstall
+# For https
+# wstool merge kimera_ros/install/kimera_ros_https.rosinstall
+
+# Finally, download and update repos:
 wstool update
 ```
 
@@ -102,7 +107,7 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
   ```
 
 ## Other datasets
-The launch file and parameters can also be configured for other datasets. For example, here we provide a [kitti rosbag for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, in one terminal, launch the spark vio ROS wrapper with the launch file we configured for kitti:
+The launch file and parameters can also be configured for other datasets. For example, here we provide a [kitti rosbag for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, in one terminal, launch the Kimera ROS wrapper with the launch file we configured for kitti:
 ```
 roslaunch kimera_ros kimera_ros_kitti.launch
 ```
@@ -112,7 +117,7 @@ rosbag play --clock /PATH/TO/KITTI_ROSBAG
 ```
   - In rviz, you can use the provided config file provided at rviz/kimera_vio_kitti.rviz
   ```bash
-  rviz -d $(rospack find kimera_ros)/rviz/spark_vio_kitti.rviz
+  rviz -d $(rospack find kimera_ros)/rviz/kimera_ros_kitti.rviz
   ```
 
 # Hardware use

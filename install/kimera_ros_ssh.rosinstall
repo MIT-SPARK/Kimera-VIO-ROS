@@ -1,0 +1,16 @@
+- git:
+    local-name: catkin_simple
+    uri: git@github.com:catkin/catkin_simple.git
+- git:
+    local-name: mesh_rviz_plugins
+    uri: git@github.com:ToniRV/mesh_rviz_plugins.git
+    version: master
+- git:
+    local-name: kimera_rviz_markers
+    uri: git@github.com:ToniRV/kimera_rviz_markers.git
+    version: master
+- git:
+    local-name: pose_graph_tools
+    uri: git@github.com:MIT-SPARK/pose_graph_tools.git
+    version: master
+
