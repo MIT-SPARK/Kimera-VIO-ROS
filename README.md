@@ -49,7 +49,9 @@ wstool init
 # For ssh:
 wstool merge kimera_ros/install/kimera_ros_ssh.rosinstall
 # For https
-wstool merge kimera_ros/install/kimera_ros_https.rosinstall
+# wstool merge kimera_ros/install/kimera_ros_https.rosinstall
+
+# Finally, download and update repos:
 wstool update
 ```
 
