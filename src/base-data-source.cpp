@@ -860,7 +860,7 @@ void RosBaseDataProvider::updateNodesAndEdges(
     // check if between factor
     if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(nfg[i])) {
       // convert to between factor
-      gtsam::BetweenFactor<gtsam::Pose3> factor =
+      const gtsam::BetweenFactor<gtsam::Pose3>& factor =
             *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(nfg[i]);
       // convert between factor to PoseGraphEdge type
       pose_graph_tools::PoseGraphEdge edge;
@@ -873,14 +873,16 @@ void RosBaseDataProvider::updateNodesAndEdges(
         edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
       }
       // transforms - translation
-      edge.pose.position.x = factor.measured().translation().x();
-      edge.pose.position.y = factor.measured().translation().y();
-      edge.pose.position.z = factor.measured().translation().z();
+      const gtsam::Point3& translation = factor.measured().translation();
+      edge.pose.position.x = translation.x();
+      edge.pose.position.y = translation.y();
+      edge.pose.position.z = translation.z();
       // transforms - rotation (to quaternion)
-      edge.pose.orientation.x = factor.measured().rotation().toQuaternion().x();
-      edge.pose.orientation.y = factor.measured().rotation().toQuaternion().y();
-      edge.pose.orientation.z = factor.measured().rotation().toQuaternion().z();
-      edge.pose.orientation.w = factor.measured().rotation().toQuaternion().w();
+      const gtsam::Quaternion& quaternion = factor.measured().rotation().toQuaternion();
+      edge.pose.orientation.x = quaternion.x();
+      edge.pose.orientation.y = quaternion.y();
+      edge.pose.orientation.z = quaternion.z();
+      edge.pose.orientation.w = quaternion.w();
 
       // TODO: add covariance
       if (edge.type == pose_graph_tools::PoseGraphEdge::ODOM) {
@@ -900,15 +902,20 @@ void RosBaseDataProvider::updateNodesAndEdges(
   for (size_t i = 0; i < key_list.size(); i++) {
     pose_graph_tools::PoseGraphNode node;
     node.key = key_list[i];
+
+    const gtsam::Pose3 &value = values.at<gtsam::Pose3>(i);
+    const gtsam::Point3 &translation = value.translation();
+    const gtsam::Quaternion &quaternion = value.rotation().toQuaternion();
+
     // pose - translation
-    node.pose.position.x = values.at<gtsam::Pose3>(i).translation().x();
-    node.pose.position.y = values.at<gtsam::Pose3>(i).translation().y();
-    node.pose.position.z = values.at<gtsam::Pose3>(i).translation().z();
+    node.pose.position.x = translation.x();
+    node.pose.position.y = translation.y();
+    node.pose.position.z = translation.z();
     // pose - rotation (to quaternion)
-    node.pose.orientation.x = values.at<gtsam::Pose3>(i).rotation().toQuaternion().x();
-    node.pose.orientation.y = values.at<gtsam::Pose3>(i).rotation().toQuaternion().y();
-    node.pose.orientation.z = values.at<gtsam::Pose3>(i).rotation().toQuaternion().z();
-    node.pose.orientation.w = values.at<gtsam::Pose3>(i).rotation().toQuaternion().w();
+    node.pose.orientation.x = quaternion.x();
+    node.pose.orientation.y = quaternion.y();
+    node.pose.orientation.z = quaternion.z();
+    node.pose.orientation.w = quaternion.w();
 
     pose_graph_nodes_.push_back(node);
   }
