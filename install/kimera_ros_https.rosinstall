@@ -11,6 +11,22 @@
     uri: https://github.com/ToniRV/kimera_rviz_markers.git
     version: master
 - git:
+    local-name: gtsam
+    uri: https://github.com/borglab/gtsam.git
+    version: master
+- git:
+    local-name: opencv3_catkin
+    uri: https://github.com/ethz-asl/opencv3_catkin.git
+    version: master
+- git:
+    local-name: opengv_catkin
+    uri: https://github.com/ToniRV/opengv_catkin.git
+    version: master
+- git:
     local-name: pose_graph_tools
     uri: https://github.com/MIT-SPARK/pose_graph_tools.git
+    version: master
+- git:
+    local-name: KimeraRPGO
+    uri: https://github.com/MIT-SPARK/Kimera-RPGO.git
     version: master
