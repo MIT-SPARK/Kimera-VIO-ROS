@@ -26,6 +26,10 @@
     uri: git@github.com:MIT-SPARK/pose_graph_tools.git
     version: master
 - git:
-    local-name: KimeraRPGO
+    local-name: Kimera-RPGO
     uri: git@github.com:MIT-SPARK/Kimera-RPGO.git
+    version: master
+- git:
+    local-name: Kimera-VIO
+    uri: git@github.com:MIT-SPARK/Kimera-VIO.git
     version: master
