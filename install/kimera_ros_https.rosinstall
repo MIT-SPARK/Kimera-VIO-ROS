@@ -34,3 +34,7 @@
     local-name: Kimera-VIO
     uri: https://github.com/MIT-SPARK/Kimera-VIO.git
     version: master
+- git:
+    local-name: Kimera-VIO-ROS
+    uri: https://github.com/MIT-SPARK/Kimera-VIO-ROS.git
+    version: master

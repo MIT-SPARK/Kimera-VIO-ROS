@@ -33,3 +33,8 @@
     local-name: Kimera-VIO
     uri: git@github.com:MIT-SPARK/Kimera-VIO.git
     version: master
+- git:
+    local-name: Kimera-VIO
+    uri: git@github.com:MIT-SPARK/Kimera-VIO-ROS.git
+    version: master
+
