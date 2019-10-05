@@ -14,8 +14,8 @@
 #include <ros/ros.h>
 
 // Dependencies from VIO
-#include <pipeline/Pipeline.h>
-#include <utils/Timer.h>
+#include <kimera-vio/pipeline/Pipeline.h>
+#include <kimera-vio/utils/Timer.h>
 
 // Dependencies from this repository
 #include "kimera-ros/base-data-source.h"

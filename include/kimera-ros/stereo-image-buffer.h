@@ -12,8 +12,8 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 
-#include <common/vio_types.h>
-#include <datasource/DataSource.h>
+#include <kimera-vio/common/vio_types.h>
+#include <kimera-vio/datasource/DataSource.h>
 
 namespace VIO {
 

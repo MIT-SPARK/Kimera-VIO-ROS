@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include <tf2_ros/static_transform_broadcaster.h>
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
@@ -23,8 +24,6 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_msgs/PolygonMesh.h>
 #include <pcl_ros/point_cloud.h>
-
-#include <tf2_ros/static_transform_broadcaster.h>
 
 namespace VIO {
 
