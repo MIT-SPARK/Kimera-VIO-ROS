@@ -12,20 +12,17 @@ ROS Wrapper for [Kimera](https://github.com/MIT-SPARK/Kimera).
 
 - Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
 
-- Other dependencies:
-
-First, update package list: `sudo apt-get update`
 
 - System dependencies:
+First, update package list: `sudo apt-get update`
 ```bash
 sudo apt-get install -y --no-install-recommends apt-utils
-# (libvtk5-dev, libgtk2.0-dev in ubuntu 16.04)
 sudo apt-get install -y \
       cmake build-essential unzip pkg-config autoconf \
       libboost-all-dev \
       libjpeg-dev libpng-dev libtiff-dev \
-      libvtk6-dev \
-      libgtk-3-dev \
+# Use libvtk5-dev, libgtk2.0-dev in ubuntu 16.04 \
+      libvtk6-dev libgtk-3-dev \
       libatlas-base-dev gfortran \
       libparmetis-dev \
       python-wstool python-catkin-tools \
