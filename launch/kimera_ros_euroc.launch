@@ -26,7 +26,7 @@
 
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
-  <arg name="path_to_vocab" value="/home/marcus/code/SparkVIO/vocabulary/ORBvoc.yml"/>
+  <arg name="path_to_vocab" default="$(rospack find KimeraVIO)/vocabulary/ORBvoc.yml"/>
 
   <!-- Frame IDs -->
   <arg name="base_link_frame_id" value="base_link"/>
