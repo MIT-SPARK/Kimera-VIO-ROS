@@ -10,26 +10,11 @@ ROS Wrapper for [Kimera](https://github.com/MIT-SPARK/Kimera).
 
 ## A. Prerequisities
 
-### i. ROS
+- Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
 
-Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
-
-### ii. KimeraVIO's dependencies
-
-Follow installation instructions in [KimeraVIO](https://github.com/MIT-SPARK/Kimera-VIO).
-Make sure you install **KimeraVIO's dependencies**: GTSAM, OpenCV, OpenGV.
-
-KimeraVIO itself can be installed by cloning **[KimeraVIO](https://github.com/MIT-SPARK/Kimera-VIO)** in your catkin workspace, so you can spare installing KimeraVIO from source (its dependencies must be installed anyway).
+- ROS package dependencies are automatically downloaded using rosinstall.
 
 ## B. KimeraVIO ROS wrapper Installation
-
-### Dependencies
-ROS package dependencies are automatically downloaded using rosinstall:
-- (catkin simple)[https://github.com/catkin/catkin_simple]
-- (pose_graph_tools)[https://github.mit.edu/SPARK/pose_graph_tools] [Required: for visualization of Loop Closures]
-- (mesh_rviz_plugins)[https://github.com/ToniRV/mesh_rviz_plugins] [Optional: for visualization of textured 3D Mesh]
-
-If you have the above prerequisites and [SparkVIO](https://github.mit.edu/SPARK/VIO) installed and built, installation of the SparkVIO ROS wrapper should be:
 
 ```bash
 # Setup catkin workspace
@@ -37,7 +22,7 @@ mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/
 catkin init
 
-# Add workspace to bashrc.
+# Add workspace to bashrc for automatic sourcing of workspace.
 echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
 
 # Clone repo
@@ -53,11 +38,6 @@ wstool merge kimera_ros/install/kimera_ros_ssh.rosinstall
 
 # Finally, download and update repos:
 wstool update
-```
-
-**Option 1:** Clone [KimeraVIO](https://github.com/MIT-SPARK/Kimera-VIO) in the catkin workspace, the `package.xml` inside KimeraVIO will let catkin know that it must be installed using cmake:
-```bash
-git clone git@github.com:MIT-SPARK/Kimera-VIO.git
 ```
 
 Finally, compile:
