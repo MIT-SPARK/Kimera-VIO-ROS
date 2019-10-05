@@ -24,15 +24,13 @@
 #include <pose_graph_tools/PoseGraphEdge.h>
 #include <pose_graph_tools/PoseGraphNode.h>
 
-// TODO(Toni): do we really need all these includes??
-// I doubt we are using the imu frontend and the pipeline!
-#include <StereoFrame.h>
-#include <StereoImuSyncPacket.h>
-#include <loopclosure/LoopClosureDetector-definitions.h>
-#include <VioFrontEndParams.h>
-#include <common/vio_types.h>
-#include <datasource/DataSource.h>
-#include <utils/ThreadsafeQueue.h>
+#include <kimera-vio/StereoFrame.h>
+#include <kimera-vio/StereoImuSyncPacket.h>
+#include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
+#include <kimera-vio/VioFrontEndParams.h>
+#include <kimera-vio/common/vio_types.h>
+#include <kimera-vio/datasource/DataSource.h>
+#include <kimera-vio/utils/ThreadsafeQueue.h>
 
 #include "kimera-ros/stereo-image-buffer.h"
 

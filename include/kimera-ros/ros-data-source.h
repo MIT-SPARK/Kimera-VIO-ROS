@@ -7,14 +7,14 @@
 
 #pragma once
 
-#include "kimera-ros/base-data-source.h"
-#include "kimera-ros/stereo-image-buffer.h"
-
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/time_synchronizer.h>
 #include <sensor_msgs/Imu.h>
 #include <std_msgs/Bool.h>
+
+#include "kimera-ros/base-data-source.h"
+#include "kimera-ros/stereo-image-buffer.h"
 
 // using namespace StereoImageBuffer;
 

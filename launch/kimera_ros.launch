@@ -33,7 +33,7 @@
 
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
-  <arg name="path_to_vocab" default="/SPECIFY_THIS_PATH_IN_LAUNCH_FILE"/>
+  <arg name="path_to_vocab" default="$(find KimeraVIO)/vocabulary/ORBvoc.yml"/>
 
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"                    default="/cam0/image_raw"/>
