@@ -16,40 +16,23 @@ ROS Wrapper for [Kimera](https://github.com/MIT-SPARK/Kimera).
 
 First, update package list: `sudo apt-get update`
 
-- Build dependencies:
+- System dependencies:
 ```bash
 sudo apt-get install -y --no-install-recommends apt-utils
-sudo apt-get install -y cmake
-```
-
-- Gtsam dependencies:
-```bash
-sudo apt-get install -y libboost-all-dev
-```
-
-  - GTSAM's Optional dependencies (highly recommended for speed)
-    Install [Intel Threaded Building Blocks (TBB)](http://www.threadingbuildingblocks.org/): `sudo apt-get install libtbb-dev`
-
-- OpenCV dependencies:
-  - on Mac:
-```bash
-homebrew install vtk # (to check)
-```
-  - On Ubuntu 18.04
-```bash
 # (libvtk5-dev, libgtk2.0-dev in ubuntu 16.04)
 sudo apt-get install -y \
-      build-essential unzip pkg-config \
+      cmake build-essential unzip pkg-config autoconf \
+      libboost-all-dev \
       libjpeg-dev libpng-dev libtiff-dev \
       libvtk6-dev \
       libgtk-3-dev \
-      libatlas-base-dev gfortran
+      libatlas-base-dev gfortran \
+      libparmetis-dev \
+      python-wstool python-catkin-tools \
 ```
 
-- Gtest dependencies:
-```bash
-sudo apt-get install -y libparmetis-dev
-```
+- GTSAM's Optional dependencies (highly recommended for speed)
+Install [Intel Threaded Building Blocks (TBB)](http://www.threadingbuildingblocks.org/): `sudo apt-get install libtbb-dev`
 
 ## B. KimeraVIO ROS wrapper Installation
 
@@ -67,7 +50,8 @@ cd ~/catkin_ws/src
 git clone git@github.com:MIT-SPARK/Kimera-VIO-ROS.git
 
 # Install dependencies from rosinstall file using wstool
-wstool init
+wstool init # Use unless wstool is already initialized
+
 # For ssh:
 wstool merge kimera_ros/install/kimera_ros_ssh.rosinstall
 # For https
