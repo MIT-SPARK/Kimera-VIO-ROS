@@ -27,6 +27,18 @@
     uri: https://github.com/MIT-SPARK/pose_graph_tools.git
     version: master
 - git:
+    local-name: dbow2_catkin
+    uri: https://github.com/uzh-rpg/dbow2_catkin.git
+    version: master
+- git:
+    local-name: dlib_catkin
+    uri: https://github.com/uzh-rpg/dlib_catkin.git
+    version: master
+- git:
+    local-name: cmake_external_project_catkin
+    uri: https://github.com/zurich-eye/cmake_external_project_catkin.git
+    version: master
+- git:
     local-name: Kimera-RPGO
     uri: https://github.com/MIT-SPARK/Kimera-RPGO.git
     version: master
