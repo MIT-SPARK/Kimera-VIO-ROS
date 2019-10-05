@@ -32,19 +32,19 @@ sudo apt-get install -y libboost-all-dev
 
 - OpenCV dependencies:
   - on Mac:
-```bash
-homebrew install vtk # (to check)
-```
+    ```bash
+    homebrew install vtk # (to check)
+    ```
   - On Ubuntu 18.04
-```bash
-# (libvtk5-dev, libgtk2.0-dev in ubuntu 16.04)
-sudo apt-get install -y \
-      build-essential unzip pkg-config \
-      libjpeg-dev libpng-dev libtiff-dev \
-      libvtk6-dev \
-      libgtk-3-dev \
-      libatlas-base-dev gfortran
-```
+    ```bash
+    # (libvtk5-dev, libgtk2.0-dev in ubuntu 16.04)
+    sudo apt-get install -y \
+          build-essential unzip pkg-config \
+          libjpeg-dev libpng-dev libtiff-dev \
+          libvtk6-dev \
+          libgtk-3-dev \
+          libatlas-base-dev gfortran
+    ```
 
 - Gtest dependencies:
 ```bash
