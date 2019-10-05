@@ -12,7 +12,44 @@ ROS Wrapper for [Kimera](https://github.com/MIT-SPARK/Kimera).
 
 - Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
 
-- ROS package dependencies are automatically downloaded using rosinstall.
+- Other dependencies:
+
+First, update package list: `sudo apt-get update`
+
+- Build dependencies:
+```bash
+sudo apt-get install -y --no-install-recommends apt-utils
+sudo apt-get install -y cmake
+```
+
+- Gtsam dependencies:
+```bash
+sudo apt-get install -y libboost-all-dev
+```
+
+  - GTSAM's Optional dependencies (highly recommended for speed)
+    Install [Intel Threaded Building Blocks (TBB)](http://www.threadingbuildingblocks.org/): `sudo apt-get install libtbb-dev`
+
+- OpenCV dependencies:
+  - on Mac:
+```bash
+homebrew install vtk # (to check)
+```
+  - On Ubuntu 18.04
+```bash
+# (libvtk5-dev, libgtk2.0-dev in ubuntu 16.04)
+sudo apt-get install -y \
+      build-essential unzip pkg-config \
+      libjpeg-dev libpng-dev libtiff-dev \
+      libvtk6-dev \
+      libgtk-3-dev \
+      libatlas-base-dev gfortran
+```
+
+- Gtest dependencies:
+```bash
+sudo apt-get install -y libparmetis-dev
+```
 
 ## B. KimeraVIO ROS wrapper Installation
 
