@@ -59,7 +59,7 @@
   <arg name="visualize"    default="false" />
 
   <!-- Launch main node  -->
-  <node name="kimera_ros" pkg="kimera_ros" type="kimera_ros" 
+  <node name="kimera_ros" pkg="kimera_ros" type="kimera_ros"
         output="screen" ns="kimera_ros"
         args="--vio_params_path=$(arg params_folder)/regularVioParameters.yaml
               --tracker_params_path=$(arg params_folder)/trackerParameters.yaml

@@ -17,7 +17,7 @@
   <arg name="gt_topic" if="$(arg log_gt_data)"
        default="/vicon/firefly_sbx/firefly_sbx"/>
 
-  <arg name="use_lcd" default="true"/>
+  <arg name="use_lcd"   default="false"/>
   <arg name="visualize" default="false"/>
 
   <!-- Change rosbag path if online argument is false -->
