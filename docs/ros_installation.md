@@ -9,18 +9,18 @@ sudo apt-get update
 
 Now, you can install the ROS distribution corresponding to your system.
 
-- If you have **Ubuntu 14.04**, run:
+- If you have **Ubuntu 16.04**, run:
 ```
-# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
+# Install ROS distribution depending on your system: Ubuntu 16.04 -> kinetic, 18.04 -> melodic
 sudo apt-get install ros-kinetic-desktop-full
 # Automatically source ROS for convenience:
 echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-- Otherwise, if you have **Ubuntu 16.04**, run:
+- Otherwise, if you have **Ubuntu 18.04**, run:
 ```
-# Install ROS distribution depending on your system: Ubuntu 14.04 -> kinetic, 16.04 -> melodic
+# Install ROS distribution depending on your system: Ubuntu 16.04 -> kinetic, 18.04 -> melodic
 sudo apt-get install ros-melodic-desktop-full
 # Automatically source ROS for convenience:
 echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
