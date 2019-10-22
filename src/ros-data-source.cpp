@@ -28,7 +28,7 @@ RosDataProvider::RosDataProvider()
       last_imu_timestamp_(0),
       // keep track of number of frames processed
       frame_count_(1) {
-  ROS_INFO("Starting SparkVIO wrapper for online");
+  ROS_INFO("Starting KimeraVIO wrapper for online");
 
   // Start IMU subscriber
   imu_subscriber_ =

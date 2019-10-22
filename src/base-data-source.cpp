@@ -36,7 +36,7 @@ RosBaseDataProvider::RosBaseDataProvider()
       nh_private_("~"),
       vio_output_queue_("VIO output"),
       lcd_output_queue_("LCD output") {
-  ROS_INFO(">>>>>>> Initializing Spark-VIO-ROS <<<<<<<");
+  ROS_INFO(">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<");
 
   // Parse calibration info for camera and IMU
   // Calibration info on parameter server (Parsed from yaml)

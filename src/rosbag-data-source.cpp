@@ -14,7 +14,7 @@ namespace VIO {
 
 RosbagDataProvider::RosbagDataProvider()
     : RosBaseDataProvider(), rosbag_data_() {
-  ROS_INFO("Starting SparkVIO wrapper for offline");
+  ROS_INFO("Starting KimeraVIO wrapper for offline");
 
   std::string rosbag_path;
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path));
