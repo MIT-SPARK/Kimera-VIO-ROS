@@ -1,7 +1,7 @@
 - git:
-   local-name: catkin_simple
-   uri: https://github.com/catkin/catkin_simple.git
-   version: master
+    local-name: catkin_simple
+    uri: https://github.com/catkin/catkin_simple.git
+    version: master
 - git:
     local-name: mesh_rviz_plugins
     uri: https://github.com/ToniRV/mesh_rviz_plugins.git
@@ -28,11 +28,7 @@
     version: master
 - git:
     local-name: dbow2_catkin
-    uri: https://github.com/uzh-rpg/dbow2_catkin.git
-    version: master
-- git:
-    local-name: dlib_catkin
-    uri: https://github.com/uzh-rpg/dlib_catkin.git
+    uri: https://github.com/marcusabate/dbow2_catkin.git
     version: master
 - git:
     local-name: cmake_external_project_catkin

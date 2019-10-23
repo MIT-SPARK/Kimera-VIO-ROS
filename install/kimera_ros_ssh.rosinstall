@@ -1,6 +1,7 @@
 - git:
     local-name: catkin_simple
     uri: git@github.com:catkin/catkin_simple.git
+    version: master
 - git:
     local-name: mesh_rviz_plugins
     uri: git@github.com:ToniRV/mesh_rviz_plugins.git
@@ -8,10 +9,6 @@
 - git:
     local-name: kimera_rviz_markers
     uri: git@github.com:ToniRV/kimera_rviz_markers.git
-    version: master
-- git:
-    local-name: opengv_catkin
-    uri: git@github.com:ToniRV/opengv_catkin.git
     version: master
 - git:
     local-name: gtsam
@@ -22,16 +19,16 @@
     uri: git@github.com:ethz-asl/opencv3_catkin.git
     version: master
 - git:
+    local-name: opengv_catkin
+    uri: git@github.com:ToniRV/opengv_catkin.git
+    version: master
+- git:
     local-name: pose_graph_tools
     uri: git@github.com:MIT-SPARK/pose_graph_tools.git
     version: master
 - git:
     local-name: dbow2_catkin
-    uri: git@github.com:uzh-rpg/dbow2_catkin.git
-    version: master
-- git:
-    local-name: dlib_catkin
-    uri: git@github.com:uzh-rpg/dlib_catkin.git
+    uri: git@github.com:marcusabate/dbow2_catkin.git
     version: master
 - git:
     local-name: cmake_external_project_catkin
