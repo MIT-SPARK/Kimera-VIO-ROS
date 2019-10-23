@@ -68,9 +68,9 @@ git clone git@github.com:MIT-SPARK/Kimera-VIO-ROS.git
 wstool init # Use unless wstool is already initialized
 
 # For ssh:
-wstool merge kimera_ros/install/kimera_ros_ssh.rosinstall
+wstool merge Kimera-VIO-ROS/install/kimera_ros_ssh.rosinstall
 # For https
-# wstool merge kimera_ros/install/kimera_ros_https.rosinstall
+# wstool merge Kimera-VIO-ROS/install/kimera_ros_https.rosinstall
 
 # Finally, download and update repos:
 wstool update
