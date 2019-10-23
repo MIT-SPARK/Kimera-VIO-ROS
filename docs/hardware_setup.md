@@ -5,7 +5,7 @@
 ## RealSense D435i (Infrared)
 
 Why do we use the infrared cameras on the D435i?
-The infrared cameras offer the option to run the KimeraVIO stereo version on monochrome global shutter cameras, which are generally better suited for visual tracking.
+The infrared cameras offer the option to run the [Kimera-VIO](https://github.com/MIT-SPARK/Kimera-VIO) stereo version on monochrome global shutter cameras, which are generally better suited for visual tracking.
 
 ### Setup
 
@@ -21,7 +21,7 @@ The infrared cameras offer the option to run the KimeraVIO stereo version on mon
 
 6. Calibrate camera intrinsics and extrinsics using [Kalibr](https://github.com/ethz-asl/kalibr)
 
-7. Create configuration files for KimeraVIO ROS wrapper using [Kalibr2KimeraVIO-pinhole-radtan](https://github.com/MIT-SPARK/KimeraVIO/tree/master/kalibr/config2kimeravio.py)
+7. Create configuration files for Kimera-VIO-ROS wrapper using [Kalibr2KimeraVIO-pinhole-radtan](https://github.com/MIT-SPARK/Kimera-VIO/tree/master/kalibr/config2kimeravio.py)
 
 8. Create/adapt your own specific launch file, similar to [example RealSense IR](https://github.com/MIT-SPARK/Kimera-VIO-ROS/tree/master/launch/kimera_ros_realsense_IR.launch)
 
@@ -31,7 +31,7 @@ The infrared cameras offer the option to run the KimeraVIO stereo version on mon
 
 2. Visualize image stream using ```rosrun image_view image_view image:=[name of camera topic]```
 
-3. Launch KimeraVIO ROS wrapper using ```roslaunch spark_vio_ros [name of your launch file]```
+3. Launch Kimera-VIO ROS wrapper using ```roslaunch spark_vio_ros [name of your launch file]```
 
 4. Visualize trajectory with RVIZ using ```rviz```, [(see example config)](https://github.com/MIT-SPARK/Kimera-VIO-ROS/tree/master/rviz/kimera_vio_euroc.rviz)
 
@@ -49,7 +49,7 @@ It is important to remember that when launching the VIO, the camera should be st
 
 3. Calibrate camera intrinsics and extrinsics using [Kalibr](https://github.com/ethz-asl/kalibr), recommended model is: ```pinhole-equi``` [(see OpenCV documentation)](https://docs.opencv.org/3.3.1/db/d58/group__calib3d__fisheye.html)
 
-4. Create configuration files for KimeraVIO ROS wrapper using [Kalibr2KimeraVIO](https://github.com/MIT-SPARK/Kimera-VIO/tree/master/kalibr/config2kimeravio.py)
+4. Create configuration files for Kimera-VIO-ROS wrapper using [config2kimeravio](https://github.com/MIT-SPARK/Kimera-VIO/tree/master/kalibr/config2kimeravio.py)
 
 5. Create/adapt your own specific launch file, similar to [example MyntEye S](https://github.com/MIT-SPARK/Kimera-VIO-ROS/tree/master/launch/kimera_ros_mynteye.launch)
 
@@ -59,7 +59,7 @@ It is important to remember that when launching the VIO, the camera should be st
 
 2. Visualize image stream using ```rosrun image_view image_view image:=[name of camera topic]```
 
-3. Launch KimeraVIO ROS wrapper using ```roslaunch spark_vio_ros [name of your launch file]``` (example, see below)
+3. Launch Kimera-VIO-ROS wrapper using ```roslaunch spark_vio_ros [name of your launch file]``` (example, see below)
 
 4. Visualize trajectory with RVIZ using ```rviz```, [(see example config)](https://github.com/MIT-SPARK/Kimera-VIO-ROS/tree/master/rviz/kimera_vio_euroc.rviz)
 
