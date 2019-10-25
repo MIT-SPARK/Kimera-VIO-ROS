@@ -56,6 +56,8 @@ Install [Intel Threaded Building Blocks (TBB)](http://www.threadingbuildingblock
 mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/
 catkin init
+catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+catkin config --merge-devel
 
 # Add workspace to bashrc for automatic sourcing of workspace.
 echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
