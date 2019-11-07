@@ -24,12 +24,12 @@
 #include <pose_graph_tools/PoseGraphEdge.h>
 #include <pose_graph_tools/PoseGraphNode.h>
 
-#include <kimera-vio/StereoFrame.h>
-#include <kimera-vio/StereoImuSyncPacket.h>
-#include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
-#include <kimera-vio/VioFrontEndParams.h>
 #include <kimera-vio/common/vio_types.h>
 #include <kimera-vio/datasource/DataSource.h>
+#include <kimera-vio/frontend/StereoFrame.h>
+#include <kimera-vio/frontend/StereoImuSyncPacket.h>
+#include <kimera-vio/frontend/VioFrontEndParams.h>
+#include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/utils/ThreadsafeQueue.h>
 
 #include "kimera-ros/stereo-image-buffer.h"
