@@ -56,6 +56,8 @@ Install [Intel Threaded Building Blocks (TBB)](http://www.threadingbuildingblock
 mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/
 catkin init
+catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+catkin config --merge-devel
 
 # Add workspace to bashrc for automatic sourcing of workspace.
 echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
@@ -68,9 +70,9 @@ git clone git@github.com:MIT-SPARK/Kimera-VIO-ROS.git
 wstool init # Use unless wstool is already initialized
 
 # For ssh:
-wstool merge kimera_ros/install/kimera_ros_ssh.rosinstall
+wstool merge Kimera-VIO-ROS/install/kimera_ros_ssh.rosinstall
 # For https
-# wstool merge kimera_ros/install/kimera_ros_https.rosinstall
+# wstool merge Kimera-VIO-ROS/install/kimera_ros_https.rosinstall
 
 # Finally, download and update repos:
 wstool update
