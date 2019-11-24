@@ -1,0 +1,20 @@
+repositories:
+  MIT-SPARK/Kimera-RPGO:
+    type: git
+    url: https://github.com/MIT-SPARK/Kimera-RPGO.git
+    version: master
+
+# - git:
+#     local-name: Kimera-RPGO
+#     uri: https://github.com/MIT-SPARK/Kimera-RPGO.git
+#     version: master
+#     # Last tested commit: d48028de5b27a3cf51bd1cd538e4c54ac568154d
+# - git:
+#     local-name: Kimera-VIO
+#     uri: https://github.com/MIT-SPARK/Kimera-VIO.git
+#     version: master
+#     # Last tested commit: 2efbc572940dd56b8c6caf6d159cd7afd390d28e
+# - git:
+#     local-name: Kimera-VIO-ROS
+#     uri: https://github.com/MIT-SPARK/Kimera-VIO-ROS.git
+#     version: master
