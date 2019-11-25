@@ -6,21 +6,21 @@ repositories:
     url: https://github.com/ruffsl/gtsam.git
     version: patch-1
     # Last tested commit: 342f30d148fae84c92ff71705c9e50e0a3683bda
-  # laurentkneip/opengv:
-  #   type: git
-  #   # url: https://github.com/laurentkneip/opengv.git
-  #   # version: master
-  #   url: https://github.com/ruffsl/opengv.git
-  #   version: patch-1
-  # dorian3d/DBoW2:
-  #   type: git
-  #   # url: https://github.com/dorian3d/DBoW2.git
-  #   # version: master
-  #   url: https://github.com/ruffsl/DBoW2.git
-  #   version: patch-1
-
-# - git:
-#     local-name: opencv3_catkin
-#     uri: https://github.com/ethz-asl/opencv3_catkin.git
-#     version: master
-#     # Last tested commit: 880da1510aa80a247b80adca32ac2941ddfa94ff
+  laurentkneip/opengv:
+    type: git
+    # url: https://github.com/laurentkneip/opengv.git
+    # version: master
+    url: https://github.com/ruffsl/opengv.git
+    version: patch-1
+  dorian3d/DBoW2:
+    type: git
+    # url: https://github.com/dorian3d/DBoW2.git
+    # version: master
+    url: https://github.com/ruffsl/DBoW2.git
+    version: patch-1
+  opencv/opencv:
+    type: git
+    # url: https://github.com/opencv/opencv.git
+    # version: master
+    url: https://github.com/ruffsl/opencv.git
+    version: patch-1
