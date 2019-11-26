@@ -123,6 +123,8 @@ RUN . $OVERLAY_WS/install/setup.sh && \
         $UNDERLAY_WS/src \
         $OVERLAY_WS/src \
       --ignore-src \
+      --skip-keys "\
+        Boost" \
     && rm -rf /var/lib/apt/lists/*
 
 # copy overlay source
