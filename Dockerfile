@@ -72,7 +72,7 @@ RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
 COPY --from=cache $UNDERLAY_WS ./
 
 # build underlay source
-ARG UNDERLAY_MIXINS="release ccache"
+ARG UNDERLAY_MIXINS="release"
 RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
     colcon build \
       --symlink-install \
