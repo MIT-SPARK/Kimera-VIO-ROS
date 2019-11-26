@@ -14,9 +14,16 @@ RUN vcs import src < underlay.repos
 ENV OVERLAY_WS /opt/overlay_ws
 RUN mkdir -p $OVERLAY_WS/src
 WORKDIR $OVERLAY_WS
-# COPY ./ src/Kimera-VIO-ROS
 COPY ./install/overlay.repos ./
 RUN vcs import src < overlay.repos
+
+# copy ros source
+ENV ROS_WS /opt/ros_ws
+RUN mkdir -p $ROS_WS/src
+WORKDIR $ROS_WS
+# COPY ./ src/Kimera-VIO-ROS
+COPY ./install/ros.repos ./
+RUN vcs import src < ros.repos
 
 # copy manifests for caching
 WORKDIR /opt
@@ -103,10 +110,34 @@ RUN . $UNDERLAY_WS/install/setup.sh && \
     colcon build \
       --symlink-install \
       --mixin \
-        $OVERLAY_MIXINS \
+# copy ros manifests
+ENV ROS_WS /opt/ros_ws
+COPY --from=cache /tmp/ros_ws $ROS_WS
+WORKDIR $ROS_WS
+
+# install overlay dependencies
+RUN . $OVERLAY_WS/install/setup.sh && \
+    apt-get update && rosdep install -q -y \
+      --from-paths \
+        src \
+        $UNDERLAY_WS/src \
+        $OVERLAY_WS/src \
+      --ignore-src \
+    && rm -rf /var/lib/apt/lists/*
+
+# copy overlay source
+COPY --from=cache $ROS_WS ./
+
+# build overlay source
+ARG ROS_MIXINS="release ccache"
+RUN . $OVERLAY_WS/install/setup.sh && \
+    colcon build \
+      --symlink-install \
+      --mixin \
+        $ROS_MIXINS \
       --event-handlers console_direct+
 
 # source overlay from entrypoint
 RUN sed --in-place \
-      's|^source .*|source "$OVERLAY_WS/install/setup.bash"|' \
+      's|^source .*|source "$ROS_WS/install/setup.bash"|' \
       /ros_entrypoint.sh
