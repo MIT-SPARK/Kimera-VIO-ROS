@@ -34,6 +34,18 @@ RUN apt-get update && apt-get install -q -y \
       lcov \
     && rm -rf /var/lib/apt/lists/*
 
+# install opencv dependencies
+RUN apt-get update && apt-get install -y \
+      gfortran \
+      libatlas-base-dev \
+      libgtk-3-dev \
+      libjpeg-dev \
+      libpng-dev \
+      libtiff-dev \
+      libvtk6-dev \
+      unzip \
+    && rm -rf /var/lib/apt/lists/*
+
 # copy underlay manifests
 ENV UNDERLAY_WS /opt/underlay_ws
 COPY --from=cache /tmp/underlay_ws $UNDERLAY_WS
