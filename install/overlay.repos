@@ -3,17 +3,9 @@ repositories:
     type: git
     url: https://github.com/MIT-SPARK/Kimera-RPGO.git
     version: master
-    # Last tested commit: d48028de5b27a3cf51bd1cd538e4c54ac568154d
   MIT-SPARK/Kimera-VIO:
     type: git
     # url: https://github.com/MIT-SPARK/Kimera-VIO.git
     # version: master
     url: https://github.com/ruffsl/Kimera-VIO.git
     version: patch-1
-    # Last tested commit: 2efbc572940dd56b8c6caf6d159cd7afd390d28e
-
-# - git:
-#     local-name: Kimera-VIO-ROS
-#     uri: https://github.com/MIT-SPARK/Kimera-VIO-ROS.git
-#     version: master
-
