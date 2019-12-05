@@ -28,7 +28,7 @@
 namespace VIO {
 
 RosBaseDataProvider::RosBaseDataProvider()
-    : DataProvider(),
+    : DataProviderInterface(),
       it_(nullptr),
       stereo_calib_(),
       vio_output_(),
@@ -171,7 +171,10 @@ bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
     std::vector<double> intrinsics;
     nh_private_.getParam(camera_name + "intrinsics", intrinsics);
     CHECK_EQ(intrinsics.size(), 4u);
-    camera_param_i.intrinsics_ = intrinsics;
+    camera_param_i.intrinsics_[0] = intrinsics[0];
+    camera_param_i.intrinsics_[0] = intrinsics[1];
+    camera_param_i.intrinsics_[0] = intrinsics[2];
+    camera_param_i.intrinsics_[0] = intrinsics[3];
     // Conver intrinsics to camera matrix (OpenCV format)
     camera_param_i.camera_matrix_ = cv::Mat::eye(3, 3, CV_64F);
     camera_param_i.camera_matrix_.at<double>(0, 0) = intrinsics[0];
@@ -333,7 +336,7 @@ bool RosBaseDataProvider::parseImuData(ImuData* imu_data,
   return true;
 }
 
-void RosBaseDataProvider::publishVioOutput(const SpinOutputPacket& vio_output) {
+void RosBaseDataProvider::publishVioOutput(const SpinOutputPacket::Ptr& vio_output) {
   publishTf(vio_output);
   if (odometry_pub_.getNumSubscribers() > 0) {
     publishState(vio_output);
@@ -344,12 +347,12 @@ void RosBaseDataProvider::publishVioOutput(const SpinOutputPacket& vio_output) {
   }
   // Publish 2d mesh debug image
   if (debug_img_pub_.getNumSubscribers() > 0) {
-    publishDebugImage(vio_output.getTimestamp(), vio_output.mesh_2d_img_);
+    publishDebugImage(vio_output->getTimestamp(), vio_output->mesh_2d_img_);
   }
   if (pointcloud_pub_.getNumSubscribers() > 0) {
-    publishTimeHorizonPointCloud(vio_output.getTimestamp(),
-                                 vio_output.points_with_id_VIO_,
-                                 vio_output.lmk_id_to_lmk_type_map_);
+    publishTimeHorizonPointCloud(vio_output->getTimestamp(),
+                                 vio_output->points_with_id_VIO_,
+                                 vio_output->lmk_id_to_lmk_type_map_);
   }
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(vio_output);
@@ -363,7 +366,7 @@ void RosBaseDataProvider::publishVioOutput(const SpinOutputPacket& vio_output) {
   }
 }
 
-void RosBaseDataProvider::publishLcdOutput(const LoopClosureDetectorOutputPayload& lcd_output) {
+void RosBaseDataProvider::publishLcdOutput(const LcdOutput::Ptr& lcd_output) {
   publishTf(lcd_output);
   if (trajectory_pub_.getNumSubscribers() > 0 ) {
     publishOptimizedTrajectory(lcd_output);
@@ -451,15 +454,15 @@ void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
 }
 
 // void RosBaseDataProvider::publishTimeHorizonMesh3D(
-//    const SpinOutputPacket& vio_output) {
-//  const Mesh3D& mesh_3d = vio_output.mesh_3d_;
+//    const SpinOutputPacket::Ptr& vio_output) {
+//  const Mesh3D& mesh_3d = vio_output->mesh_3d_;
 //  size_t number_mesh_3d_polygons = mesh_3d.getNumberOfPolygons();
 //}
 
 void RosBaseDataProvider::publishPerFrameMesh3D(
-    const SpinOutputPacket& vio_output) const {
-  const Mesh2D& mesh_2d = vio_output.mesh_2d_;
-  const Mesh3D& mesh_3d = vio_output.mesh_3d_;
+    const SpinOutputPacket::Ptr& vio_output) const {
+  const Mesh2D& mesh_2d = vio_output->mesh_2d_;
+  const Mesh3D& mesh_3d = vio_output->mesh_3d_;
   size_t number_mesh_2d_polygons = mesh_2d.getNumberOfPolygons();
   size_t mesh_2d_poly_dim = mesh_2d.getMeshPolygonDimension();
 
@@ -471,7 +474,7 @@ void RosBaseDataProvider::publishPerFrameMesh3D(
   DCHECK_GT(cam_height, 0);
 
   pcl_msgs::PolygonMesh::Ptr msg(new pcl_msgs::PolygonMesh());
-  msg->header.stamp.fromNSec(vio_output.getTimestamp());
+  msg->header.stamp.fromNSec(vio_output->getTimestamp());
   msg->header.frame_id = world_frame_id_;
 
   // Create point cloud to hold vertices.
@@ -562,13 +565,13 @@ void RosBaseDataProvider::publishPerFrameMesh3D(
 }  // namespace VIO
 
 void RosBaseDataProvider::publishState(
-    const SpinOutputPacket& vio_output) const {
+    const SpinOutputPacket::Ptr& vio_output) const {
   // Get latest estimates for odometry.
-  const gtsam::Pose3& pose = vio_output.getEstimatedPose();
-  const gtsam::Vector3& velocity = vio_output.getEstimatedVelocity();
-  const Timestamp& ts = vio_output.getTimestamp();
-  const gtsam::Matrix6& pose_cov = vio_output.getEstimatedPoseCov();
-  const gtsam::Matrix3& vel_cov = vio_output.getEstimatedVelCov();
+  const gtsam::Pose3& pose = vio_output->getEstimatedPose();
+  const gtsam::Vector3& velocity = vio_output->getEstimatedVelocity();
+  const Timestamp& ts = vio_output->getTimestamp();
+  const gtsam::Matrix6& pose_cov = vio_output->getEstimatedPoseCov();
+  const gtsam::Matrix3& vel_cov = vio_output->getEstimatedVelCov();
 
   // First publish odometry estimate
   nav_msgs::Odometry odometry_msg;
@@ -633,9 +636,9 @@ void RosBaseDataProvider::publishState(
   odometry_pub_.publish(odometry_msg);
 }
 
-void RosBaseDataProvider::publishTf(const SpinOutputPacket& vio_output) {
-  const Timestamp& timestamp = vio_output.getTimestamp();
-  const gtsam::Pose3& pose = vio_output.getEstimatedPose();
+void RosBaseDataProvider::publishTf(const SpinOutputPacket::Ptr& vio_output) {
+  const Timestamp& timestamp = vio_output->getTimestamp();
+  const gtsam::Pose3& pose = vio_output->getEstimatedPose();
   const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
   // Publish base_link TF.
   geometry_msgs::TransformStamped odom_tf;
@@ -654,9 +657,9 @@ void RosBaseDataProvider::publishTf(const SpinOutputPacket& vio_output) {
 }
 
 void RosBaseDataProvider::publishFrontendStats(
-    const SpinOutputPacket& vio_output) const {
+    const SpinOutputPacket::Ptr& vio_output) const {
   // Get frontend data for resiliency output
-  const DebugTrackerInfo& debug_tracker_info = vio_output.getTrackerInfo();
+  const DebugTrackerInfo& debug_tracker_info = vio_output->getTrackerInfo();
 
   // Create message type
   std_msgs::Float64MultiArray frontend_stats_msg;
@@ -688,11 +691,11 @@ void RosBaseDataProvider::publishFrontendStats(
 }
 
 void RosBaseDataProvider::publishResiliency(
-    const SpinOutputPacket& vio_output) const {
+    const SpinOutputPacket::Ptr& vio_output) const {
   // Get frontend and velocity covariance data for resiliency output
-  const DebugTrackerInfo& debug_tracker_info = vio_output.getTrackerInfo();
-  const gtsam::Matrix3& vel_cov = vio_output.getEstimatedVelCov();
-  const gtsam::Matrix6& pose_cov = vio_output.getEstimatedPoseCov();
+  const DebugTrackerInfo& debug_tracker_info = vio_output->getTrackerInfo();
+  const gtsam::Matrix3& vel_cov = vio_output->getEstimatedVelCov();
+  const gtsam::Matrix6& pose_cov = vio_output->getEstimatedPoseCov();
 
   // Create message type for quality of SparkVIO
   std_msgs::Float64MultiArray resiliency_msg;
@@ -751,9 +754,9 @@ void RosBaseDataProvider::publishResiliency(
 }
 
 void RosBaseDataProvider::publishImuBias(
-    const SpinOutputPacket& vio_output) const {
+    const SpinOutputPacket::Ptr& vio_output) const {
   // Get imu bias to output
-  const ImuBias& imu_bias = vio_output.getEstimatedBias();
+  const ImuBias& imu_bias = vio_output->getEstimatedBias();
   const Vector3& accel_bias = imu_bias.accelerometer();
   const Vector3& gyro_bias = imu_bias.gyroscope();
 
@@ -780,10 +783,10 @@ void RosBaseDataProvider::publishImuBias(
 }
 
 void RosBaseDataProvider::publishOptimizedTrajectory(
-    const LoopClosureDetectorOutputPayload& lcd_output) const {
+    const LcdOutput::Ptr& lcd_output) const {
   // Get pgo-optimized trajectory
-  const Timestamp& ts = lcd_output.timestamp_kf_;
-  const gtsam::Values& trajectory = lcd_output.states_;
+  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const gtsam::Values& trajectory = lcd_output->states_;
   // Create message type
   nav_msgs::Path path;
 
@@ -936,11 +939,11 @@ pose_graph_tools::PoseGraph RosBaseDataProvider::getPosegraphMsg() {
 }
 
 void RosBaseDataProvider::publishPoseGraph(
-    const LoopClosureDetectorOutputPayload& lcd_output) {
+    const LcdOutput::Ptr& lcd_output) {
   // Get the factor graph
-  const Timestamp& ts = lcd_output.timestamp_kf_;
-  const gtsam::NonlinearFactorGraph& nfg = lcd_output.nfg_;
-  const gtsam::Values& values = lcd_output.states_;
+  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const gtsam::NonlinearFactorGraph& nfg = lcd_output->nfg_;
+  const gtsam::Values& values = lcd_output->states_;
   updateNodesAndEdges(nfg, values);
   pose_graph_tools::PoseGraph graph = getPosegraphMsg();
   graph.header.stamp.fromNSec(ts);
@@ -949,9 +952,9 @@ void RosBaseDataProvider::publishPoseGraph(
 }
 
 void RosBaseDataProvider::publishTf(
-    const LoopClosureDetectorOutputPayload& lcd_output) {
-  const Timestamp& ts = lcd_output.timestamp_kf_;
-  const gtsam::Pose3& w_Pose_map = lcd_output.W_Pose_Map_;
+    const LcdOutput::Ptr& lcd_output) {
+  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
   const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
   // Publish map TF.
   geometry_msgs::TransformStamped map_tf;
@@ -1014,7 +1017,7 @@ void RosBaseDataProvider::printParsedParams() const {
 
 // VIO output callback at keyframe rate
 void RosBaseDataProvider::callbackKeyframeRateVioOutput(
-    const SpinOutputPacket& vio_output) {
+    const SpinOutputPacket::Ptr& vio_output) {
   // The code here should be lighting fast or we will be blocking the backend
   // thread in the VIO. This is actually running in the backend thread, as
   // such do not modify things other than thread-safe stuff.
@@ -1022,7 +1025,7 @@ void RosBaseDataProvider::callbackKeyframeRateVioOutput(
 }
 
 void RosBaseDataProvider::callbackLoopClosureOutput(
-    const LoopClosureDetectorOutputPayload& lcd_output) {
+    const LcdOutput::Ptr& lcd_output) {
   lcd_output_queue_.push(lcd_output);
 }
 

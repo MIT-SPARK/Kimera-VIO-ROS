@@ -48,8 +48,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Create actual VIO pipeline.
-  VIO::Pipeline vio_pipeline(dataset_parser->pipeline_params_,
-                             FLAGS_parallel_run);
+  VIO::Pipeline vio_pipeline(dataset_parser->pipeline_params_);
 
   // Register callback to vio_pipeline.
   dataset_parser->registerVioCallback(
@@ -73,7 +72,7 @@ int main(int argc, char *argv[]) {
     ros::start();
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.
-    while (ros::ok() && vio_pipeline.spinViz(false)) {
+    while (ros::ok() && vio_pipeline.spinViz()) {
       continue;
     };
     ROS_INFO("Shutting down ROS and VIO pipeline.");

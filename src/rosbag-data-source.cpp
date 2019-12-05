@@ -216,15 +216,15 @@ bool RosbagDataProvider::spin() {
           timestamp_last_frame = timestamp_frame_k;
 
           // Publish Output
-          vio_callback_(StereoImuSyncPacket(
-              StereoFrame(k, timestamp_frame_k,
-                          readRosImage(rosbag_data_.left_imgs_.at(k)),
-                          stereo_calib_.left_camera_info_,
-                          readRosImage(rosbag_data_.right_imgs_.at(k)),
-                          stereo_calib_.right_camera_info_,
-                          stereo_calib_.camL_Pose_camR_,
-                          stereo_matching_params),
-              imu_meas.timestamps_, imu_meas.measurements_));
+        vio_callback_(VIO::make_unique<StereoImuSyncPacket>(
+            StereoFrame(k, timestamp_frame_k,
+                        readRosImage(rosbag_data_.left_imgs_.at(k)),
+                        stereo_calib_.left_camera_info_,
+                        readRosImage(rosbag_data_.right_imgs_.at(k)),
+                        stereo_calib_.right_camera_info_,
+                        stereo_matching_params),
+            imu_meas.timestamps_, imu_meas.measurements_));
+          
           // Publish ground-truth data if available
           if (rosbag_data_.gt_odometry_.size() > k) {
             publishGroundTruthOdometry(rosbag_data_.gt_odometry_.at(k));
@@ -245,16 +245,16 @@ bool RosbagDataProvider::spin() {
 
       // Publish VIO output if any.
       // TODO(Toni) this could go faster if running in another thread or node...
-      SpinOutputPacket vio_output;
+      SpinOutputPacket::Ptr vio_output = nullptr;
       if (vio_output_queue_.pop(vio_output)) {
         publishVioOutput(vio_output);
-        publishClock(vio_output.getTimestamp());
+        publishClock(vio_output->getTimestamp());
       } else {
         LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
       }
 
       // Publish LCD output if any.
-      LoopClosureDetectorOutputPayload lcd_output;
+      LcdOutput::Ptr lcd_output = nullptr;
       if (lcd_output_queue_.pop(lcd_output)) {
         publishLcdOutput(lcd_output);
       }
@@ -269,13 +269,13 @@ bool RosbagDataProvider::spin() {
 
   // Endless loop until ros dies to publish left-over outputs.
   while (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
-    SpinOutputPacket vio_output;
+    SpinOutputPacket::Ptr vio_output = nullptr;
     CHECK(vio_output_queue_.popBlocking(vio_output))
         << "Vio output queue was shutdown...";
     publishVioOutput(vio_output);
-    publishClock(vio_output.getTimestamp());
+    publishClock(vio_output->getTimestamp());
 
-    LoopClosureDetectorOutputPayload lcd_output;
+    LcdOutput::Ptr lcd_output = nullptr;
     lcd_output_queue_.pop(lcd_output);
     publishLcdOutput(lcd_output);
   }

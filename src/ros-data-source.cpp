@@ -209,11 +209,13 @@ bool RosDataProvider::spin() {
         resetReinitFlag();
 
         // Send input data to VIO!
-        vio_callback_(StereoImuSyncPacket(
-            StereoFrame(frame_count_, timestamp, left_image,
-                        stereo_calib_.left_camera_info_, right_image,
+        vio_callback_(VIO::make_unique<StereoImuSyncPacket>(
+            StereoFrame(frame_count_, timestamp,
+                        left_image,
+                        stereo_calib_.left_camera_info_,
+                        right_image,
                         stereo_calib_.right_camera_info_,
-                        stereo_calib_.camL_Pose_camR_, stereo_matching_params),
+                        stereo_matching_params),
             imu_meas.timestamps_, imu_meas.measurements_, reinit_packet_));
 
         last_timestamp_ = timestamp;
@@ -235,13 +237,13 @@ bool RosDataProvider::spin() {
     }
 
     // Publish VIO output if any.
-    SpinOutputPacket vio_output;
+    SpinOutputPacket::Ptr vio_output = nullptr;
     if (vio_output_queue_.pop(vio_output)) {
       publishVioOutput(vio_output);
     }
 
     // Publish LCD output if any.
-    LoopClosureDetectorOutputPayload lcd_output;
+    LcdOutput::Ptr lcd_output = nullptr;
     if (lcd_output_queue_.pop(lcd_output)) {
       publishLcdOutput(lcd_output);
     }
