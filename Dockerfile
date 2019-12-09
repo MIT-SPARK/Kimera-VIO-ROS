@@ -83,9 +83,16 @@ ARG UNDERLAY_MIXINS="release"
 RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
     colcon build \
       --symlink-install \
-      --mixin \
-        $UNDERLAY_MIXINS \
-      --event-handlers console_direct+
+      --mixin $UNDERLAY_MIXINS \
+      --cmake-args \
+        --no-warn-unused-cli \
+        -DGTSAM_BUILD_TESTS=OFF \
+        -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF \
+        -DGTSAM_BUILD_UNSTABLE=ON \
+        -DGTSAM_POSE3_EXPMAP=ON \
+        -DGTSAM_ROT3_EXPMAP=ON \
+        -DOPENCV_EXTRA_MODULES_PATH=$UNDERLAY_WS/src/opencv/opencv/contrib/modules
+      # --event-handlers console_direct+
 
 # copy overlay manifests
 ENV OVERLAY_WS /opt/overlay_ws
