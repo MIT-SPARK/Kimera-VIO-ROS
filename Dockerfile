@@ -116,7 +116,19 @@ ARG OVERLAY_MIXINS="release ccache"
 RUN . $UNDERLAY_WS/install/setup.sh && \
     colcon build \
       --symlink-install \
-      --mixin \
+      --mixin $OVERLAY_MIXINS \
+      --cmake-args \
+        --no-warn-unused-cli \
+        -DCMAKE_CXX_FLAGS="\
+          -Wno-sign-compare \
+          -Wno-unused-value \
+          -Wno-unused-variable \
+          -Wno-unused-but-set-variable \
+          -Wno-reorder \
+          -Wno-parentheses \
+          -Wno-unused-parameter"
+      # --event-handlers console_direct+
+
 # copy ros manifests
 ENV ROS_WS /opt/ros_ws
 COPY --from=cache /tmp/ros_ws $ROS_WS
@@ -142,9 +154,18 @@ ARG ROS_MIXINS="release ccache"
 RUN . $OVERLAY_WS/install/setup.sh && \
     colcon build \
       --symlink-install \
-      --mixin \
-        $ROS_MIXINS \
-      --event-handlers console_direct+
+      --mixin $ROS_MIXINS \
+      --cmake-args \
+        --no-warn-unused-cli \
+        -DCMAKE_CXX_FLAGS="\
+          -Wno-sign-compare \
+          -Wno-unused-value \
+          -Wno-unused-variable \
+          -Wno-unused-but-set-variable \
+          -Wno-reorder \
+          -Wno-parentheses \
+          -Wno-unused-parameter"
+      # --event-handlers console_direct+
 
 # source overlay from entrypoint
 RUN sed --in-place \
