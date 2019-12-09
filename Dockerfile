@@ -1,4 +1,4 @@
-ARG FROM_IMAGE=ros:dashing
+ARG FROM_IMAGE=ros:eloquent
 
 # multi-stage for caching
 FROM $FROM_IMAGE AS cache
@@ -42,7 +42,7 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C1CF6E31E6
 RUN echo "deb http://packages.ros.org/ros/ubuntu bionic main" > /etc/apt/sources.list.d/ros1-latest.list
 
 ENV ROS_DISTRO melodic
-# ENV ROS2_DISTRO dashing
+# ENV ROS2_DISTRO eloquent
 
 # install CI dependencies
 RUN apt-get update && apt-get install -q -y \
