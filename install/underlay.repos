@@ -1,10 +1,8 @@
 repositories:
   borglab/gtsam:
     type: git
-    # url: https://github.com/borglab/gtsam.git
-    # version: master
-    url: https://github.com/ruffsl/gtsam.git
-    version: patch-1
+    url: https://github.com/borglab/gtsam.git
+    version: master
   laurentkneip/opengv:
     type: git
     # url: https://github.com/laurentkneip/opengv.git
