@@ -7,8 +7,8 @@
 
 #include "kimera-ros/rosbag-data-source.h"
 
-#include <sensor_msgs/Imu.h>
 #include <rosgraph_msgs/Clock.h>
+#include <sensor_msgs/Imu.h>
 
 namespace VIO {
 
@@ -36,8 +36,8 @@ RosbagDataProvider::RosbagDataProvider()
   // Ros publishers specific to rosbag data provider
   clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("/clock", 10);
   /// Advertise to the same topic than what it was writen in the rosbag.
-  gt_odometry_pub_ = nh_.advertise<nav_msgs::Odometry>(
-        ground_truth_odometry_topic, 10);
+  gt_odometry_pub_ =
+      nh_.advertise<nav_msgs::Odometry>(ground_truth_odometry_topic, 10);
 
   // Parse data from rosbag
   CHECK(parseRosbag(rosbag_path,
@@ -50,7 +50,7 @@ RosbagDataProvider::RosbagDataProvider()
   if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
     LOG(WARNING) << "Using initial ground-truth state for initialization.";
     pipeline_params_.backend_params_->initial_ground_truth_state_ =
-        getGroundTruthVioNavState(0); // Send first gt state.
+        getGroundTruthVioNavState(0);  // Send first gt state.
   }
 }
 
@@ -142,13 +142,14 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
           if (msg_topic == gt_odom_topic) {
             rosbag_data->gt_odometry_.push_back(gt_odometry);
           } else {
-            ROS_ERROR("Unrecognized topic name for odometry msg. We were"
-                      " expecting ground-truth odometry on this topic.");
+            ROS_ERROR(
+                "Unrecognized topic name for odometry msg. We were"
+                " expecting ground-truth odometry on this topic.");
           }
         } else {
           ROS_ERROR_STREAM(
-                "Could not find the type of this rosbag msg from topic:\n"
-                     << msg.getTopic());
+              "Could not find the type of this rosbag msg from topic:\n"
+              << msg.getTopic());
         }
       }
     }
@@ -159,16 +160,14 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   ROS_ERROR_COND(rosbag_data->left_imgs_.size() == 0 ||
                      rosbag_data->right_imgs_.size() == 0,
                  "No images parsed from rosbag!");
-  ROS_ERROR_COND(imu_data_.imu_buffer_.size() <=
-                 rosbag_data->left_imgs_.size(),
+  ROS_ERROR_COND(imu_data_.imu_buffer_.size() <= rosbag_data->left_imgs_.size(),
                  "Less than or equal number fo imu data as image data.");
   // Check that gt data was correctly parsed if we were asked for it.
-  ROS_ERROR_COND(!gt_odom_topic.empty() &&
-                 rosbag_data_.gt_odometry_.size() > 0,
-                 "Requested to parse ground-truth odometry, but parsed 0 msgs.");
-  ROS_ERROR_COND(!gt_odom_topic.empty() &&
-                 rosbag_data->gt_odometry_.size() !=
-                     rosbag_data->left_imgs_.size(),
+  ROS_ERROR_COND(
+      !gt_odom_topic.empty() && rosbag_data_.gt_odometry_.size() > 0,
+      "Requested to parse ground-truth odometry, but parsed 0 msgs.");
+  ROS_ERROR_COND(!gt_odom_topic.empty() && rosbag_data->gt_odometry_.size() !=
+                                               rosbag_data->left_imgs_.size(),
                  "Different number of ground_truth data than image data.");
   return true;
 }
@@ -190,10 +189,10 @@ bool RosbagDataProvider::spin() {
         ImuMeasurements imu_meas;
         utils::ThreadsafeImuBuffer::QueryResult imu_query =
             imu_data_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-              timestamp_last_frame,
-              timestamp_frame_k,
-              &imu_meas.timestamps_,
-              &imu_meas.measurements_);
+                timestamp_last_frame,
+                timestamp_frame_k,
+                &imu_meas.timestamps_,
+                &imu_meas.measurements_);
         if (imu_query ==
             utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
           // Call VIO Pipeline.
@@ -216,15 +215,17 @@ bool RosbagDataProvider::spin() {
           timestamp_last_frame = timestamp_frame_k;
 
           // Publish Output
-        vio_callback_(VIO::make_unique<StereoImuSyncPacket>(
-            StereoFrame(k, timestamp_frame_k,
-                        readRosImage(rosbag_data_.left_imgs_.at(k)),
-                        stereo_calib_.left_camera_info_,
-                        readRosImage(rosbag_data_.right_imgs_.at(k)),
-                        stereo_calib_.right_camera_info_,
-                        stereo_matching_params),
-            imu_meas.timestamps_, imu_meas.measurements_));
-          
+          vio_callback_(VIO::make_unique<StereoImuSyncPacket>(
+              StereoFrame(k,
+                          timestamp_frame_k,
+                          readRosImage(rosbag_data_.left_imgs_.at(k)),
+                          stereo_calib_.left_camera_info_,
+                          readRosImage(rosbag_data_.right_imgs_.at(k)),
+                          stereo_calib_.right_camera_info_,
+                          stereo_matching_params),
+              imu_meas.timestamps_,
+              imu_meas.measurements_));
+
           // Publish ground-truth data if available
           if (rosbag_data_.gt_odometry_.size() > k) {
             publishGroundTruthOdometry(rosbag_data_.gt_odometry_.at(k));
@@ -245,10 +246,12 @@ bool RosbagDataProvider::spin() {
 
       // Publish VIO output if any.
       // TODO(Toni) this could go faster if running in another thread or node...
-      SpinOutputPacket::Ptr vio_output = nullptr;
-      if (vio_output_queue_.pop(vio_output)) {
-        publishVioOutput(vio_output);
-        publishClock(vio_output->getTimestamp());
+      FrontendOutput::Ptr frontend_output;
+      BackendOutput::Ptr backend_output;
+      MesherOutput::Ptr mesher_output;
+      if (getVioOutput(frontend_output, backend_output, mesher_output)) {
+        publishVioOutput(frontend_output, backend_output, mesher_output);
+        publishClock(backend_output->timestamp_);
       } else {
         LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
       }
@@ -269,11 +272,13 @@ bool RosbagDataProvider::spin() {
 
   // Endless loop until ros dies to publish left-over outputs.
   while (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
-    SpinOutputPacket::Ptr vio_output = nullptr;
-    CHECK(vio_output_queue_.popBlocking(vio_output))
-        << "Vio output queue was shutdown...";
-    publishVioOutput(vio_output);
-    publishClock(vio_output->getTimestamp());
+    FrontendOutput::Ptr frontend_output;
+    BackendOutput::Ptr backend_output;
+    MesherOutput::Ptr mesher_output;
+    getVioOutput(frontend_output, backend_output, mesher_output);
+
+    publishVioOutput(frontend_output, backend_output, mesher_output);
+    publishClock(backend_output->timestamp_);
 
     LcdOutput::Ptr lcd_output = nullptr;
     lcd_output_queue_.pop(lcd_output);
@@ -284,30 +289,30 @@ bool RosbagDataProvider::spin() {
 }
 
 VioNavState RosbagDataProvider::getGroundTruthVioNavState(
-      const size_t& k_frame) const {
-    CHECK_LE(k_frame, rosbag_data_.gt_odometry_.size());
-    nav_msgs::Odometry gt_odometry = *(rosbag_data_.gt_odometry_.at(k_frame));
-    // World to Body rotation
-    gtsam::Rot3 W_R_B = gtsam::Rot3::Quaternion(
-          gt_odometry.pose.pose.orientation.w,
-          gt_odometry.pose.pose.orientation.x,
-          gt_odometry.pose.pose.orientation.y,
-          gt_odometry.pose.pose.orientation.z);
-    gtsam::Point3 position (gt_odometry.pose.pose.position.x,
-                            gt_odometry.pose.pose.position.y,
-                            gt_odometry.pose.pose.position.z);
-    gtsam::Vector3 velocity (gt_odometry.twist.twist.linear.x,
-                             gt_odometry.twist.twist.linear.y,
-                             gt_odometry.twist.twist.linear.z);
-    VioNavState gt_init;
-    gt_init.pose_ = gtsam::Pose3(W_R_B, position);
-    gt_init.velocity_ = velocity;
-    // TODO(Toni): how can we get the ground-truth biases? For sim, ins't it 0?
-    gtsam::Vector3 gyro_bias (0.0, 0.0, 0.0);
-    gtsam::Vector3 acc_bias (0.0, 0.0, 0.0);
-    gt_init.imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
-    return gt_init;
-  }
+    const size_t& k_frame) const {
+  CHECK_LE(k_frame, rosbag_data_.gt_odometry_.size());
+  nav_msgs::Odometry gt_odometry = *(rosbag_data_.gt_odometry_.at(k_frame));
+  // World to Body rotation
+  gtsam::Rot3 W_R_B =
+      gtsam::Rot3::Quaternion(gt_odometry.pose.pose.orientation.w,
+                              gt_odometry.pose.pose.orientation.x,
+                              gt_odometry.pose.pose.orientation.y,
+                              gt_odometry.pose.pose.orientation.z);
+  gtsam::Point3 position(gt_odometry.pose.pose.position.x,
+                         gt_odometry.pose.pose.position.y,
+                         gt_odometry.pose.pose.position.z);
+  gtsam::Vector3 velocity(gt_odometry.twist.twist.linear.x,
+                          gt_odometry.twist.twist.linear.y,
+                          gt_odometry.twist.twist.linear.z);
+  VioNavState gt_init;
+  gt_init.pose_ = gtsam::Pose3(W_R_B, position);
+  gt_init.velocity_ = velocity;
+  // TODO(Toni): how can we get the ground-truth biases? For sim, ins't it 0?
+  gtsam::Vector3 gyro_bias(0.0, 0.0, 0.0);
+  gtsam::Vector3 acc_bias(0.0, 0.0, 0.0);
+  gt_init.imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
+  return gt_init;
+}
 
 void RosbagDataProvider::publishClock(const Timestamp& timestamp) const {
   rosgraph_msgs::Clock clock;

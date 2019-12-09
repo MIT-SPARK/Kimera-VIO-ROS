@@ -12,12 +12,12 @@
 #include <opencv2/core/matx.hpp>
 #include <string>
 
+#include <nav_msgs/Odometry.h>
 #include <ros/console.h>
 #include <ros/ros.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <sensor_msgs/Image.h>
-#include <nav_msgs/Odometry.h>
 
 #include "kimera-ros/base-data-source.h"
 

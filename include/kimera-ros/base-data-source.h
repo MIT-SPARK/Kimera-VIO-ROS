@@ -18,17 +18,18 @@
 #include <pcl_ros/point_cloud.h>
 
 #include <image_transport/subscriber_filter.h>
-#include <ros/ros.h>
-#include <tf/transform_broadcaster.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <pose_graph_tools/PoseGraphEdge.h>
 #include <pose_graph_tools/PoseGraphNode.h>
+#include <ros/ros.h>
+#include <tf/transform_broadcaster.h>
 
 #include <kimera-vio/common/vio_types.h>
 #include <kimera-vio/datasource/DataSource.h>
 #include <kimera-vio/frontend/StereoFrame.h>
-#include <kimera-vio/frontend/StereoMatchingParams.h>
 #include <kimera-vio/frontend/StereoImuSyncPacket.h>
+#include <kimera-vio/frontend/StereoMatchingParams.h>
+#include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/frontend/VioFrontEndParams.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/utils/ThreadsafeQueue.h>
@@ -53,11 +54,17 @@ class RosBaseDataProvider : public DataProviderInterface {
   RosBaseDataProvider();
   virtual ~RosBaseDataProvider();
 
-  // VIO output callback at keyframe rate.
-  void callbackKeyframeRateVioOutput(const SpinOutputPacket::Ptr& vio_output);
+  // VIO backend output callback.
+  void callbackBackendOutput(const BackendOutput::Ptr& output);
+
+  // VIO frontend output callback.
+  void callbackFrontendOutput(const FrontendOutput::Ptr& output);
+
+  // VIO frontend output callback.
+  void callbackMesherOutput(const MesherOutput::Ptr& output);
 
   // LCD/PGO output callback.
-  void callbackLoopClosureOutput(const LcdOutput::Ptr& lcd_output);
+  void callbackLcdOutput(const LcdOutput::Ptr& output);
 
  protected:
   // Stereo info
@@ -68,19 +75,19 @@ class RosBaseDataProvider : public DataProviderInterface {
   };
 
  protected:
- // TODO(marcus): decide what to do here
- // These must be implemented or the class remains abstract. But they aren't 
- // useful for ROS parsers.
-  bool parseCameraParams(const std::string &input_dataset_path,
-                         const std::string &left_cam_name,
-                         const std::string &right_cam_name,
+  // TODO(marcus): decide what to do here
+  // These must be implemented or the class remains abstract. But they aren't
+  // useful for ROS parsers.
+  bool parseCameraParams(const std::string& input_dataset_path,
+                         const std::string& left_cam_name,
+                         const std::string& right_cam_name,
                          const bool parse_images,
-                         MultiCameraParams *multi_cam_params) {}
-  bool parseImuParams(const std::string &input_dataset_path,
-                      const std::string &imu_name,
-                      ImuParams *imu_params) {}
+                         MultiCameraParams* multi_cam_params) {}
+  bool parseImuParams(const std::string& input_dataset_path,
+                      const std::string& imu_name,
+                      ImuParams* imu_params) {}
 
-protected:
+ protected:
   cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;
 
   cv::Mat readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg) const;
@@ -91,8 +98,16 @@ protected:
   // Parse IMU calibration info (for ros online)
   bool parseImuData(ImuData* imu_data, ImuParams* imu_params) const;
 
+  // Pop and synchronize output packets from queues
+  bool getVioOutput(FrontendOutput::Ptr frontend_output,
+                    BackendOutput::Ptr backend_output,
+                    MesherOutput::Ptr mesher_output,
+                    int max_iterations = 10);
+
   // Publish all outputs by calling individual functions below
-  void publishVioOutput(const SpinOutputPacket::Ptr& vio_output);
+  void publishVioOutput(const FrontendOutput::Ptr& frontend_output,
+                        const BackendOutput::Ptr& backend_output,
+                        const MesherOutput::Ptr& mesher_output);
 
   // Publish all outputs for LCD
   void publishLcdOutput(const LcdOutput::Ptr& lcd_output);
@@ -105,7 +120,6 @@ protected:
  protected:
   VioFrontEndParams frontend_params_;
   StereoCalibration stereo_calib_;
-  SpinOutputPacket::Ptr vio_output_;
 
   // Define Node Handler for general use (Parameter server)
   ros::NodeHandle nh_;
@@ -121,8 +135,10 @@ protected:
   std::string left_cam_frame_id_;
   std::string right_cam_frame_id_;
 
-  // Queue to store and retrieve VIO output in a thread-safe way.
-  ThreadsafeQueue<SpinOutputPacket::Ptr> vio_output_queue_;
+  // Queues to store and retrieve VIO output in a thread-safe way.
+  ThreadsafeQueue<BackendOutput::Ptr> backend_output_queue_;
+  ThreadsafeQueue<FrontendOutput::Ptr> frontend_output_queue_;
+  ThreadsafeQueue<MesherOutput::Ptr> mesher_output_queue_;
   ThreadsafeQueue<LcdOutput::Ptr> lcd_output_queue_;
 
   // Store IMU data from last frame
@@ -131,26 +147,25 @@ protected:
 
  private:
   // Publish VIO outputs.
-  void publishTf(const SpinOutputPacket::Ptr& vio_output);
+  void publishTf(const BackendOutput::Ptr& output);
   void publishTimeHorizonPointCloud(
-      const Timestamp& timestamp, const PointsWithIdMap& points_with_id,
+      const Timestamp& timestamp,
+      const PointsWithIdMap& points_with_id,
       const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const;
-  void publishPerFrameMesh3D(const SpinOutputPacket::Ptr& vio_output) const;
-  void publishTimeHorizonMesh3D(const SpinOutputPacket::Ptr& vio_output) const;
-  void publishState(const SpinOutputPacket::Ptr& vio_output) const;
-  void publishFrontendStats(const SpinOutputPacket::Ptr& vio_output) const;
-  void publishResiliency(const SpinOutputPacket::Ptr& vio_output) const;
-  void publishImuBias(const SpinOutputPacket::Ptr& vio_output) const;
+  void publishPerFrameMesh3D(const MesherOutput::Ptr& output) const;
+  void publishTimeHorizonMesh3D(const MesherOutput::Ptr& output) const;
+  void publishState(const BackendOutput::Ptr& output) const;
+  void publishFrontendStats(const FrontendOutput::Ptr& output) const;
+  void publishResiliency(const FrontendOutput::Ptr& frontend_output,
+                         const BackendOutput::Ptr& backend_output) const;
+  void publishImuBias(const BackendOutput::Ptr& output) const;
 
   // Publish LCD/PGO outputs.
   void publishTf(const LcdOutput::Ptr& lcd_output);
-  void publishOptimizedTrajectory(
-      const LcdOutput::Ptr& lcd_output) const;
-  void publishPoseGraph(
-      const LcdOutput::Ptr& lcd_output);
-  void updateNodesAndEdges(
-      const gtsam::NonlinearFactorGraph& nfg,
-      const gtsam::Values& values);
+  void publishOptimizedTrajectory(const LcdOutput::Ptr& lcd_output) const;
+  void publishPoseGraph(const LcdOutput::Ptr& lcd_output);
+  void updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
+                           const gtsam::Values& values);
   void updateRejectedEdges();
   pose_graph_tools::PoseGraph getPosegraphMsg();
 
@@ -192,5 +207,6 @@ protected:
 POINT_CLOUD_REGISTER_POINT_STRUCT(
     VIO::PointNormalUV,
     (float, x, x)(float, y, y)(float, x, z)(float, normal_x, normal_x)(
-        float, normal_y, normal_y)(float, normal_z, normal_z)(float, u,
-                                                              u)(float, v, v))
+        float,
+        normal_y,
+        normal_y)(float, normal_z, normal_z)(float, u, u)(float, v, v))

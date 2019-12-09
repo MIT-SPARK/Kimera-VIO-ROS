@@ -28,7 +28,7 @@ DEFINE_bool(online_run, true, "RUN VIO ROS online or offline");
 ////////////////////////////////////////////////////////////////////////////////
 // stereoVIOexample using ROS wrapper example
 ////////////////////////////////////////////////////////////////////////////////
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   // Initialize Google's flags library.
   google::ParseCommandLineFlags(&argc, &argv, true);
   // Initialize Google's logging library.
@@ -54,21 +54,34 @@ int main(int argc, char *argv[]) {
   dataset_parser->registerVioCallback(
       std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
 
-  // Register callback to retrieve vio pipeline output.
-  vio_pipeline.registerKeyFrameRateOutputCallback(
-      std::bind(&VIO::RosBaseDataProvider::callbackKeyframeRateVioOutput,
-                dataset_parser, std::placeholders::_1));
+  // Register callback to retrieve vio pipeline output from all modules.
+  vio_pipeline.registerBackendOutputCallback(
+      std::bind(&VIO::RosBaseDataProvider::callbackBackendOutput,
+                dataset_parser,
+                std::placeholders::_1));
 
-  vio_pipeline.registerLcdPgoOutputCallback(
-      std::bind(&VIO::RosBaseDataProvider::callbackLoopClosureOutput,
-                dataset_parser, std::placeholders::_1));
+  vio_pipeline.registerFrontendOutputCallback(
+      std::bind(&VIO::RosBaseDataProvider::callbackFrontendOutput,
+                dataset_parser,
+                std::placeholders::_1));
+
+  vio_pipeline.registerMesherOutputCallback(
+      std::bind(&VIO::RosBaseDataProvider::callbackMesherOutput,
+                dataset_parser,
+                std::placeholders::_1));
+
+  // TODO(marcus): only register this if we have `use_lcd` enabled.
+  vio_pipeline.registerLcdOutputCallback(
+      std::bind(&VIO::RosBaseDataProvider::callbackLcdOutput,
+                dataset_parser,
+                std::placeholders::_1));
 
   // Spin dataset.
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (FLAGS_parallel_run) {
-    auto handle = std::async(std::launch::async,
-                             &VIO::RosBaseDataProvider::spin, dataset_parser);
+    auto handle = std::async(
+        std::launch::async, &VIO::RosBaseDataProvider::spin, dataset_parser);
     ros::start();
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.

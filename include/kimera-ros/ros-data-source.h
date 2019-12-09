@@ -44,7 +44,7 @@ class RosDataProvider : public RosBaseDataProvider {
 
   Timestamp last_timestamp_;      // Timestamp correponding to last frame
   Timestamp last_imu_timestamp_;  // Timestamp corresponding to last imu meas
-  int frame_count_;                // Keep track of number of frames processed
+  int frame_count_;               // Keep track of number of frames processed
 
   StereoBuffer stereo_buffer_;
 

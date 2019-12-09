@@ -81,7 +81,7 @@ RosDataProvider::RosDataProvider()
 RosDataProvider::~RosDataProvider() {}
 
 // IMU callback
-void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr &msgIMU) {
+void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU) {
   // Callback and store IMU data and timestamp
   // until next StereoImuSyncPacket is made
   gtsam::Vector6 gyroAccData;
@@ -117,7 +117,7 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr &msgIMU) {
 
 // Reinitialization callback
 void RosDataProvider::callbackReinit(
-    const std_msgs::Bool::ConstPtr &reinitFlag) {
+    const std_msgs::Bool::ConstPtr& reinitFlag) {
   // TODO(Sandro): Do we want to reinitialize at specific pose or just at
   // origin? void RosDataProvider::callbackReinit( const
   // nav_msgs::Odometry::ConstPtr& msgReinit) {
@@ -132,13 +132,15 @@ void RosDataProvider::callbackReinit(
 
 // Getting re-initialization pose
 void RosDataProvider::callbackReinitPose(
-    const geometry_msgs::PoseStamped &reinitPose) {
+    const geometry_msgs::PoseStamped& reinitPose) {
   // Set reinitialization pose
-  gtsam::Rot3 rotation(gtsam::Quaternion(
-      reinitPose.pose.orientation.w, reinitPose.pose.orientation.x,
-      reinitPose.pose.orientation.y, reinitPose.pose.orientation.z));
+  gtsam::Rot3 rotation(gtsam::Quaternion(reinitPose.pose.orientation.w,
+                                         reinitPose.pose.orientation.x,
+                                         reinitPose.pose.orientation.y,
+                                         reinitPose.pose.orientation.z));
 
-  gtsam::Point3 position(reinitPose.pose.position.x, reinitPose.pose.position.y,
+  gtsam::Point3 position(reinitPose.pose.position.x,
+                         reinitPose.pose.position.y,
                          reinitPose.pose.position.z);
   gtsam::Pose3 pose = gtsam::Pose3(rotation, position);
   reinit_packet_.setReinitPose(pose);
@@ -146,8 +148,8 @@ void RosDataProvider::callbackReinitPose(
 
 // Callback for stereo images and main spin
 void RosDataProvider::callbackCamAndProcessStereo(
-    const sensor_msgs::ImageConstPtr &msgLeft,
-    const sensor_msgs::ImageConstPtr &msgRight) {
+    const sensor_msgs::ImageConstPtr& msgLeft,
+    const sensor_msgs::ImageConstPtr& msgRight) {
   // store in stereo buffer
   stereo_buffer_.addStereoFrame(msgLeft, msgRight);
 }
@@ -158,7 +160,7 @@ bool RosDataProvider::spin() {
     // Main spin of the data provider: Interpolates IMU data and build
     // StereoImuSyncPacket (Think of this as the spin of the other
     // parser/data-providers)
-    const Timestamp &timestamp = stereo_buffer_.getEarliestTimestamp();
+    const Timestamp& timestamp = stereo_buffer_.getEarliestTimestamp();
     if (timestamp <= last_timestamp_) {
       if (stereo_buffer_.size() != 0) {
         ROS_WARN(
@@ -176,7 +178,9 @@ bool RosDataProvider::spin() {
 
       utils::ThreadsafeImuBuffer::QueryResult imu_query =
           imu_data_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-              last_timestamp_, timestamp, &imu_meas.timestamps_,
+              last_timestamp_,
+              timestamp,
+              &imu_meas.timestamps_,
               &imu_meas.measurements_);
       if (imu_query ==
           utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
@@ -184,7 +188,7 @@ bool RosDataProvider::spin() {
         sensor_msgs::ImageConstPtr left_ros_img, right_ros_img;
         CHECK(stereo_buffer_.extractLatestImages(left_ros_img, right_ros_img));
 
-        const StereoMatchingParams &stereo_matching_params =
+        const StereoMatchingParams& stereo_matching_params =
             frontend_params_.getStereoMatchingParams();
 
         // Read ROS images to cv type
@@ -210,13 +214,16 @@ bool RosDataProvider::spin() {
 
         // Send input data to VIO!
         vio_callback_(VIO::make_unique<StereoImuSyncPacket>(
-            StereoFrame(frame_count_, timestamp,
+            StereoFrame(frame_count_,
+                        timestamp,
                         left_image,
                         stereo_calib_.left_camera_info_,
                         right_image,
                         stereo_calib_.right_camera_info_,
                         stereo_matching_params),
-            imu_meas.timestamps_, imu_meas.measurements_, reinit_packet_));
+            imu_meas.timestamps_,
+            imu_meas.measurements_,
+            reinit_packet_));
 
         last_timestamp_ = timestamp;
         frame_count_++;
@@ -237,9 +244,11 @@ bool RosDataProvider::spin() {
     }
 
     // Publish VIO output if any.
-    SpinOutputPacket::Ptr vio_output = nullptr;
-    if (vio_output_queue_.pop(vio_output)) {
-      publishVioOutput(vio_output);
+    FrontendOutput::Ptr frontend_output;
+    BackendOutput::Ptr backend_output;
+    MesherOutput::Ptr mesher_output;
+    if (getVioOutput(frontend_output, backend_output, mesher_output)) {
+      publishVioOutput(frontend_output, backend_output, mesher_output);
     }
 
     // Publish LCD output if any.
@@ -253,7 +262,10 @@ bool RosDataProvider::spin() {
   }
 
   ROS_INFO("Ros data source spin done. Shutting down vio output queue.");
-  vio_output_queue_.shutdown();
+  backend_output_queue_.shutdown();
+  frontend_output_queue_.shutdown();
+  mesher_output_queue_.shutdown();
+  lcd_output_queue_.shutdown();
 
   return true;
 }
