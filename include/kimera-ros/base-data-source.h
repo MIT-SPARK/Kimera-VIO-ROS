@@ -51,24 +51,31 @@ struct PointNormalUV {
 
 class RosBaseDataProvider : public DataProviderInterface {
  public:
+  KIMERA_DELETE_COPY_CONSTRUCTORS(RosBaseDataProvider);
+  KIMERA_POINTER_TYPEDEFS(RosBaseDataProvider);
+
   RosBaseDataProvider();
 
   virtual ~RosBaseDataProvider();
 
  public:
   inline void callbackBackendOutput(const VIO::BackendOutput::Ptr& output) {
+    ROS_INFO("Recieved Backend Output from pipeline.");
     backend_output_queue_.push(output);
   }
 
   inline void callbackFrontendOutput(const VIO::FrontendOutput::Ptr& output) {
+    ROS_INFO("Recieved Frontend Output from pipeline.");
     frontend_output_queue_.push(output);
   }
 
   inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
+    ROS_INFO("Recieved Mesher Output from pipeline.");
     mesher_output_queue_.push(output);
   }
 
   inline void callbackLcdOutput(const VIO::LcdOutput::Ptr& output) {
+    ROS_INFO("Recieved Lcd Output from pipeline.");
     lcd_output_queue_.push(output);
   }
 

@@ -126,6 +126,12 @@ void RosBaseDataProvider::publishVioOutput(
     const FrontendOutput::Ptr& frontend_output,
     const BackendOutput::Ptr& backend_output,
     const MesherOutput::Ptr& mesher_output) {
+  CHECK_NOTNULL(frontend_output);
+  CHECK_NOTNULL(backend_output);
+  CHECK_NOTNULL(mesher_output);
+
+  ROS_INFO("Publishing VIO output.");
+
   publishTf(backend_output);
   if (odometry_pub_.getNumSubscribers() > 0) {
     publishState(backend_output);
@@ -159,6 +165,8 @@ void RosBaseDataProvider::publishVioOutput(
 }
 
 void RosBaseDataProvider::publishLcdOutput(const LcdOutput::Ptr& lcd_output) {
+  CHECK_NOTNULL(lcd_output);
+
   publishTf(lcd_output);
   if (trajectory_pub_.getNumSubscribers() > 0) {
     publishOptimizedTrajectory(lcd_output);
@@ -172,9 +180,11 @@ bool RosBaseDataProvider::getVioOutput(FrontendOutput::Ptr frontend_output,
                                        BackendOutput::Ptr backend_output,
                                        MesherOutput::Ptr mesher_output,
                                        int max_iterations) {
-  CHECK_NOTNULL(backend_output);
-  CHECK_NOTNULL(frontend_output);
-  CHECK_NOTNULL(mesher_output);
+  // TODO(marcus): we expect these to be null before we fill them, no?
+  // CHECK_NOTNULL(backend_output);
+  // CHECK_NOTNULL(frontend_output);
+  // CHECK_NOTNULL(mesher_output);
+
   // We first get the backend's output, because it will be slower than the
   // frontend
   if (backend_output_queue_.pop(backend_output)) {
@@ -216,6 +226,9 @@ bool RosBaseDataProvider::getVioOutput(FrontendOutput::Ptr frontend_output,
                     "packet timestamp.";
       return false;
     }
+  } else {
+    // Could not pop a backend payload, so we return false
+    return false;
   }
 
   return true;
@@ -307,6 +320,8 @@ void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
 
 void RosBaseDataProvider::publishPerFrameMesh3D(
     const MesherOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
+
   const Mesh2D& mesh_2d = output->mesh_2d_;
   const Mesh3D& mesh_3d = output->mesh_3d_;
   size_t number_mesh_2d_polygons = mesh_2d.getNumberOfPolygons();
@@ -411,6 +426,7 @@ void RosBaseDataProvider::publishPerFrameMesh3D(
 }  // namespace VIO
 
 void RosBaseDataProvider::publishState(const BackendOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
   // Get latest estimates for odometry.
   const Timestamp& ts = output->timestamp_;
   const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
@@ -484,6 +500,8 @@ void RosBaseDataProvider::publishState(const BackendOutput::Ptr& output) const {
 }
 
 void RosBaseDataProvider::publishTf(const BackendOutput::Ptr& output) {
+  CHECK_NOTNULL(output);
+
   const Timestamp& timestamp = output->timestamp_;
   const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
   const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
@@ -505,6 +523,8 @@ void RosBaseDataProvider::publishTf(const BackendOutput::Ptr& output) {
 
 void RosBaseDataProvider::publishFrontendStats(
     const FrontendOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
+
   // Get frontend data for resiliency output
   const DebugTrackerInfo& debug_tracker_info = output->getTrackerInfo();
 
@@ -540,6 +560,9 @@ void RosBaseDataProvider::publishFrontendStats(
 void RosBaseDataProvider::publishResiliency(
     const FrontendOutput::Ptr& frontend_output,
     const BackendOutput::Ptr& backend_output) const {
+  CHECK_NOTNULL(frontend_output);
+  CHECK_NOTNULL(backend_output);
+
   // Get frontend and velocity covariance data for resiliency output
   const DebugTrackerInfo& debug_tracker_info =
       frontend_output->getTrackerInfo();
@@ -606,6 +629,8 @@ void RosBaseDataProvider::publishResiliency(
 
 void RosBaseDataProvider::publishImuBias(
     const BackendOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
+
   // Get imu bias to output
   const ImuBias& imu_bias = output->W_State_Blkf_.imu_bias_;
   const Vector3& accel_bias = imu_bias.accelerometer();
@@ -635,6 +660,8 @@ void RosBaseDataProvider::publishImuBias(
 
 void RosBaseDataProvider::publishOptimizedTrajectory(
     const LcdOutput::Ptr& lcd_output) const {
+  CHECK_NOTNULL(lcd_output);
+
   // Get pgo-optimized trajectory
   const Timestamp& ts = lcd_output->timestamp_kf_;
   const gtsam::Values& trajectory = lcd_output->states_;
@@ -795,6 +822,8 @@ pose_graph_tools::PoseGraph RosBaseDataProvider::getPosegraphMsg() {
 }
 
 void RosBaseDataProvider::publishPoseGraph(const LcdOutput::Ptr& lcd_output) {
+  CHECK_NOTNULL(lcd_output);
+
   // Get the factor graph
   const Timestamp& ts = lcd_output->timestamp_kf_;
   const gtsam::NonlinearFactorGraph& nfg = lcd_output->nfg_;
@@ -807,6 +836,8 @@ void RosBaseDataProvider::publishPoseGraph(const LcdOutput::Ptr& lcd_output) {
 }
 
 void RosBaseDataProvider::publishTf(const LcdOutput::Ptr& lcd_output) {
+  CHECK_NOTNULL(lcd_output);
+
   const Timestamp& ts = lcd_output->timestamp_kf_;
   const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
   const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();

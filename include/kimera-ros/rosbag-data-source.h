@@ -37,6 +37,9 @@ struct RosbagData {
 
 class RosbagDataProvider : public RosBaseDataProvider {
  public:
+  KIMERA_DELETE_COPY_CONSTRUCTORS(RosbagDataProvider);
+  KIMERA_POINTER_TYPEDEFS(RosbagDataProvider);
+
   RosbagDataProvider();
   virtual ~RosbagDataProvider();
 

@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
 
   // Create dataset parser.
   // TODO(marcus): make unique_ptr
-  std::shared_ptr<VIO::RosBaseDataProvider> dataset_parser;
+  VIO::RosBaseDataProvider::Ptr dataset_parser;
   if (FLAGS_online_run) {
     // Running ros online.
     dataset_parser = std::make_shared<VIO::RosDataProvider>();
@@ -84,10 +84,14 @@ int main(int argc, char* argv[]) {
                 std::placeholders::_1));
 
   // TODO(marcus): only register this if we have `use_lcd` enabled.
-  vio_pipeline.registerLcdOutputCallback(
-      std::bind(&VIO::RosBaseDataProvider::callbackLcdOutput,
-                std::ref(*CHECK_NOTNULL(dataset_parser.get())),
-                std::placeholders::_1));
+  bool use_lcd;
+  ros::param::get("use_lcd", use_lcd);
+  if (use_lcd) {
+    vio_pipeline.registerLcdOutputCallback(
+        std::bind(&VIO::RosBaseDataProvider::callbackLcdOutput,
+                  std::ref(*CHECK_NOTNULL(dataset_parser.get())),
+                  std::placeholders::_1));
+  }
 
   // Spin dataset.
   auto tic = VIO::utils::Timer::tic();

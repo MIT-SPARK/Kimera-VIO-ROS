@@ -61,16 +61,18 @@
   <!-- Launch main node  -->
   <node name="kimera_ros" pkg="kimera_ros" type="kimera_ros" 
         output="screen" ns="kimera_ros"
-        args="--vio_params_path=$(arg params_folder)/regularVioParameters.yaml
-              --tracker_params_path=$(arg params_folder)/trackerParameters.yaml
-              --lcd_params_path=$(arg params_folder)/LCDParameters.yaml
-              --vocabulary_path=$(arg path_to_vocab)
-              --use_lcd=$(arg use_lcd)
-              --flagfile=$(arg params_folder)/flags/StereoVIO.flags
-              --flagfile=$(arg params_folder)/flags/Mesher.flags
-              --flagfile=$(arg params_folder)/flags/VioBackEnd.flags
-              --flagfile=$(arg params_folder)/flags/RegularVioBackEnd.flags
-              --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+        args="--left_cam_params_path=$(arg params_folder)/LeftCameraParams.yaml \
+              --right_cam_params_path=$(arg params_folder)/RightCameraParams.yaml \
+              --imu_params_path=$(arg params_folder)/ImuParams.yaml \
+              --backend_params_path=$(arg params_folder)/regularVioParameters.yaml \
+              --frontend_params_path=$(arg params_folder)/trackerParameters.yaml \
+              --use_lcd=$(arg use_lcd) \
+              --lcd_params_path=$(arg params_folder)/LCDParameters.yaml \
+              --vocabulary_path=$(arg path_to_vocab) \
+              --flagfile=$(arg params_folder)/flags/Mesher.flags \
+              --flagfile=$(arg params_folder)/flags/VioBackEnd.flags \
+              --flagfile=$(arg params_folder)/flags/RegularVioBackEnd.flags \
+              --flagfile=$(arg params_folder)/flags/Visualizer3D.flags \
               --logtostderr=1
               --colorlogtostderr=1
               --log_prefix=1
@@ -81,6 +83,9 @@
               --visualize=$(arg visualize)
               --parallel_run=$(arg parallel)
               --online_run=$(arg online)">
+
+     <param name="use_lcd"           value="$(arg use_lcd)"/>
+
     <!-- Frame IDs for Odometry -->
     <param name="world_frame_id"     value="$(arg world_frame_id)"/>
     <param name="base_link_frame_id" value="$(arg base_link_frame_id)"/>
@@ -123,7 +128,7 @@
     <param name="mono_ransac_threshold"   value="30"/>
 
     <!-- Load calibration -->
-    <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/>
+    <!-- <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/> -->
   </node>
 
   <!-- Launch visualizer -->

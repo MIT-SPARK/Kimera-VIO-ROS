@@ -22,6 +22,9 @@ namespace VIO {
 
 class RosDataProvider : public RosBaseDataProvider {
  public:
+  KIMERA_DELETE_COPY_CONSTRUCTORS(RosDataProvider);
+  KIMERA_POINTER_TYPEDEFS(RosDataProvider);
+
   RosDataProvider();
 
   virtual ~RosDataProvider();
@@ -75,9 +78,8 @@ class RosDataProvider : public RosBaseDataProvider {
   void callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose);
 
   // Message filters and to sync stereo images
-  typedef image_transport::SubscriberFilter ImageSubscriber;
-  ImageSubscriber left_img_subscriber_;
-  ImageSubscriber right_img_subscriber_;
+  image_transport::Subscriber left_img_sub_;
+  image_transport::Subscriber right_img_sub_;
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;

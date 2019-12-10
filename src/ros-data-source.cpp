@@ -19,8 +19,8 @@ namespace VIO {
 
 RosDataProvider::RosDataProvider()
     : RosBaseDataProvider(),
-      left_img_subscriber_(),
-      right_img_subscriber_(),
+      left_img_sub_(),
+      right_img_sub_(),
       frame_count_left_(FrameId(0)),
       frame_count_right_(FrameId(0)),
       imu_input_queue_("IMU Input Queue"),
@@ -42,10 +42,13 @@ RosDataProvider::RosDataProvider()
   ros::AsyncSpinner async_spinner_imu(0, &imu_queue);
   async_spinner_imu.start();
 
-  // Subscribe to stereo images. Approx time sync, should be exact though...
+  // Subscribe to stereo images.
   DCHECK(it_);
-  left_img_subscriber_.subscribe(*it_, "left_cam", 1);
-  right_img_subscriber_.subscribe(*it_, "right_cam", 1);
+  left_img_sub_ =
+      it_->subscribe("left_cam", 1, &RosDataProvider::callbackLeftImage, this);
+
+  right_img_sub_ = it_->subscribe(
+      "right_cam", 1, &RosDataProvider::callbackRightImage, this);
 
   // Define Callback Queue for Cam Data
   ros::CallbackQueue cam_queue;
@@ -76,11 +79,13 @@ RosDataProvider::~RosDataProvider() {
 }
 
 void RosDataProvider::callbackLeftImage(const sensor_msgs::ImageConstPtr& msg) {
+  ROS_INFO("Pushing left image to queue.");
   left_camera_input_queue_.push(msg);
 }
 
 void RosDataProvider::callbackRightImage(
     const sensor_msgs::ImageConstPtr& msg) {
+  ROS_INFO("Pushing right image to queue.");
   right_camera_input_queue_.push(msg);
 }
 
@@ -98,8 +103,9 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU) {
   // imu_accgyr(4) = msgIMU->angular_velocity.y;
   // imu_accgyr(5) = msgIMU->angular_velocity.z;
   // // Adapt imu timestamp to account for time shift in IMU-cam
-  // static const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
-  // Timestamp timestamp = msgIMU->header.stamp.toNSec() - imu_shift.toNSec();
+  // static const ros::Duration
+  // imu_shift(pipeline_params_.imu_params_.imu_shift_); Timestamp timestamp =
+  // msgIMU->header.stamp.toNSec() - imu_shift.toNSec();
   // // t_imu = t_cam + imu_shift (see: Kalibr)
   // // ROS_INFO("Recieved message at time %ld", timestamp);
 
@@ -108,7 +114,8 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU) {
   // if (timestamp > last_imu_timestamp_) {
   //   imu_data_.imu_buffer_.addMeasurement(timestamp, imu_accgyr);
   // } else {
-  //   ROS_ERROR("Current IMU timestamp is less or equal to previous timestamp.");
+  //   ROS_ERROR("Current IMU timestamp is less or equal to previous
+  //   timestamp.");
   // }
 
   // if (last_timestamp_ == 0) {
@@ -152,7 +159,6 @@ void RosDataProvider::callbackReinitPose(
 
 bool RosDataProvider::spin() {
   CHECK_EQ(pipeline_params_.camera_params_.size(), 2u);
-  CHECK_GT(final_k_, initial_k_);
 
   while (ros::ok()) {
     spinOnce();  // TODO(marcus): need a sequential mode?
@@ -171,12 +177,17 @@ bool RosDataProvider::spin() {
 }
 
 bool RosDataProvider::spinOnce() {
-  static const CameraParams& left_cam_info = pipeline_params_.camera_params_.at(0);
-  static const CameraParams& right_cam_info = pipeline_params_.camera_params_.at(1);
+  static const CameraParams& left_cam_info =
+      pipeline_params_.camera_params_.at(0);
+  static const CameraParams& right_cam_info =
+      pipeline_params_.camera_params_.at(1);
 
   // Send data to callbacks as needed
   sensor_msgs::ImuConstPtr imu_data;
-  if (imu_input_queue_.pop()) {
+  if (imu_input_queue_.pop(imu_data)) {
+    CHECK_NOTNULL(imu_data);
+    ROS_INFO("Pushing imu_data to pipeline.");
+
     ImuAccGyr imu_accgyr;
 
     imu_accgyr(0) = imu_data->linear_acceleration.x;
@@ -196,18 +207,22 @@ bool RosDataProvider::spinOnce() {
   }
 
   sensor_msgs::ImageConstPtr left_img;
-  if (left_camera_input_queue_.pop()) {
+  if (left_camera_input_queue_.pop(left_img)) {
+    CHECK_NOTNULL(left_img);
+    ROS_INFO("Pushing left frame to pipeline.");
+
     const Timestamp& timestamp = left_img->header.stamp.toNSec();
 
-    left_frame_callback_(VIO::make_unique<Frame>(frame_count_left_,
-                                                 timestamp,
-                                                 left_cam_info,
-                                                 readRosImage(left_img)));
+    left_frame_callback_(VIO::make_unique<Frame>(
+        frame_count_left_, timestamp, left_cam_info, readRosImage(left_img)));
     frame_count_left_++;
   }
 
   sensor_msgs::ImageConstPtr right_img;
-  if (right_camera_input_queue_.pop()) {
+  if (right_camera_input_queue_.pop(right_img)) {
+    CHECK_NOTNULL(right_img);
+    ROS_INFO("Pushing right frame to pipeline.");
+
     const Timestamp& timestamp = right_img->header.stamp.toNSec();
 
     right_frame_callback_(VIO::make_unique<Frame>(frame_count_right_,
@@ -268,7 +283,8 @@ bool RosDataProvider::spinOnce() {
 //           utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
 //         // data available
 //         sensor_msgs::ImageConstPtr left_ros_img, right_ros_img;
-//         CHECK(stereo_buffer_.extractLatestImages(left_ros_img, right_ros_img));
+//         CHECK(stereo_buffer_.extractLatestImages(left_ros_img,
+//         right_ros_img));
 
 //         const StereoMatchingParams& stereo_matching_params =
 //             frontend_params_.getStereoMatchingParams();
