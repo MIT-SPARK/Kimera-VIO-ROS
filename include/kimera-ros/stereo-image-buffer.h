@@ -13,7 +13,7 @@
 #include <sensor_msgs/Image.h>
 
 #include <kimera-vio/common/vio_types.h>
-#include <kimera-vio/datasource/DataSource.h>
+#include <kimera-vio/dataprovider/DataProviderInterface.h>
 
 namespace VIO {
 

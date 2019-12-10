@@ -38,6 +38,7 @@ int main(int argc, char* argv[]) {
   ros::init(argc, argv, "kimera_vio");
 
   // Create dataset parser.
+  // TODO(marcus): make unique_ptr
   std::shared_ptr<VIO::RosBaseDataProvider> dataset_parser;
   if (FLAGS_online_run) {
     // Running ros online.
@@ -50,30 +51,42 @@ int main(int argc, char* argv[]) {
   // Create actual VIO pipeline.
   VIO::Pipeline vio_pipeline(dataset_parser->pipeline_params_);
 
-  // Register callback to vio_pipeline.
-  dataset_parser->registerVioCallback(
-      std::bind(&VIO::Pipeline::spin, &vio_pipeline, std::placeholders::_1));
+  // Register callback for inputs.
+  dataset_parser->registerImuSingleCallback(
+      std::bind(&VIO::Pipeline::fillSingleImuQueue,
+                &vio_pipeline,
+                std::placeholders::_1));
+
+  dataset_parser->registerLeftFrameCallback(
+      std::bind(&VIO::Pipeline::fillLeftFrameQueue,
+                &vio_pipeline,
+                std::placeholders::_1));
+
+  dataset_parser->registerRightFrameCallback(
+      std::bind(&VIO::Pipeline::fillRightFrameQueue,
+                &vio_pipeline,
+                std::placeholders::_1));
 
   // Register callback to retrieve vio pipeline output from all modules.
   vio_pipeline.registerBackendOutputCallback(
       std::bind(&VIO::RosBaseDataProvider::callbackBackendOutput,
-                dataset_parser,
+                std::ref(*CHECK_NOTNULL(dataset_parser.get())),
                 std::placeholders::_1));
 
   vio_pipeline.registerFrontendOutputCallback(
       std::bind(&VIO::RosBaseDataProvider::callbackFrontendOutput,
-                dataset_parser,
+                std::ref(*CHECK_NOTNULL(dataset_parser.get())),
                 std::placeholders::_1));
 
   vio_pipeline.registerMesherOutputCallback(
       std::bind(&VIO::RosBaseDataProvider::callbackMesherOutput,
-                dataset_parser,
+                std::ref(*CHECK_NOTNULL(dataset_parser.get())),
                 std::placeholders::_1));
 
   // TODO(marcus): only register this if we have `use_lcd` enabled.
   vio_pipeline.registerLcdOutputCallback(
       std::bind(&VIO::RosBaseDataProvider::callbackLcdOutput,
-                dataset_parser,
+                std::ref(*CHECK_NOTNULL(dataset_parser.get())),
                 std::placeholders::_1));
 
   // Spin dataset.

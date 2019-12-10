@@ -175,24 +175,26 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
 bool RosbagDataProvider::spin() {
   Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
 
-  // Stereo matching parameters
-  const StereoMatchingParams& stereo_matching_params =
-      frontend_params_.getStereoMatchingParams();
-
   for (size_t k = 0; k < rosbag_data_.getNumberOfImages(); k++) {
     if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
       // Main spin of the data provider: Interpolates IMU data
       // and builds StereoImuSyncPacket
       // (Think of this as the spin of the other parser/data-providers)
       const Timestamp& timestamp_frame_k = rosbag_data_.timestamps_.at(k);
+
+      static const CameraParams& left_cam_info =
+          pipeline_params_.camera_params_.at(0);
+      static const CameraParams& right_cam_info =
+          pipeline_params_.camera_params_.at(1);
+
       if (timestamp_frame_k > timestamp_last_frame) {
         ImuMeasurements imu_meas;
         utils::ThreadsafeImuBuffer::QueryResult imu_query =
             imu_data_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-                timestamp_last_frame,
-                timestamp_frame_k,
-                &imu_meas.timestamps_,
-                &imu_meas.measurements_);
+              timestamp_last_frame,
+              timestamp_frame_k,
+              &imu_meas.timestamps_,
+              &imu_meas.acc_gyr_);
         if (imu_query ==
             utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
           // Call VIO Pipeline.
@@ -206,31 +208,54 @@ bool RosbagDataProvider::spin() {
                    << "STAMPS IMU: \n"
                    << imu_meas.timestamps_ << '\n'
                    << "ACCGYR IMU rows : \n"
-                   << imu_meas.measurements_.rows() << '\n'
+                   << imu_meas.acc_gyr_.rows() << '\n'
                    << "ACCGYR IMU cols : \n"
-                   << imu_meas.measurements_.cols() << '\n'
+                   << imu_meas.acc_gyr_.cols() << '\n'
                    << "ACCGYR IMU: \n"
-                   << imu_meas.measurements_ << '\n';
+                   << imu_meas.acc_gyr_ << '\n';
 
           timestamp_last_frame = timestamp_frame_k;
 
-          // Publish Output
-          vio_callback_(VIO::make_unique<StereoImuSyncPacket>(
-              StereoFrame(k,
-                          timestamp_frame_k,
-                          readRosImage(rosbag_data_.left_imgs_.at(k)),
-                          stereo_calib_.left_camera_info_,
-                          readRosImage(rosbag_data_.right_imgs_.at(k)),
-                          stereo_calib_.right_camera_info_,
-                          stereo_matching_params),
-              imu_meas.timestamps_,
-              imu_meas.measurements_));
+          imu_multi_callback_(imu_meas);
+
+          left_frame_callback_(
+              VIO::make_unique<Frame>(k,
+                                      timestamp_frame_k,
+                                      left_cam_info,
+                                      readRosImage(rosbag_data_.left_imgs_.at(k))));
+
+          left_frame_callback_(
+              VIO::make_unique<Frame>(k,
+                                      timestamp_frame_k,
+                                      right_cam_info,
+                                      readRosImage(rosbag_data_.right_imgs_.at(k))));
 
           // Publish ground-truth data if available
           if (rosbag_data_.gt_odometry_.size() > k) {
             publishGroundTruthOdometry(rosbag_data_.gt_odometry_.at(k));
           }
+
           VLOG(10) << "Finished VIO processing for frame k = " << k;
+
+          // Publish VIO output if any.
+          // TODO(Toni) this could go faster if running in another thread or
+          // node...
+          FrontendOutput::Ptr frontend_output;
+          BackendOutput::Ptr backend_output;
+          MesherOutput::Ptr mesher_output;
+          if (getVioOutput(frontend_output, backend_output, mesher_output)) {
+            publishVioOutput(frontend_output, backend_output, mesher_output);
+            publishClock(backend_output->timestamp_);
+          } else {
+            LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
+          }
+
+          // Publish LCD output if any.
+          LcdOutput::Ptr lcd_output = nullptr;
+          if (lcd_output_queue_.pop(lcd_output)) {
+            publishLcdOutput(lcd_output);
+          }
+
         } else {
           ROS_WARN(
               "Skipping frame %d. No imu data available between current frame "
@@ -244,24 +269,8 @@ bool RosbagDataProvider::spin() {
             static_cast<int>(k));
       }
 
-      // Publish VIO output if any.
-      // TODO(Toni) this could go faster if running in another thread or node...
-      FrontendOutput::Ptr frontend_output;
-      BackendOutput::Ptr backend_output;
-      MesherOutput::Ptr mesher_output;
-      if (getVioOutput(frontend_output, backend_output, mesher_output)) {
-        publishVioOutput(frontend_output, backend_output, mesher_output);
-        publishClock(backend_output->timestamp_);
-      } else {
-        LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
-      }
-
-      // Publish LCD output if any.
-      LcdOutput::Ptr lcd_output = nullptr;
-      if (lcd_output_queue_.pop(lcd_output)) {
-        publishLcdOutput(lcd_output);
-      }
       ros::spinOnce();
+
     } else {
       LOG(ERROR) << "ROS SHUTDOWN requested, stopping rosbag spin.";
       ros::shutdown();
@@ -287,6 +296,10 @@ bool RosbagDataProvider::spin() {
 
   return true;
 }
+
+// bool RosbagDataProvider::spinOnce() {
+
+// }
 
 VioNavState RosbagDataProvider::getGroundTruthVioNavState(
     const size_t& k_frame) const {

@@ -25,7 +25,7 @@
 #include <tf/transform_broadcaster.h>
 
 #include <kimera-vio/common/vio_types.h>
-#include <kimera-vio/datasource/DataSource.h>
+#include <kimera-vio/dataprovider/DataProviderInterface.h>
 #include <kimera-vio/frontend/StereoFrame.h>
 #include <kimera-vio/frontend/StereoImuSyncPacket.h>
 #include <kimera-vio/frontend/StereoMatchingParams.h>
@@ -52,51 +52,30 @@ struct PointNormalUV {
 class RosBaseDataProvider : public DataProviderInterface {
  public:
   RosBaseDataProvider();
+
   virtual ~RosBaseDataProvider();
 
-  // VIO backend output callback.
-  void callbackBackendOutput(const BackendOutput::Ptr& output);
+ public:
+  inline void callbackBackendOutput(const VIO::BackendOutput::Ptr& output) {
+    backend_output_queue_.push(output);
+  }
 
-  // VIO frontend output callback.
-  void callbackFrontendOutput(const FrontendOutput::Ptr& output);
+  inline void callbackFrontendOutput(const VIO::FrontendOutput::Ptr& output) {
+    frontend_output_queue_.push(output);
+  }
 
-  // VIO frontend output callback.
-  void callbackMesherOutput(const MesherOutput::Ptr& output);
+  inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
+    mesher_output_queue_.push(output);
+  }
 
-  // LCD/PGO output callback.
-  void callbackLcdOutput(const LcdOutput::Ptr& output);
-
- protected:
-  // Stereo info
-  struct StereoCalibration {
-    CameraParams left_camera_info_;
-    CameraParams right_camera_info_;
-    gtsam::Pose3 camL_Pose_camR_;  // relative pose between cameras
-  };
-
- protected:
-  // TODO(marcus): decide what to do here
-  // These must be implemented or the class remains abstract. But they aren't
-  // useful for ROS parsers.
-  bool parseCameraParams(const std::string& input_dataset_path,
-                         const std::string& left_cam_name,
-                         const std::string& right_cam_name,
-                         const bool parse_images,
-                         MultiCameraParams* multi_cam_params) {}
-  bool parseImuParams(const std::string& input_dataset_path,
-                      const std::string& imu_name,
-                      ImuParams* imu_params) {}
+  inline void callbackLcdOutput(const VIO::LcdOutput::Ptr& output) {
+    lcd_output_queue_.push(output);
+  }
 
  protected:
   cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;
 
   cv::Mat readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg) const;
-
-  // Parse camera calibration info (from param server)
-  bool parseCameraData(StereoCalibration* stereo_calib);
-
-  // Parse IMU calibration info (for ros online)
-  bool parseImuData(ImuData* imu_data, ImuParams* imu_params) const;
 
   // Pop and synchronize output packets from queues
   bool getVioOutput(FrontendOutput::Ptr frontend_output,
@@ -118,9 +97,6 @@ class RosBaseDataProvider : public DataProviderInterface {
                        const std::string& child_frame_id);
 
  protected:
-  VioFrontEndParams frontend_params_;
-  StereoCalibration stereo_calib_;
-
   // Define Node Handler for general use (Parameter server)
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
@@ -142,7 +118,6 @@ class RosBaseDataProvider : public DataProviderInterface {
   ThreadsafeQueue<LcdOutput::Ptr> lcd_output_queue_;
 
   // Store IMU data from last frame
-  // TODO(Toni) I don't see where this is used!?
   ImuData imu_data_;
 
  private:

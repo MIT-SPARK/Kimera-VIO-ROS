@@ -42,7 +42,9 @@ class RosbagDataProvider : public RosBaseDataProvider {
 
   // Returns true if the whole rosbag was successfully played, false if ROS was
   // shutdown before the rosbag finished.
-  virtual bool spin() override;
+  bool spin() override;
+
+  // bool spinOnce();
 
  private:
   // Parse rosbag data

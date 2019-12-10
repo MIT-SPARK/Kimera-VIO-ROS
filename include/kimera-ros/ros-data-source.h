@@ -23,8 +23,12 @@ namespace VIO {
 class RosDataProvider : public RosBaseDataProvider {
  public:
   RosDataProvider();
+
   virtual ~RosDataProvider();
-  virtual bool spin() override;
+
+  bool spin() override;
+
+  bool spinOnce();
 
   // Checks the current status of reinitialization flag
   inline bool getReinitFlag() const { return reinit_flag_; }
@@ -42,17 +46,25 @@ class RosDataProvider : public RosBaseDataProvider {
   // Define Node Handler for Cam Callback (and Queue)
   ros::NodeHandle nh_cam_;
 
-  Timestamp last_timestamp_;      // Timestamp correponding to last frame
-  Timestamp last_imu_timestamp_;  // Timestamp corresponding to last imu meas
-  int frame_count_;               // Keep track of number of frames processed
+  FrameId frame_count_left_;
+  FrameId frame_count_right_;
 
-  StereoBuffer stereo_buffer_;
+  // Queues for fast input callbacks
+  ThreadsafeQueue<sensor_msgs::ImuConstPtr> imu_input_queue_;
+  ThreadsafeQueue<sensor_msgs::ImageConstPtr> left_camera_input_queue_;
+  ThreadsafeQueue<sensor_msgs::ImageConstPtr> right_camera_input_queue_;
 
   // Reinitialization flag and packet (pose, vel, bias)
   bool reinit_flag_ = false;
   ReinitPacket reinit_packet_ = ReinitPacket();
 
  private:
+  // Left camera callback
+  void callbackLeftImage(const sensor_msgs::ImageConstPtr& msg);
+
+  // Right camera callback
+  void callbackRightImage(const sensor_msgs::ImageConstPtr& msg);
+
   // IMU callback
   void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
 
@@ -62,21 +74,10 @@ class RosDataProvider : public RosBaseDataProvider {
   // Reinitialization pose
   void callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose);
 
-  // Callback for stereo images and main spin
-  void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
-                                   const sensor_msgs::ImageConstPtr& msgRight);
-
   // Message filters and to sync stereo images
   typedef image_transport::SubscriberFilter ImageSubscriber;
   ImageSubscriber left_img_subscriber_;
   ImageSubscriber right_img_subscriber_;
-
-  // Declare Approx Synchronization Policy and Synchronizer for stereo images.
-  // TODO(Toni): should be exact sync policy
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
-                                                          sensor_msgs::Image>
-      sync_pol;
-  std::unique_ptr<message_filters::Synchronizer<sync_pol>> sync_;
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;

@@ -32,7 +32,6 @@ namespace VIO {
 RosBaseDataProvider::RosBaseDataProvider()
     : DataProviderInterface(),
       it_(nullptr),
-      stereo_calib_(),
       nh_(),
       nh_private_("~"),
       backend_output_queue_("Backend output"),
@@ -40,23 +39,6 @@ RosBaseDataProvider::RosBaseDataProvider()
       mesher_output_queue_("Mesher output"),
       lcd_output_queue_("LCD output") {
   ROS_INFO(">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<");
-
-  // Parse calibration info for camera and IMU
-  // Calibration info on parameter server (Parsed from yaml)
-  parseCameraData(&stereo_calib_);
-  parseImuData(&imu_data_, &pipeline_params_.imu_params_);
-  // parse backend/frontend parameters
-  // Mind that parseBackendParams modifies the imu_params_ if using the default!
-  // TODO(TONI) the parseImuData is completely flawed, since parse backend
-  // is actually parsing the imu params!!
-
-  parseBackendParams();
-
-  CHECK(pipeline_params_.backend_params_);
-  parseFrontendParams();
-
-  parseLCDParams();
-  CHECK_NOTNULL(&pipeline_params_.lcd_params_);
 
   // Print parameters to check.
   printParsedParams();
@@ -89,17 +71,17 @@ RosBaseDataProvider::RosBaseDataProvider()
   mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5, true);
   debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
 
-  // Static TFs for left/right cameras
-  const gtsam::Pose3& body_Pose_left_cam =
-      stereo_calib_.left_camera_info_.body_Pose_cam_;
-  const gtsam::Pose3& body_Pose_right_cam =
-      stereo_calib_.right_camera_info_.body_Pose_cam_;
-  publishStaticTf(body_Pose_left_cam, base_link_frame_id_, left_cam_frame_id_);
-  publishStaticTf(
-      body_Pose_right_cam, base_link_frame_id_, right_cam_frame_id_);
+  publishStaticTf(pipeline_params_.camera_params_.at(0).body_Pose_cam_,
+                  base_link_frame_id_,
+                  left_cam_frame_id_);
+  publishStaticTf(pipeline_params_.camera_params_.at(1).body_Pose_cam_,
+                  base_link_frame_id_,
+                  right_cam_frame_id_);
 }
 
-RosBaseDataProvider::~RosBaseDataProvider() {}
+RosBaseDataProvider::~RosBaseDataProvider() {
+  LOG(INFO) << "RosBaseDataProvider destructor called.";
+}
 
 cv::Mat RosBaseDataProvider::readRosImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
@@ -138,204 +120,6 @@ cv::Mat RosBaseDataProvider::readRosDepthImage(
     img_depth.convertTo(img_depth, CV_16UC1);
   }
   return img_depth;
-}
-
-bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
-  CHECK_NOTNULL(stereo_calib);
-  // Parse camera calibration info (from param server)
-
-  // Rate
-  double rate;
-  nh_private_.getParam("camera_rate_hz", rate);
-
-  // Resoltuion
-  std::vector<int> resolution;
-  CHECK(nh_private_.getParam("camera_resolution", resolution));
-  CHECK_EQ(resolution.size(), 2);
-
-  // Get distortion/intrinsics/extrinsics for each camera
-  for (int i = 0; i < 2; i++) {
-    std::string camera_name;
-    CameraParams camera_param_i;
-    // Fill in rate and resolution
-    camera_param_i.image_size_ = cv::Size(resolution[0], resolution[1]);
-    // Terminology wrong but following rest of the repo
-    camera_param_i.frame_rate_ = 1.0 / rate;
-
-    if (i == 0) {
-      camera_name = "left_camera_";
-    } else {
-      camera_name = "right_camera_";
-    }
-    // Parse intrinsics (camera matrix)
-    std::vector<double> intrinsics;
-    nh_private_.getParam(camera_name + "intrinsics", intrinsics);
-    CHECK_EQ(intrinsics.size(), 4u);
-    camera_param_i.intrinsics_[0] = intrinsics[0];
-    camera_param_i.intrinsics_[0] = intrinsics[1];
-    camera_param_i.intrinsics_[0] = intrinsics[2];
-    camera_param_i.intrinsics_[0] = intrinsics[3];
-    // Conver intrinsics to camera matrix (OpenCV format)
-    camera_param_i.camera_matrix_ = cv::Mat::eye(3, 3, CV_64F);
-    camera_param_i.camera_matrix_.at<double>(0, 0) = intrinsics[0];
-    camera_param_i.camera_matrix_.at<double>(1, 1) = intrinsics[1];
-    camera_param_i.camera_matrix_.at<double>(0, 2) = intrinsics[2];
-    camera_param_i.camera_matrix_.at<double>(1, 2) = intrinsics[3];
-
-    // Parse extrinsics (rotation and translation)
-    std::vector<double> extrinsics;
-    // Encode calibration frame to body frame
-    std::vector<double> frame_change;
-    CHECK(nh_private_.getParam(camera_name + "extrinsics", extrinsics));
-    CHECK(nh_private_.getParam("calibration_to_body_frame", frame_change));
-    CHECK_EQ(extrinsics.size(), 16u);
-    CHECK_EQ(frame_change.size(), 16u);
-    // Place into matrix
-    // 4 4 is hardcoded here because currently only accept extrinsic input
-    // in homoegeneous format [R T ; 0 1]
-    cv::Mat E_calib = cv::Mat::zeros(4, 4, CV_64F);
-    cv::Mat calib2body = cv::Mat::zeros(4, 4, CV_64F);
-    for (int k = 0; k < 16; k++) {
-      int row = k / 4;  // Integer division, truncation of fractional part.
-      int col = k % 4;
-      E_calib.at<double>(row, col) = extrinsics[k];
-      calib2body.at<double>(row, col) = frame_change[k];
-    }
-
-    // TODO(Yun): Check frames convention!
-    // Extrinsics in body frame
-    cv::Mat E_body = calib2body * E_calib;
-
-    // restore back to vector form
-    std::vector<double> extrinsics_body;
-    for (int k = 0; k < 16; k++) {
-      int row = k / 4;  // Integer division, truncation of fractional part.
-      int col = k % 4;
-      extrinsics_body.push_back(E_body.at<double>(row, col));
-    }
-
-    camera_param_i.body_Pose_cam_ =
-        UtilsOpenCV::poseVectorToGtsamPose3(extrinsics_body);
-
-    // Distortion model
-    std::string distortion_model;
-    nh_private_.getParam("distortion_model", distortion_model);
-    camera_param_i.distortion_model_ = distortion_model;
-
-    // Parse distortion
-    std::vector<double> d_coeff;
-    nh_private_.getParam(camera_name + "distortion_coefficients", d_coeff);
-    cv::Mat distortion_coeff;
-
-    // TODO(Toni): this is super prone to errors, do not rely only on d_coeff
-    // size to know what distortion params we are using...
-    switch (d_coeff.size()) {
-      case (4): {
-        CHECK_EQ(camera_param_i.distortion_model_, "radial-tangential");
-        // If given 4 coefficients
-        // TODO(Toni): why 'or'? Should be only one no?
-        ROS_INFO(
-            "Using radtan or equidistant model (4 coefficients) for camera %d",
-            i);
-        distortion_coeff = cv::Mat::zeros(1, 4, CV_64F);
-        distortion_coeff.at<double>(0, 0) = d_coeff[0];  // k1
-        distortion_coeff.at<double>(0, 1) = d_coeff[1];  // k2
-        distortion_coeff.at<double>(0, 3) = d_coeff[2];  // p1 or k3
-        distortion_coeff.at<double>(0, 4) = d_coeff[3];  // p2 or k4
-        break;
-      }
-      case (5): {
-        CHECK_EQ(camera_param_i.distortion_model_, "radial-tangential");
-        // If given 5 coefficients
-        ROS_INFO("Using radtan model (5 coefficients) for camera %d", i);
-        distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
-        for (int k = 0; k < 5; k++) {
-          distortion_coeff.at<double>(0, k) = d_coeff[k];  // k1, k2, k3, p1, p2
-        }
-        break;
-      }
-      default: {  // otherwise
-        ROS_FATAL("Unsupported distortion format.");
-      }
-    }
-
-    camera_param_i.distortion_coeff_ = distortion_coeff;
-
-    // TODO(unknown): add skew (can add switch statement when parsing
-    // intrinsics)
-    // TODO(TONI): wtf! before we parse 5 params if radial-tangential,
-    // but now we only use 4? We don't care or what?
-    camera_param_i.calibration_ =
-        gtsam::Cal3DS2(intrinsics[0],                       // fx
-                       intrinsics[1],                       // fy
-                       0.0,                                 // skew
-                       intrinsics[2],                       // u0
-                       intrinsics[3],                       // v0
-                       distortion_coeff.at<double>(0, 0),   //  k1
-                       distortion_coeff.at<double>(0, 1),   //  k2
-                       distortion_coeff.at<double>(0, 3),   //  p1
-                       distortion_coeff.at<double>(0, 4));  //  p2
-
-    if (i == 0) {
-      stereo_calib->left_camera_info_ = camera_param_i;
-    } else {
-      stereo_calib->right_camera_info_ = camera_param_i;
-    }
-  }
-
-  // Calculate the pose of right camera relative to the left camera
-  stereo_calib->camL_Pose_camR_ =
-      (stereo_calib->left_camera_info_.body_Pose_cam_)
-          .between(stereo_calib->right_camera_info_.body_Pose_cam_);
-
-  ROS_INFO("Parsed stereo camera calibration");
-  return true;
-}
-
-bool RosBaseDataProvider::parseImuData(ImuData* imu_data,
-                                       ImuParams* imu_params) const {
-  CHECK_NOTNULL(imu_data);
-  CHECK_NOTNULL(imu_params);
-  // Parse IMU calibration info (from param server)
-  double rate = 0.0;
-  CHECK(nh_private_.getParam("imu_rate_hz", rate));
-  double gyro_noise = 0.0;
-  CHECK(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
-  double gyro_walk = 0.0;
-  CHECK(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
-  double acc_noise = 0.0;
-  CHECK(nh_private_.getParam("accelerometer_noise_density", acc_noise));
-  double acc_walk = 0.0;
-  CHECK(nh_private_.getParam("accelerometer_random_walk", acc_walk));
-  double imu_shift = 0.0;  // check the actual sign of how it is applied (weird)
-  CHECK(nh_private_.getParam("imu_shift", imu_shift));
-  LOG_IF(WARNING, imu_shift != 0.0)
-      << "Adding/Substracting a timestamp shift to"
-         " IMU of: "
-      << imu_shift;
-  CHECK_GT(rate, 0.0);
-  CHECK_GT(gyro_noise, 0.0);
-  CHECK_GT(gyro_walk, 0.0);
-  CHECK_GT(acc_noise, 0.0);
-  CHECK_GT(acc_walk, 0.0);
-
-  // TODO(Sandro): Do we need these parameters??
-  imu_data->nominal_imu_rate_ = 1.0 / rate;
-  imu_data->imu_rate_ = 1.0 / rate;
-  imu_data->imu_rate_std_ = 0.00500009;          // set to 0 for now
-  imu_data->imu_rate_maxMismatch_ = 0.00500019;  // set to 0 for now
-
-  // Gyroscope and accelerometer noise parameters
-  // TODO(Toni): why are we not parsing these from .yaml file????
-  imu_params->gyro_noise_ = gyro_noise;
-  imu_params->gyro_walk_ = gyro_walk;
-  imu_params->acc_noise_ = acc_noise;
-  imu_params->acc_walk_ = acc_walk;
-  // imu_shift is defined as t_imu = t_cam + imu_shift (see: Kalibr)
-  imu_params->imu_shift_ = imu_shift;
-
-  ROS_INFO("Parsed IMU calibration");
-  return true;
 }
 
 void RosBaseDataProvider::publishVioOutput(
@@ -529,9 +313,9 @@ void RosBaseDataProvider::publishPerFrameMesh3D(
   size_t mesh_2d_poly_dim = mesh_2d.getMeshPolygonDimension();
 
   static const size_t cam_width =
-      stereo_calib_.left_camera_info_.image_size_.width;
+      pipeline_params_.camera_params_.at(0).image_size_.width;
   static const size_t cam_height =
-      stereo_calib_.left_camera_info_.image_size_.height;
+      pipeline_params_.camera_params_.at(0).image_size_.height;
   DCHECK_GT(cam_width, 0);
   DCHECK_GT(cam_height, 0);
 
@@ -1063,13 +847,10 @@ void RosBaseDataProvider::publishStaticTf(const gtsam::Pose3& pose,
 }
 
 void RosBaseDataProvider::printParsedParams() const {
-  LOG(INFO) << std::string(80, '=') << '\n'
-            << ">>>>>>>>> RosDataProvider::print <<<<<<<<<<<" << '\n'
-            << "camL_Pose_camR_: " << stereo_calib_.camL_Pose_camR_ << '\n'
-            << " - Left camera params: ";
-  stereo_calib_.left_camera_info_.print();
-  LOG(INFO) << std::string(80, '=') << '\n' << " - Right camera params:";
-  stereo_calib_.right_camera_info_.print();
+  LOG(INFO) << std::string(80, '=') << '\n' << " - Left camera info:";
+  pipeline_params_.camera_params_.at(0).print();
+  LOG(INFO) << std::string(80, '=') << '\n' << " - Right camera info:";
+  pipeline_params_.camera_params_.at(1).print();
   LOG(INFO) << std::string(80, '=') << '\n' << " - IMU info:";
   imu_data_.print();
   LOG(INFO) << std::string(80, '=') << '\n' << " - IMU params:";
@@ -1079,29 +860,6 @@ void RosBaseDataProvider::printParsedParams() const {
   LOG(INFO) << std::string(80, '=');
   pipeline_params_.lcd_params_.print();
   LOG(INFO) << std::string(80, '=');
-}
-
-// The code here should be lighting fast or we will be blocking the backend
-// thread in the VIO. This is actually running in the backend thread, as
-// such do not modify things other than thread-safe stuff.
-
-void RosBaseDataProvider::callbackBackendOutput(
-    const BackendOutput::Ptr& output) {
-  backend_output_queue_.push(output);
-}
-
-void RosBaseDataProvider::callbackFrontendOutput(
-    const FrontendOutput::Ptr& output) {
-  frontend_output_queue_.push(output);
-}
-
-void RosBaseDataProvider::callbackMesherOutput(
-    const MesherOutput::Ptr& output) {
-  mesher_output_queue_.push(output);
-}
-
-void RosBaseDataProvider::callbackLcdOutput(const LcdOutput::Ptr& output) {
-  lcd_output_queue_.push(output);
 }
 
 }  // namespace VIO
