@@ -19,7 +19,7 @@
 #include <rosbag/view.h>
 #include <sensor_msgs/Image.h>
 
-#include "kimera-ros/base-data-source.h"
+#include "kimera_ros/RosDataProviderInterface.h"
 
 namespace VIO {
 
@@ -35,13 +35,13 @@ struct RosbagData {
   std::vector<nav_msgs::OdometryConstPtr> gt_odometry_;
 };
 
-class RosbagDataProvider : public RosBaseDataProvider {
+class RosbagDataProvider : public RosDataProviderInterface {
  public:
   KIMERA_DELETE_COPY_CONSTRUCTORS(RosbagDataProvider);
   KIMERA_POINTER_TYPEDEFS(RosbagDataProvider);
 
   RosbagDataProvider();
-  virtual ~RosbagDataProvider();
+  virtual ~RosbagDataProvider() = default;
 
   // Returns true if the whole rosbag was successfully played, false if ROS was
   // shutdown before the rosbag finished.

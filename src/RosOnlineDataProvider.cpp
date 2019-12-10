@@ -5,7 +5,7 @@
  * @author Antoni Rosinol
  */
 
-#include "kimera-ros/ros-data-source.h"
+#include "kimera_ros/RosOnlineDataProvider.h"
 
 #include <string>
 #include <vector>
@@ -17,8 +17,8 @@
 
 namespace VIO {
 
-RosDataProvider::RosDataProvider()
-    : RosBaseDataProvider(),
+RosOnlineDataProvider::RosOnlineDataProvider()
+    : RosDataProviderInterface(),
       left_img_sub_(),
       right_img_sub_(),
       frame_count_left_(FrameId(0)),
@@ -30,7 +30,7 @@ RosDataProvider::RosDataProvider()
 
   // Start IMU subscriber
   imu_subscriber_ =
-      nh_imu_.subscribe("imu", 50, &RosDataProvider::callbackIMU, this);
+      nh_imu_.subscribe("imu", 50, &RosOnlineDataProvider::callbackIMU, this);
 
   // Define Callback Queue for IMU Data
   ros::CallbackQueue imu_queue;
@@ -45,10 +45,10 @@ RosDataProvider::RosDataProvider()
   // Subscribe to stereo images.
   DCHECK(it_);
   left_img_sub_ =
-      it_->subscribe("left_cam", 1, &RosDataProvider::callbackLeftImage, this);
+      it_->subscribe("left_cam", 1, &RosOnlineDataProvider::callbackLeftImage, this);
 
   right_img_sub_ = it_->subscribe(
-      "right_cam", 1, &RosDataProvider::callbackRightImage, this);
+      "right_cam", 1, &RosOnlineDataProvider::callbackRightImage, this);
 
   // Define Callback Queue for Cam Data
   ros::CallbackQueue cam_queue;
@@ -60,9 +60,9 @@ RosDataProvider::RosDataProvider()
 
   ////// Define Reinitializer Subscriber
   reinit_flag_subscriber_ = nh_reinit_.subscribe(
-      "reinit_flag", 10, &RosDataProvider::callbackReinit, this);
+      "reinit_flag", 10, &RosOnlineDataProvider::callbackReinit, this);
   reinit_pose_subscriber_ = nh_reinit_.subscribe(
-      "reinit_pose", 10, &RosDataProvider::callbackReinitPose, this);
+      "reinit_pose", 10, &RosOnlineDataProvider::callbackReinitPose, this);
 
   // Define Callback Queue for Reinit Data
   ros::CallbackQueue reinit_queue;
@@ -74,22 +74,22 @@ RosDataProvider::RosDataProvider()
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
 }
 
-RosDataProvider::~RosDataProvider() {
+RosOnlineDataProvider::~RosOnlineDataProvider() {
   LOG(INFO) << "RosDataProvider destructor called.";
 }
 
-void RosDataProvider::callbackLeftImage(const sensor_msgs::ImageConstPtr& msg) {
+void RosOnlineDataProvider::callbackLeftImage(const sensor_msgs::ImageConstPtr& msg) {
   ROS_INFO("Pushing left image to queue.");
   left_camera_input_queue_.push(msg);
 }
 
-void RosDataProvider::callbackRightImage(
+void RosOnlineDataProvider::callbackRightImage(
     const sensor_msgs::ImageConstPtr& msg) {
   ROS_INFO("Pushing right image to queue.");
   right_camera_input_queue_.push(msg);
 }
 
-void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU) {
+void RosOnlineDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU) {
   imu_input_queue_.push(msgIMU);
   // // Callback and store IMU data and timestamp
   // // until next StereoImuSyncPacket is made
@@ -127,7 +127,7 @@ void RosDataProvider::callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU) {
 }
 
 // Reinitialization callback
-void RosDataProvider::callbackReinit(
+void RosOnlineDataProvider::callbackReinit(
     const std_msgs::Bool::ConstPtr& reinitFlag) {
   // TODO(Sandro): Do we want to reinitialize at specific pose or just at
   // origin? void RosDataProvider::callbackReinit( const
@@ -142,7 +142,7 @@ void RosDataProvider::callbackReinit(
 }
 
 // Getting re-initialization pose
-void RosDataProvider::callbackReinitPose(
+void RosOnlineDataProvider::callbackReinitPose(
     const geometry_msgs::PoseStamped& reinitPose) {
   // Set reinitialization pose
   gtsam::Rot3 rotation(gtsam::Quaternion(reinitPose.pose.orientation.w,
@@ -157,7 +157,7 @@ void RosDataProvider::callbackReinitPose(
   reinit_packet_.setReinitPose(pose);
 }
 
-bool RosDataProvider::spin() {
+bool RosOnlineDataProvider::spin() {
   CHECK_EQ(pipeline_params_.camera_params_.size(), 2u);
 
   while (ros::ok()) {
@@ -176,7 +176,7 @@ bool RosDataProvider::spin() {
   return false;
 }
 
-bool RosDataProvider::spinOnce() {
+bool RosOnlineDataProvider::spinOnce() {
   static const CameraParams& left_cam_info =
       pipeline_params_.camera_params_.at(0);
   static const CameraParams& right_cam_info =

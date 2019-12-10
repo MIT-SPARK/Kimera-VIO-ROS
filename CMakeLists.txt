@@ -16,10 +16,10 @@ endif()
 catkin_simple()
 
 cs_add_executable(${PROJECT_NAME}
-  src/stereo-vio-ros.cpp
-  src/base-data-source.cpp
-  src/rosbag-data-source.cpp
-  src/ros-data-source.cpp
+  src/KimeraVioRos.cpp
+  src/RosDataProvider.cpp
+  src/RosBagDataProvider.cpp
+  src/RosOnlineDataProvider.cpp
   src/stereo-image-buffer.cpp)
 target_link_libraries(${PROJECT_NAME} KimeraVIO)
 

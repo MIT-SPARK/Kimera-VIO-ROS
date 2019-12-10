@@ -8,9 +8,10 @@
 #pragma once
 
 #include <functional>
+#include <string>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/matx.hpp>
-#include <string>
 
 #define PCL_NO_PRECOMPILE  // Define this before you include any PCL headers
                            // to include the templated algorithms
@@ -34,8 +35,6 @@
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/utils/ThreadsafeQueue.h>
 
-#include "kimera-ros/stereo-image-buffer.h"
-
 namespace VIO {
 
 /**
@@ -49,33 +48,33 @@ struct PointNormalUV {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
 
-class RosBaseDataProvider : public DataProviderInterface {
+class RosDataProviderInterface : public DataProviderInterface {
  public:
-  KIMERA_DELETE_COPY_CONSTRUCTORS(RosBaseDataProvider);
-  KIMERA_POINTER_TYPEDEFS(RosBaseDataProvider);
+  KIMERA_DELETE_COPY_CONSTRUCTORS(RosDataProviderInterface);
+  KIMERA_POINTER_TYPEDEFS(RosDataProviderInterface);
 
-  RosBaseDataProvider();
+  RosDataProviderInterface();
 
-  virtual ~RosBaseDataProvider();
+  virtual ~RosDataProviderInterface();
 
  public:
   inline void callbackBackendOutput(const VIO::BackendOutput::Ptr& output) {
-    ROS_INFO("Recieved Backend Output from pipeline.");
+    ROS_INFO("Received Backend Output from pipeline.");
     backend_output_queue_.push(output);
   }
 
   inline void callbackFrontendOutput(const VIO::FrontendOutput::Ptr& output) {
-    ROS_INFO("Recieved Frontend Output from pipeline.");
+    ROS_INFO("Received Frontend Output from pipeline.");
     frontend_output_queue_.push(output);
   }
 
   inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
-    ROS_INFO("Recieved Mesher Output from pipeline.");
+    ROS_INFO("Received Mesher Output from pipeline.");
     mesher_output_queue_.push(output);
   }
 
   inline void callbackLcdOutput(const VIO::LcdOutput::Ptr& output) {
-    ROS_INFO("Recieved Lcd Output from pipeline.");
+    ROS_INFO("Received Lcd Output from pipeline.");
     lcd_output_queue_.push(output);
   }
 

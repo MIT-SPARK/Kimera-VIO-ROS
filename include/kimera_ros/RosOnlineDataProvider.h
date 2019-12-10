@@ -13,21 +13,21 @@
 #include <sensor_msgs/Imu.h>
 #include <std_msgs/Bool.h>
 
-#include "kimera-ros/base-data-source.h"
-#include "kimera-ros/stereo-image-buffer.h"
+#include "kimera_ros/RosDataProviderInterface.h"
+#include "kimera_ros/stereo-image-buffer.h"
 
 // using namespace StereoImageBuffer;
 
 namespace VIO {
 
-class RosDataProvider : public RosBaseDataProvider {
+class RosOnlineDataProvider : public RosDataProviderInterface {
  public:
-  KIMERA_DELETE_COPY_CONSTRUCTORS(RosDataProvider);
-  KIMERA_POINTER_TYPEDEFS(RosDataProvider);
+  KIMERA_DELETE_COPY_CONSTRUCTORS(RosOnlineDataProvider);
+  KIMERA_POINTER_TYPEDEFS(RosOnlineDataProvider);
 
-  RosDataProvider();
+  RosOnlineDataProvider();
 
-  virtual ~RosDataProvider();
+  virtual ~RosOnlineDataProvider();
 
   bool spin() override;
 

@@ -5,7 +5,7 @@
  * @author Antoni Rosinol
  */
 
-#include "kimera-ros/rosbag-data-source.h"
+#include "kimera_ros/RosBagDataProvider.h"
 
 #include <rosgraph_msgs/Clock.h>
 #include <sensor_msgs/Imu.h>
@@ -13,7 +13,8 @@
 namespace VIO {
 
 RosbagDataProvider::RosbagDataProvider()
-    : RosBaseDataProvider(), rosbag_data_() {
+    : RosDataProviderInterface(),
+      rosbag_data_() {
   ROS_INFO("Starting KimeraVIO wrapper for offline");
 
   std::string rosbag_path;
@@ -53,8 +54,6 @@ RosbagDataProvider::RosbagDataProvider()
         getGroundTruthVioNavState(0);  // Send first gt state.
   }
 }
-
-RosbagDataProvider::~RosbagDataProvider() {}
 
 bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
                                      const std::string& left_imgs_topic,
@@ -296,10 +295,6 @@ bool RosbagDataProvider::spin() {
 
   return true;
 }
-
-// bool RosbagDataProvider::spinOnce() {
-
-// }
 
 VioNavState RosbagDataProvider::getGroundTruthVioNavState(
     const size_t& k_frame) const {

@@ -1,6 +1,5 @@
-/* @file   stereo-vio-ros.cpp
+/* @file   KimeraVioRos.cpp
  * @brief  ROS Wrapper for Spark-VIO
- * @author Yun Chang
  * @author Antoni Rosinol
  */
 
@@ -18,16 +17,13 @@
 #include <kimera-vio/utils/Timer.h>
 
 // Dependencies from this repository
-#include "kimera-ros/base-data-source.h"
-#include "kimera-ros/ros-data-source.h"
-#include "kimera-ros/rosbag-data-source.h"
+#include "kimera_ros/RosDataProviderInterface.h"
+#include "kimera_ros/RosOnlineDataProvider.h"
+#include "kimera_ros/RosBagDataProvider.h"
 
 DEFINE_bool(parallel_run, true, "Run VIO parallel or sequential");
 DEFINE_bool(online_run, true, "RUN VIO ROS online or offline");
 
-////////////////////////////////////////////////////////////////////////////////
-// stereoVIOexample using ROS wrapper example
-////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
   // Initialize Google's flags library.
   google::ParseCommandLineFlags(&argc, &argv, true);
@@ -39,10 +35,10 @@ int main(int argc, char* argv[]) {
 
   // Create dataset parser.
   // TODO(marcus): make unique_ptr
-  VIO::RosBaseDataProvider::Ptr dataset_parser;
+  VIO::RosDataProviderInterface::Ptr dataset_parser;
   if (FLAGS_online_run) {
     // Running ros online.
-    dataset_parser = std::make_shared<VIO::RosDataProvider>();
+    dataset_parser = std::make_shared<VIO::RosOnlineDataProvider>();
   } else {
     // Parse rosbag.
     dataset_parser = std::make_shared<VIO::RosbagDataProvider>();
@@ -69,17 +65,17 @@ int main(int argc, char* argv[]) {
 
   // Register callback to retrieve vio pipeline output from all modules.
   vio_pipeline.registerBackendOutputCallback(
-      std::bind(&VIO::RosBaseDataProvider::callbackBackendOutput,
+      std::bind(&VIO::RosDataProviderInterface::callbackBackendOutput,
                 std::ref(*CHECK_NOTNULL(dataset_parser.get())),
                 std::placeholders::_1));
 
   vio_pipeline.registerFrontendOutputCallback(
-      std::bind(&VIO::RosBaseDataProvider::callbackFrontendOutput,
+      std::bind(&VIO::RosDataProviderInterface::callbackFrontendOutput,
                 std::ref(*CHECK_NOTNULL(dataset_parser.get())),
                 std::placeholders::_1));
 
   vio_pipeline.registerMesherOutputCallback(
-      std::bind(&VIO::RosBaseDataProvider::callbackMesherOutput,
+      std::bind(&VIO::RosDataProviderInterface::callbackMesherOutput,
                 std::ref(*CHECK_NOTNULL(dataset_parser.get())),
                 std::placeholders::_1));
 
@@ -88,7 +84,7 @@ int main(int argc, char* argv[]) {
   ros::param::get("use_lcd", use_lcd);
   if (use_lcd) {
     vio_pipeline.registerLcdOutputCallback(
-        std::bind(&VIO::RosBaseDataProvider::callbackLcdOutput,
+        std::bind(&VIO::RosDataProviderInterface::callbackLcdOutput,
                   std::ref(*CHECK_NOTNULL(dataset_parser.get())),
                   std::placeholders::_1));
   }
@@ -98,7 +94,7 @@ int main(int argc, char* argv[]) {
   bool is_pipeline_successful = false;
   if (FLAGS_parallel_run) {
     auto handle = std::async(
-        std::launch::async, &VIO::RosBaseDataProvider::spin, dataset_parser);
+        std::launch::async, &VIO::RosDataProviderInterface::spin, dataset_parser);
     ros::start();
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.

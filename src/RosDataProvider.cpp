@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "kimera-ros/ros-data-source.h"
+#include "kimera_ros/RosOnlineDataProvider.h"
 
 #include <kimera-vio/visualizer/Visualizer3D.h>
 
@@ -29,7 +29,7 @@
 
 namespace VIO {
 
-RosBaseDataProvider::RosBaseDataProvider()
+RosDataProviderInterface::RosDataProviderInterface()
     : DataProviderInterface(),
       it_(nullptr),
       nh_(),
@@ -79,11 +79,11 @@ RosBaseDataProvider::RosBaseDataProvider()
                   right_cam_frame_id_);
 }
 
-RosBaseDataProvider::~RosBaseDataProvider() {
+RosDataProviderInterface::~RosDataProviderInterface() {
   LOG(INFO) << "RosBaseDataProvider destructor called.";
 }
 
-cv::Mat RosBaseDataProvider::readRosImage(
+cv::Mat RosDataProviderInterface::readRosImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
@@ -104,7 +104,7 @@ cv::Mat RosBaseDataProvider::readRosImage(
   return cv_ptr->image;
 }
 
-cv::Mat RosBaseDataProvider::readRosDepthImage(
+cv::Mat RosDataProviderInterface::readRosDepthImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
@@ -122,7 +122,7 @@ cv::Mat RosBaseDataProvider::readRosDepthImage(
   return img_depth;
 }
 
-void RosBaseDataProvider::publishVioOutput(
+void RosDataProviderInterface::publishVioOutput(
     const FrontendOutput::Ptr& frontend_output,
     const BackendOutput::Ptr& backend_output,
     const MesherOutput::Ptr& mesher_output) {
@@ -164,7 +164,7 @@ void RosBaseDataProvider::publishVioOutput(
   }
 }
 
-void RosBaseDataProvider::publishLcdOutput(const LcdOutput::Ptr& lcd_output) {
+void RosDataProviderInterface::publishLcdOutput(const LcdOutput::Ptr& lcd_output) {
   CHECK_NOTNULL(lcd_output);
 
   publishTf(lcd_output);
@@ -176,7 +176,7 @@ void RosBaseDataProvider::publishLcdOutput(const LcdOutput::Ptr& lcd_output) {
   }
 }
 
-bool RosBaseDataProvider::getVioOutput(FrontendOutput::Ptr frontend_output,
+bool RosDataProviderInterface::getVioOutput(FrontendOutput::Ptr frontend_output,
                                        BackendOutput::Ptr backend_output,
                                        MesherOutput::Ptr mesher_output,
                                        int max_iterations) {
@@ -234,7 +234,7 @@ bool RosBaseDataProvider::getVioOutput(FrontendOutput::Ptr frontend_output,
   return true;
 }
 
-void RosBaseDataProvider::publishTimeHorizonPointCloud(
+void RosDataProviderInterface::publishTimeHorizonPointCloud(
     const Timestamp& timestamp,
     const PointsWithIdMap& points_with_id,
     const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const {
@@ -301,7 +301,7 @@ void RosBaseDataProvider::publishTimeHorizonPointCloud(
   pointcloud_pub_.publish(msg);
 }
 
-void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
+void RosDataProviderInterface::publishDebugImage(const Timestamp& timestamp,
                                             const cv::Mat& debug_image) const {
   // CHECK(debug_image.type(), CV_8UC1);
   std_msgs::Header h;
@@ -318,7 +318,7 @@ void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
 //  size_t number_mesh_3d_polygons = mesh_3d.getNumberOfPolygons();
 //}
 
-void RosBaseDataProvider::publishPerFrameMesh3D(
+void RosDataProviderInterface::publishPerFrameMesh3D(
     const MesherOutput::Ptr& output) const {
   CHECK_NOTNULL(output);
 
@@ -425,7 +425,7 @@ void RosBaseDataProvider::publishPerFrameMesh3D(
   return;
 }  // namespace VIO
 
-void RosBaseDataProvider::publishState(const BackendOutput::Ptr& output) const {
+void RosDataProviderInterface::publishState(const BackendOutput::Ptr& output) const {
   CHECK_NOTNULL(output);
   // Get latest estimates for odometry.
   const Timestamp& ts = output->timestamp_;
@@ -499,7 +499,7 @@ void RosBaseDataProvider::publishState(const BackendOutput::Ptr& output) const {
   odometry_pub_.publish(odometry_msg);
 }
 
-void RosBaseDataProvider::publishTf(const BackendOutput::Ptr& output) {
+void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
   CHECK_NOTNULL(output);
 
   const Timestamp& timestamp = output->timestamp_;
@@ -521,7 +521,7 @@ void RosBaseDataProvider::publishTf(const BackendOutput::Ptr& output) {
   tf_broadcaster_.sendTransform(odom_tf);
 }
 
-void RosBaseDataProvider::publishFrontendStats(
+void RosDataProviderInterface::publishFrontendStats(
     const FrontendOutput::Ptr& output) const {
   CHECK_NOTNULL(output);
 
@@ -557,7 +557,7 @@ void RosBaseDataProvider::publishFrontendStats(
   frontend_stats_pub_.publish(frontend_stats_msg);
 }
 
-void RosBaseDataProvider::publishResiliency(
+void RosDataProviderInterface::publishResiliency(
     const FrontendOutput::Ptr& frontend_output,
     const BackendOutput::Ptr& backend_output) const {
   CHECK_NOTNULL(frontend_output);
@@ -627,7 +627,7 @@ void RosBaseDataProvider::publishResiliency(
   resiliency_pub_.publish(resiliency_msg);
 }
 
-void RosBaseDataProvider::publishImuBias(
+void RosDataProviderInterface::publishImuBias(
     const BackendOutput::Ptr& output) const {
   CHECK_NOTNULL(output);
 
@@ -658,7 +658,7 @@ void RosBaseDataProvider::publishImuBias(
   imu_bias_pub_.publish(imu_bias_msg);
 }
 
-void RosBaseDataProvider::publishOptimizedTrajectory(
+void RosDataProviderInterface::publishOptimizedTrajectory(
     const LcdOutput::Ptr& lcd_output) const {
   CHECK_NOTNULL(lcd_output);
 
@@ -694,7 +694,7 @@ void RosBaseDataProvider::publishOptimizedTrajectory(
   trajectory_pub_.publish(path);
 }
 
-void RosBaseDataProvider::updateRejectedEdges() {
+void RosDataProviderInterface::updateRejectedEdges() {
   // first update the rejected edges
   for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
        loop_closure_edges_) {
@@ -731,7 +731,7 @@ void RosBaseDataProvider::updateRejectedEdges() {
   }
 }
 
-void RosBaseDataProvider::updateNodesAndEdges(
+void RosDataProviderInterface::updateNodesAndEdges(
     const gtsam::NonlinearFactorGraph& nfg,
     const gtsam::Values& values) {
   inlier_edges_.clear();
@@ -807,7 +807,7 @@ void RosBaseDataProvider::updateNodesAndEdges(
   return;
 }
 
-pose_graph_tools::PoseGraph RosBaseDataProvider::getPosegraphMsg() {
+pose_graph_tools::PoseGraph RosDataProviderInterface::getPosegraphMsg() {
   // pose graph getter
   pose_graph_tools::PoseGraph pose_graph;
   pose_graph.edges = odometry_edges_;  // add odometry edges to pg
@@ -821,7 +821,7 @@ pose_graph_tools::PoseGraph RosBaseDataProvider::getPosegraphMsg() {
   return pose_graph;
 }
 
-void RosBaseDataProvider::publishPoseGraph(const LcdOutput::Ptr& lcd_output) {
+void RosDataProviderInterface::publishPoseGraph(const LcdOutput::Ptr& lcd_output) {
   CHECK_NOTNULL(lcd_output);
 
   // Get the factor graph
@@ -835,7 +835,7 @@ void RosBaseDataProvider::publishPoseGraph(const LcdOutput::Ptr& lcd_output) {
   posegraph_pub_.publish(graph);
 }
 
-void RosBaseDataProvider::publishTf(const LcdOutput::Ptr& lcd_output) {
+void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
   CHECK_NOTNULL(lcd_output);
 
   const Timestamp& ts = lcd_output->timestamp_kf_;
@@ -857,7 +857,7 @@ void RosBaseDataProvider::publishTf(const LcdOutput::Ptr& lcd_output) {
   tf_broadcaster_.sendTransform(map_tf);
 }
 
-void RosBaseDataProvider::publishStaticTf(const gtsam::Pose3& pose,
+void RosDataProviderInterface::publishStaticTf(const gtsam::Pose3& pose,
                                           const std::string& parent_frame_id,
                                           const std::string& child_frame_id) {
   static tf2_ros::StaticTransformBroadcaster static_broadcaster;
@@ -877,7 +877,7 @@ void RosBaseDataProvider::publishStaticTf(const gtsam::Pose3& pose,
   static_broadcaster.sendTransform(static_transform_stamped);
 }
 
-void RosBaseDataProvider::printParsedParams() const {
+void RosDataProviderInterface::printParsedParams() const {
   LOG(INFO) << std::string(80, '=') << '\n' << " - Left camera info:";
   pipeline_params_.camera_params_.at(0).print();
   LOG(INFO) << std::string(80, '=') << '\n' << " - Right camera info:";
