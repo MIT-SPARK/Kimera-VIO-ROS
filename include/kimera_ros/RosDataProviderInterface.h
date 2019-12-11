@@ -60,16 +60,19 @@ class RosDataProviderInterface : public DataProviderInterface {
  public:
   inline void callbackBackendOutput(const VIO::BackendOutput::Ptr& output) {
     ROS_INFO("Received Backend Output from pipeline.");
+    publishBackendOutput(output);
     backend_output_queue_.push(output);
   }
 
   inline void callbackFrontendOutput(const VIO::FrontendOutput::Ptr& output) {
     ROS_INFO("Received Frontend Output from pipeline.");
+    publishFrontendOutput(output);
     frontend_output_queue_.push(output);
   }
 
   inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
     ROS_INFO("Received Mesher Output from pipeline.");
+    publishMesherOutput(output);
     mesher_output_queue_.push(output);
   }
 
@@ -83,19 +86,18 @@ class RosDataProviderInterface : public DataProviderInterface {
 
   const cv::Mat readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg) const;
 
-  // Pop and synchronize output packets from queues
-  bool getVioOutput(FrontendOutput::Ptr frontend_output,
-                    BackendOutput::Ptr backend_output,
-                    MesherOutput::Ptr mesher_output,
-                    int max_iterations = 10);
+  // Publish VIO outputs.
+  virtual void publishBackendOutput(const BackendOutput::Ptr& output);
 
-  // Publish all outputs by calling individual functions below
-  void publishVioOutput(const FrontendOutput::Ptr& frontend_output,
-                        const BackendOutput::Ptr& backend_output,
-                        const MesherOutput::Ptr& mesher_output);
+  virtual void publishFrontendOutput(const FrontendOutput::Ptr& output);
+
+  virtual void publishMesherOutput(const MesherOutput::Ptr& output);
+
+  virtual bool publishSyncedOutputs();
 
   // Publish all outputs for LCD
-  void publishLcdOutput(const LcdOutput::Ptr& lcd_output);
+  // TODO(marcus): make like other outputs
+  virtual void publishLcdOutput(const LcdOutput::Ptr& lcd_output);
 
   // Publish static transforms (for camera frames) to the tf tree
   void publishStaticTf(const gtsam::Pose3& pose,
@@ -127,33 +129,45 @@ class RosDataProviderInterface : public DataProviderInterface {
   ImuData imu_data_;
 
  private:
-  // Publish VIO outputs.
   void publishTf(const BackendOutput::Ptr& output);
-  void publishTimeHorizonPointCloud(
-      const Timestamp& timestamp,
-      const PointsWithIdMap& points_with_id,
-      const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const;
+
+  void publishTimeHorizonPointCloud(const BackendOutput::Ptr& output) const;
+
   void publishPerFrameMesh3D(const MesherOutput::Ptr& output) const;
+
   void publishTimeHorizonMesh3D(const MesherOutput::Ptr& output) const;
+
   void publishState(const BackendOutput::Ptr& output) const;
+
   void publishFrontendStats(const FrontendOutput::Ptr& output) const;
+
   void publishResiliency(const FrontendOutput::Ptr& frontend_output,
                          const BackendOutput::Ptr& backend_output) const;
+
   void publishImuBias(const BackendOutput::Ptr& output) const;
+
 
   // Publish LCD/PGO outputs.
   void publishTf(const LcdOutput::Ptr& lcd_output);
+
   void publishOptimizedTrajectory(const LcdOutput::Ptr& lcd_output) const;
+
   void publishPoseGraph(const LcdOutput::Ptr& lcd_output);
+
   void updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
                            const gtsam::Values& values);
+
   void updateRejectedEdges();
+
   pose_graph_tools::PoseGraph getPosegraphMsg();
+
 
   // Publish/print debugging information.
   void publishDebugImage(const Timestamp& timestamp,
                          const cv::Mat& debug_image) const;
+
   void printParsedParams() const;
+
 
  private:
   // Define publisher for debug images.

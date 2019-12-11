@@ -65,6 +65,8 @@ class RosbagDataProvider : public RosDataProviderInterface {
   // by the sequential order in the rosbag).
   VioNavState getGroundTruthVioNavState(const size_t& k_frame) const;
 
+  void publishBackendOutput(const BackendOutput::Ptr& output) override;
+
   // Publish clock
   void publishClock(const Timestamp& timestamp) const;
 

@@ -13,8 +13,7 @@
 namespace VIO {
 
 RosbagDataProvider::RosbagDataProvider()
-    : RosDataProviderInterface(),
-      rosbag_data_() {
+    : RosDataProviderInterface(), rosbag_data_() {
   ROS_INFO("Starting KimeraVIO wrapper for offline");
 
   std::string rosbag_path;
@@ -171,6 +170,12 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   return true;
 }
 
+void RosbagDataProvider::publishBackendOutput(
+    const BackendOutput::Ptr& output) {
+  RosDataProviderInterface::publishBackendOutput(output);
+  publishClock(output->timestamp_);
+}
+
 bool RosbagDataProvider::spin() {
   Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
 
@@ -190,10 +195,10 @@ bool RosbagDataProvider::spin() {
         ImuMeasurements imu_meas;
         utils::ThreadsafeImuBuffer::QueryResult imu_query =
             imu_data_.imu_buffer_.getImuDataInterpolatedUpperBorder(
-              timestamp_last_frame,
-              timestamp_frame_k,
-              &imu_meas.timestamps_,
-              &imu_meas.acc_gyr_);
+                timestamp_last_frame,
+                timestamp_frame_k,
+                &imu_meas.timestamps_,
+                &imu_meas.acc_gyr_);
         if (imu_query ==
             utils::ThreadsafeImuBuffer::QueryResult::kDataAvailable) {
           // Call VIO Pipeline.
@@ -217,17 +222,17 @@ bool RosbagDataProvider::spin() {
 
           imu_multi_callback_(imu_meas);
 
-          left_frame_callback_(
-              VIO::make_unique<Frame>(k,
-                                      timestamp_frame_k,
-                                      left_cam_info,
-                                      readRosImage(rosbag_data_.left_imgs_.at(k))));
+          left_frame_callback_(VIO::make_unique<Frame>(
+              k,
+              timestamp_frame_k,
+              left_cam_info,
+              readRosImage(rosbag_data_.left_imgs_.at(k))));
 
-          left_frame_callback_(
-              VIO::make_unique<Frame>(k,
-                                      timestamp_frame_k,
-                                      right_cam_info,
-                                      readRosImage(rosbag_data_.right_imgs_.at(k))));
+          left_frame_callback_(VIO::make_unique<Frame>(
+              k,
+              timestamp_frame_k,
+              right_cam_info,
+              readRosImage(rosbag_data_.right_imgs_.at(k))));
 
           // Publish ground-truth data if available
           if (rosbag_data_.gt_odometry_.size() > k) {
@@ -239,13 +244,8 @@ bool RosbagDataProvider::spin() {
           // Publish VIO output if any.
           // TODO(Toni) this could go faster if running in another thread or
           // node...
-          FrontendOutput::Ptr frontend_output;
-          BackendOutput::Ptr backend_output;
-          MesherOutput::Ptr mesher_output;
-          if (getVioOutput(frontend_output, backend_output, mesher_output)) {
-            publishVioOutput(frontend_output, backend_output, mesher_output);
-            publishClock(backend_output->timestamp_);
-          } else {
+          bool got_synced_outputs = publishSyncedOutputs();
+          if (!got_synced_outputs) {
             LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
           }
 
@@ -280,13 +280,7 @@ bool RosbagDataProvider::spin() {
 
   // Endless loop until ros dies to publish left-over outputs.
   while (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
-    FrontendOutput::Ptr frontend_output;
-    BackendOutput::Ptr backend_output;
-    MesherOutput::Ptr mesher_output;
-    getVioOutput(frontend_output, backend_output, mesher_output);
-
-    publishVioOutput(frontend_output, backend_output, mesher_output);
-    publishClock(backend_output->timestamp_);
+    publishSyncedOutputs();
 
     LcdOutput::Ptr lcd_output = nullptr;
     lcd_output_queue_.pop(lcd_output);

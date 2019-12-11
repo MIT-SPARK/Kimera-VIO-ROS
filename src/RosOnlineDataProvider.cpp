@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <glog/logging.h>
+
 #include <geometry_msgs/PoseStamped.h>
 #include <ros/callback_queue.h>
 #include <sensor_msgs/image_encodings.h>
@@ -116,9 +118,13 @@ void RosOnlineDataProvider::callbackIMU(
   imu_accgyr(5) = msgIMU->angular_velocity.z;
 
   // Adapt imu timestamp to account for time shift in IMU-cam
+  Timestamp timestamp = msgIMU->header.stamp.toNSec();
+
   static const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
-  const Timestamp& timestamp =
-      msgIMU->header.stamp.toNSec() - imu_shift.toNSec();
+  if (imu_shift != ros::Duration(0)) {
+    LOG_EVERY_N(WARNING, 1000) << "imu_shift is not 0.";
+    timestamp -= imu_shift.toNSec();
+  }
 
   imu_single_callback_(ImuMeasurement(timestamp, imu_accgyr));
 }
@@ -172,12 +178,7 @@ bool RosOnlineDataProvider::spin() {
 
 bool RosOnlineDataProvider::spinOnce() {
   // Publish VIO output if any.
-  FrontendOutput::Ptr frontend_output;
-  BackendOutput::Ptr backend_output;
-  MesherOutput::Ptr mesher_output;
-  if (getVioOutput(frontend_output, backend_output, mesher_output)) {
-    publishVioOutput(frontend_output, backend_output, mesher_output);
-  }
+  publishSyncedOutputs();
 
   // Publish LCD output if any.
   LcdOutput::Ptr lcd_output = nullptr;

@@ -11,6 +11,7 @@
 #include "kimera_ros/RosOnlineDataProvider.h"
 
 #include <kimera-vio/visualizer/Visualizer3D.h>
+#include <kimera-vio/pipeline/PipelineModule.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -85,10 +86,11 @@ RosDataProviderInterface::~RosDataProviderInterface() {
 
 // TODO(marcus): From this documentation
 //  (http://wiki.ros.org/cv_bridge/Tutorials/UsingCvBridgeToConvertBetweenROSImagesAndOpenCVImages)
-//  we should be using toCvShare to get a CvImage pointer. However, this is a shared pointer
-//  and the ROS message data isn't freed. This means anyone else can modify this from another cb
-//  and our version will change too. Even the const isn't enough because people can just copy that
-//  and still have access to underlying data. Neet a smarter way to move these around yet make this 
+//  we should be using toCvShare to get a CvImage pointer. However, this is a
+//  shared pointer and the ROS message data isn't freed. This means anyone else
+//  can modify this from another cb and our version will change too. Even the
+//  const isn't enough because people can just copy that and still have access
+//  to underlying data. Neet a smarter way to move these around yet make this
 //  faster.
 const cv::Mat RosDataProviderInterface::readRosImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
@@ -129,49 +131,85 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
   return img_depth;
 }
 
-void RosDataProviderInterface::publishVioOutput(
-    const FrontendOutput::Ptr& frontend_output,
-    const BackendOutput::Ptr& backend_output,
-    const MesherOutput::Ptr& mesher_output) {
-  CHECK_NOTNULL(frontend_output);
-  CHECK_NOTNULL(backend_output);
-  CHECK_NOTNULL(mesher_output);
+void RosDataProviderInterface::publishBackendOutput(
+    const BackendOutput::Ptr& output) {
+  CHECK_NOTNULL(output);
 
-  ROS_INFO("Publishing VIO output.");
-
-  publishTf(backend_output);
+  publishTf(output);
   if (odometry_pub_.getNumSubscribers() > 0) {
-    publishState(backend_output);
-  }
-  // Publish 3d mesh (not the time-horizon one! just the per-frame one)
-  if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
-    publishPerFrameMesh3D(mesher_output);
-  }
-  // Publish 2d mesh debug image
-  if (debug_img_pub_.getNumSubscribers() > 0) {
-    cv::Mat mesh_2d_img = Visualizer3D::visualizeMesh2D(
-        mesher_output->mesh_2d_for_viz_,
-        frontend_output->stereo_frame_lkf_.getLeftFrame().img_);
-    publishDebugImage(backend_output->timestamp_, mesh_2d_img);
-  }
-  if (pointcloud_pub_.getNumSubscribers() > 0) {
-    publishTimeHorizonPointCloud(backend_output->timestamp_,
-                                 backend_output->landmarks_with_id_map_,
-                                 backend_output->lmk_id_to_lmk_type_map_);
-  }
-  if (frontend_stats_pub_.getNumSubscribers() > 0) {
-    publishFrontendStats(frontend_output);
-  }
-  // Publish Resiliency
-  if (resiliency_pub_.getNumSubscribers() > 0) {
-    publishResiliency(frontend_output, backend_output);
+    publishState(output);
   }
   if (imu_bias_pub_.getNumSubscribers() > 0) {
-    publishImuBias(backend_output);
+    publishImuBias(output);
+  }
+  if (pointcloud_pub_.getNumSubscribers() > 0) {
+    publishTimeHorizonPointCloud(output);
   }
 }
 
-void RosDataProviderInterface::publishLcdOutput(const LcdOutput::Ptr& lcd_output) {
+void RosDataProviderInterface::publishFrontendOutput(
+    const FrontendOutput::Ptr& output) {
+  CHECK_NOTNULL(output);
+
+  if (frontend_stats_pub_.getNumSubscribers() > 0) {
+    publishFrontendStats(output);
+  }
+}
+
+void RosDataProviderInterface::publishMesherOutput(
+    const MesherOutput::Ptr& output) {
+  CHECK_NOTNULL(output);
+
+  if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
+    publishPerFrameMesh3D(output);
+  }
+}
+
+bool RosDataProviderInterface::publishSyncedOutputs() {
+  // First acquire a backend output packet, as it is slowest.
+  BackendOutput::Ptr backend_output = nullptr;
+  if (backend_output_queue_.pop(backend_output)) {
+    CHECK_NOTNULL(backend_output);
+    const Timestamp& ts = backend_output->timestamp_;
+
+    FrontendOutput::Ptr frontend_output = nullptr;
+    bool get_frontend = VIO::PipelineModuleBase::syncQueue<FrontendOutput::Ptr>(
+        ts, &frontend_output_queue_, &frontend_output, "RosDataProvider");
+
+    MesherOutput::Ptr mesher_output = nullptr;
+    bool get_mesher = VIO::PipelineModuleBase::syncQueue<MesherOutput::Ptr>(
+        ts, &mesher_output_queue_, &mesher_output, "RosDataProvider");
+
+    if (frontend_output && mesher_output) {
+      CHECK_NOTNULL(frontend_output);
+      CHECK_NOTNULL(mesher_output);
+
+      // Publish 2d mesh debug image
+      if (debug_img_pub_.getNumSubscribers() > 0) {
+        cv::Mat mesh_2d_img = Visualizer3D::visualizeMesh2D(
+            mesher_output->mesh_2d_for_viz_,
+            frontend_output->stereo_frame_lkf_.getLeftFrame().img_);
+        publishDebugImage(backend_output->timestamp_, mesh_2d_img);
+      }
+    }
+
+    if (frontend_output && backend_output) {
+      CHECK_NOTNULL(frontend_output);
+      CHECK_NOTNULL(backend_output);
+      // Publish Resiliency
+      if (resiliency_pub_.getNumSubscribers() > 0) {
+        publishResiliency(frontend_output, backend_output);
+      }
+    }
+
+    return get_frontend && get_mesher;
+  }
+
+  return false;
+}
+
+void RosDataProviderInterface::publishLcdOutput(
+    const LcdOutput::Ptr& lcd_output) {
   CHECK_NOTNULL(lcd_output);
 
   publishTf(lcd_output);
@@ -183,68 +221,14 @@ void RosDataProviderInterface::publishLcdOutput(const LcdOutput::Ptr& lcd_output
   }
 }
 
-bool RosDataProviderInterface::getVioOutput(FrontendOutput::Ptr frontend_output,
-                                       BackendOutput::Ptr backend_output,
-                                       MesherOutput::Ptr mesher_output,
-                                       int max_iterations) {
-  // TODO(marcus): we expect these to be null before we fill them, no?
-  // CHECK_NOTNULL(backend_output);
-  // CHECK_NOTNULL(frontend_output);
-  // CHECK_NOTNULL(mesher_output);
-
-  // We first get the backend's output, because it will be slower than the
-  // frontend
-  if (backend_output_queue_.pop(backend_output)) {
-    const Timestamp& ts = backend_output->timestamp_;
-    Timestamp payload_timestamp = std::numeric_limits<Timestamp>::min();
-
-    // Now get mesher packet
-    int i = 0;
-    for (; i < max_iterations && ts > payload_timestamp; ++i) {
-      // TODO(toni): add a timer to avoid waiting forever...
-      if (!mesher_output_queue_.popBlocking(mesher_output)) {
-        LOG(ERROR) << "Unable to pop from mesher output queue.";
-        return false;
-      } else {
-        payload_timestamp = mesher_output->timestamp_;
-      }
-    }
-    if (payload_timestamp != ts) {
-      LOG(ERROR)
-          << "Failed to match mesher packet timestamp with backend packet "
-             "timestamp.";
-      return false;
-    }
-
-    // Now get frontend packet
-    payload_timestamp = std::numeric_limits<Timestamp>::min();
-    i = 0;
-    for (; i < max_iterations && ts > payload_timestamp; ++i) {
-      // TODO(toni): add timer...
-      if (!frontend_output_queue_.popBlocking(frontend_output)) {
-        LOG(ERROR) << "Unable to pop from frontend output queue.";
-        return false;
-      } else {
-        payload_timestamp = frontend_output->timestamp_;
-      }
-    }
-    if (payload_timestamp != ts) {
-      LOG(ERROR) << "Failed to match frontend packet timestamp with backend "
-                    "packet timestamp.";
-      return false;
-    }
-  } else {
-    // Could not pop a backend payload, so we return false
-    return false;
-  }
-
-  return true;
-}
-
 void RosDataProviderInterface::publishTimeHorizonPointCloud(
-    const Timestamp& timestamp,
-    const PointsWithIdMap& points_with_id,
-    const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const {
+    const BackendOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
+  const Timestamp& timestamp = output->timestamp_;
+  const PointsWithIdMap& points_with_id = output->landmarks_with_id_map_;
+  const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map =
+      output->lmk_id_to_lmk_type_map_;
+
   PointCloudXYZRGB::Ptr msg(new PointCloudXYZRGB);
   msg->header.frame_id = world_frame_id_;
   msg->is_dense = true;
@@ -308,8 +292,9 @@ void RosDataProviderInterface::publishTimeHorizonPointCloud(
   pointcloud_pub_.publish(msg);
 }
 
-void RosDataProviderInterface::publishDebugImage(const Timestamp& timestamp,
-                                            const cv::Mat& debug_image) const {
+void RosDataProviderInterface::publishDebugImage(
+    const Timestamp& timestamp,
+    const cv::Mat& debug_image) const {
   // CHECK(debug_image.type(), CV_8UC1);
   std_msgs::Header h;
   h.stamp.fromNSec(timestamp);
@@ -432,7 +417,8 @@ void RosDataProviderInterface::publishPerFrameMesh3D(
   return;
 }  // namespace VIO
 
-void RosDataProviderInterface::publishState(const BackendOutput::Ptr& output) const {
+void RosDataProviderInterface::publishState(
+    const BackendOutput::Ptr& output) const {
   CHECK_NOTNULL(output);
   // Get latest estimates for odometry.
   const Timestamp& ts = output->timestamp_;
@@ -618,7 +604,8 @@ void RosDataProviderInterface::publishResiliency(
   CHECK(nh_private_.getParam("velocity_det_threshold", vel_det_threshold));
   CHECK(nh_private_.getParam("position_det_threshold", pos_det_threshold));
   CHECK(
-      nh_private_.getParam("stereo_ransac_threshold", stereo_ransac_threshold));
+      nh_private_.getParam("stereo_ransac_threshold",
+      stereo_ransac_threshold));
   CHECK(nh_private_.getParam("mono_ransac_threshold", mono_ransac_theshold));
   resiliency_msg.data[4] = pos_det_threshold;
   resiliency_msg.data[5] = vel_det_threshold;
@@ -828,7 +815,8 @@ pose_graph_tools::PoseGraph RosDataProviderInterface::getPosegraphMsg() {
   return pose_graph;
 }
 
-void RosDataProviderInterface::publishPoseGraph(const LcdOutput::Ptr& lcd_output) {
+void RosDataProviderInterface::publishPoseGraph(
+    const LcdOutput::Ptr& lcd_output) {
   CHECK_NOTNULL(lcd_output);
 
   // Get the factor graph
@@ -864,9 +852,10 @@ void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
   tf_broadcaster_.sendTransform(map_tf);
 }
 
-void RosDataProviderInterface::publishStaticTf(const gtsam::Pose3& pose,
-                                          const std::string& parent_frame_id,
-                                          const std::string& child_frame_id) {
+void RosDataProviderInterface::publishStaticTf(
+    const gtsam::Pose3& pose,
+    const std::string& parent_frame_id,
+    const std::string& child_frame_id) {
   static tf2_ros::StaticTransformBroadcaster static_broadcaster;
   geometry_msgs::TransformStamped static_transform_stamped;
   // TODO(Toni): Warning: using ros::Time::now(), will that bring issues?
