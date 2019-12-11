@@ -21,9 +21,6 @@
 #include "kimera_ros/RosDataProviderInterface.h"
 #include "kimera_ros/RosOnlineDataProvider.h"
 
-DEFINE_bool(parallel_run, true, "Run VIO parallel or sequential");
-DEFINE_bool(online_run, true, "RUN VIO ROS online or offline");
-
 int main(int argc, char* argv[]) {
   // Initialize Google's flags library.
   google::ParseCommandLineFlags(&argc, &argv, true);
@@ -32,20 +29,22 @@ int main(int argc, char* argv[]) {
 
   // Initialize ROS node
   ros::init(argc, argv, "kimera_vio");
+  ros::NodeHandle nh_ ("~");
 
   // Create dataset parser.
-  // TODO(marcus): make unique_ptr
-  VIO::RosDataProviderInterface::UniquePtr dataset_parser;
-  if (FLAGS_online_run) {
+  VIO::RosDataProviderInterface::UniquePtr dataset_parser = nullptr;
+  bool online_run = false;
+  CHECK(nh_.getParam("online_run", online_run));
+  if (online_run) {
     // Running ros online.
     dataset_parser = VIO::make_unique<VIO::RosOnlineDataProvider>();
   } else {
     // Parse rosbag.
     dataset_parser = VIO::make_unique<VIO::RosbagDataProvider>();
   }
+  CHECK(dataset_parser);
 
   // Create actual VIO pipeline.
-  dataset_parser->pipeline_params_.parallel_run_ = FLAGS_parallel_run;
   VIO::Pipeline vio_pipeline(dataset_parser->pipeline_params_);
 
   // Register callback for inputs.
@@ -81,7 +80,7 @@ int main(int argc, char* argv[]) {
                 std::placeholders::_1));
 
   // TODO(marcus): only register this if we have `use_lcd` enabled.
-  bool use_lcd;
+  bool use_lcd = false;
   ros::param::get("use_lcd", use_lcd);
   if (use_lcd) {
     vio_pipeline.registerLcdOutputCallback(
@@ -93,7 +92,7 @@ int main(int argc, char* argv[]) {
   // Spin dataset.
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
-  if (FLAGS_parallel_run) {
+  if (dataset_parser->pipeline_params_.parallel_run_) {
     auto handle = std::async(std::launch::async,
                              &VIO::RosDataProviderInterface::spin,
                              std::move(dataset_parser));
