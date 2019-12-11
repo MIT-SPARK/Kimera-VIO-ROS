@@ -17,9 +17,9 @@
 #include <kimera-vio/utils/Timer.h>
 
 // Dependencies from this repository
+#include "kimera_ros/RosBagDataProvider.h"
 #include "kimera_ros/RosDataProviderInterface.h"
 #include "kimera_ros/RosOnlineDataProvider.h"
-#include "kimera_ros/RosBagDataProvider.h"
 
 DEFINE_bool(parallel_run, true, "Run VIO parallel or sequential");
 DEFINE_bool(online_run, true, "RUN VIO ROS online or offline");
@@ -35,16 +35,17 @@ int main(int argc, char* argv[]) {
 
   // Create dataset parser.
   // TODO(marcus): make unique_ptr
-  VIO::RosDataProviderInterface::Ptr dataset_parser;
+  VIO::RosDataProviderInterface::UniquePtr dataset_parser;
   if (FLAGS_online_run) {
     // Running ros online.
-    dataset_parser = std::make_shared<VIO::RosOnlineDataProvider>();
+    dataset_parser = VIO::make_unique<VIO::RosOnlineDataProvider>();
   } else {
     // Parse rosbag.
-    dataset_parser = std::make_shared<VIO::RosbagDataProvider>();
+    dataset_parser = VIO::make_unique<VIO::RosbagDataProvider>();
   }
 
   // Create actual VIO pipeline.
+  dataset_parser->pipeline_params_.parallel_run_ = FLAGS_parallel_run;
   VIO::Pipeline vio_pipeline(dataset_parser->pipeline_params_);
 
   // Register callback for inputs.
@@ -93,20 +94,32 @@ int main(int argc, char* argv[]) {
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (FLAGS_parallel_run) {
-    auto handle = std::async(
-        std::launch::async, &VIO::RosDataProviderInterface::spin, dataset_parser);
+    auto handle = std::async(std::launch::async,
+                             &VIO::RosDataProviderInterface::spin,
+                             std::move(dataset_parser));
+    auto handle_pipeline = std::async(std::launch::async,
+                                      &VIO::Pipeline::spin,
+                                      &vio_pipeline);
     ros::start();
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.
-    while (ros::ok() && vio_pipeline.spinViz()) {
+    while (ros::ok()) {//&& vio_pipeline.spinViz()) {
       continue;
-    };
+    }
     ROS_INFO("Shutting down ROS and VIO pipeline.");
     ros::shutdown();
     vio_pipeline.shutdown();
-    is_pipeline_successful = handle.get();
+    handle_pipeline.get();
+    is_pipeline_successful = !handle.get();
   } else {
-    is_pipeline_successful = dataset_parser->spin();
+    ros::start();
+    while (ros::ok() && dataset_parser->spin()) {
+      vio_pipeline.spin();
+    }
+    ROS_INFO("Shutting down ROS and VIO pipeline.");
+    ros::shutdown();
+    vio_pipeline.shutdown();
+    is_pipeline_successful = true;
   }
   auto spin_duration = VIO::utils::Timer::toc(tic);
   ROS_WARN_STREAM("Spin took: " << spin_duration.count() << " ms.");
