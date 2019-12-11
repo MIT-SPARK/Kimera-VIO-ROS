@@ -14,7 +14,6 @@
 #include <std_msgs/Bool.h>
 
 #include "kimera_ros/RosDataProviderInterface.h"
-#include "kimera_ros/stereo-image-buffer.h"
 
 // using namespace StereoImageBuffer;
 
@@ -49,13 +48,7 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Define Node Handler for Cam Callback (and Queue)
   ros::NodeHandle nh_cam_;
 
-  FrameId frame_count_left_;
-  FrameId frame_count_right_;
-
-  // Queues for fast input callbacks
-  ThreadsafeQueue<sensor_msgs::ImuConstPtr> imu_input_queue_;
-  ThreadsafeQueue<sensor_msgs::ImageConstPtr> left_camera_input_queue_;
-  ThreadsafeQueue<sensor_msgs::ImageConstPtr> right_camera_input_queue_;
+  FrameId frame_count_;
 
   // Reinitialization flag and packet (pose, vel, bias)
   bool reinit_flag_ = false;
@@ -63,10 +56,8 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
 
  private:
   // Left camera callback
-  void callbackLeftImage(const sensor_msgs::ImageConstPtr& msg);
-
-  // Right camera callback
-  void callbackRightImage(const sensor_msgs::ImageConstPtr& msg);
+  void callbackStereoImages(const sensor_msgs::ImageConstPtr& left_msg,
+                            const sensor_msgs::ImageConstPtr& right_msg);
 
   // IMU callback
   void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
@@ -78,8 +69,8 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   void callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose);
 
   // Message filters and to sync stereo images
-  image_transport::Subscriber left_img_sub_;
-  image_transport::Subscriber right_img_sub_;
+  image_transport::Subscriber left_img_subscriber_;
+  image_transport::Subscriber right_img_subscriber_;
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;

@@ -79,9 +79,9 @@ class RosDataProviderInterface : public DataProviderInterface {
   }
 
  protected:
-  cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;
+  const cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;
 
-  cv::Mat readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg) const;
+  const cv::Mat readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg) const;
 
   // Pop and synchronize output packets from queues
   bool getVioOutput(FrontendOutput::Ptr frontend_output,

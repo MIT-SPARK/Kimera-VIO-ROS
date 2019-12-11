@@ -83,7 +83,14 @@ RosDataProviderInterface::~RosDataProviderInterface() {
   LOG(INFO) << "RosBaseDataProvider destructor called.";
 }
 
-cv::Mat RosDataProviderInterface::readRosImage(
+// TODO(marcus): From this documentation
+//  (http://wiki.ros.org/cv_bridge/Tutorials/UsingCvBridgeToConvertBetweenROSImagesAndOpenCVImages)
+//  we should be using toCvShare to get a CvImage pointer. However, this is a shared pointer
+//  and the ROS message data isn't freed. This means anyone else can modify this from another cb
+//  and our version will change too. Even the const isn't enough because people can just copy that
+//  and still have access to underlying data. Neet a smarter way to move these around yet make this 
+//  faster.
+const cv::Mat RosDataProviderInterface::readRosImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
@@ -104,7 +111,7 @@ cv::Mat RosDataProviderInterface::readRosImage(
   return cv_ptr->image;
 }
 
-cv::Mat RosDataProviderInterface::readRosDepthImage(
+const cv::Mat RosDataProviderInterface::readRosDepthImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
