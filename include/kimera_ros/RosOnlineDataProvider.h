@@ -69,8 +69,16 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   void callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose);
 
   // Message filters and to sync stereo images
-  image_transport::Subscriber left_img_subscriber_;
-  image_transport::Subscriber right_img_subscriber_;
+  typedef image_transport::SubscriberFilter ImageSubscriber;
+  ImageSubscriber left_img_subscriber_;
+  ImageSubscriber right_img_subscriber_;
+
+  // Declare Approx Synchronization Policy and Synchronizer for stereo images.
+  // TODO(Toni): should be exact sync policy
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
+                                                          sensor_msgs::Image>
+      sync_pol;
+  std::unique_ptr<message_filters::Synchronizer<sync_pol>> sync_;
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;

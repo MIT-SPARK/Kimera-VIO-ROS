@@ -19,8 +19,6 @@ namespace VIO {
 
 RosOnlineDataProvider::RosOnlineDataProvider()
     : RosDataProviderInterface(),
-      left_img_sub_(),
-      right_img_sub_(),
       frame_count_(FrameId(0)),
       left_img_subscriber_(),
       right_img_subscriber_(),
@@ -54,7 +52,7 @@ RosOnlineDataProvider::RosOnlineDataProvider()
       sync_pol(10), left_img_subscriber_, right_img_subscriber_);
   DCHECK(sync_);
   sync_->registerCallback(
-      boost::bind(&RosDataProvider::callbackStereoImages, this, _1, _2));
+      boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
 
   // Define Callback Queue for Cam Data
   ros::CallbackQueue cam_queue;
@@ -88,25 +86,27 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
 void RosOnlineDataProvider::callbackStereoImages(
     const sensor_msgs::ImageConstPtr& left_msg,
     const sensor_msgs::ImageConstPtr& right_msg) {
+  static const CameraParams& left_cam_info = pipeline_params_.camera_params_.at(0);
+  static const CameraParams& right_cam_info = pipeline_params_.camera_params_.at(1);
+ 
   ROS_INFO("Pushing left frame to pipeline.");
-  const Timestamp& timestamp = left_msg->header.stamp.toNSec();
+  const Timestamp& timestamp_left = left_msg->header.stamp.toNSec();
   left_frame_callback_(VIO::make_unique<Frame>(
-      frame_count_left_, timestamp, left_cam_info, readRosImage(left_msg)));
+      frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
 
   ROS_INFO("Pushing right frame to pipeline.");
-  const Timestamp& timestamp = right_msg->header.stamp.toNSec();
+  const Timestamp& timestamp_right = right_msg->header.stamp.toNSec();
   right_frame_callback_(VIO::make_unique<Frame>(
-      frame_count_right_, timestamp, right_cam_info, readRosImage(right_msg)));
+      frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
   
   frame_count_++;
 }
-}  // namespace VIO
 
 void RosOnlineDataProvider::callbackIMU(
     const sensor_msgs::ImuConstPtr& msgIMU) {
   ROS_INFO("Pushing imu_data to pipeline.");
 
-  ImuAccGyr imu_accgyr;
+  VIO::ImuAccGyr imu_accgyr;
 
   imu_accgyr(0) = msgIMU->linear_acceleration.x;
   imu_accgyr(1) = msgIMU->linear_acceleration.y;
