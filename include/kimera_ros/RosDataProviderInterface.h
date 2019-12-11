@@ -59,25 +59,21 @@ class RosDataProviderInterface : public DataProviderInterface {
 
  public:
   inline void callbackBackendOutput(const VIO::BackendOutput::Ptr& output) {
-    ROS_INFO("Received Backend Output from pipeline.");
     publishBackendOutput(output);
     backend_output_queue_.push(output);
   }
 
   inline void callbackFrontendOutput(const VIO::FrontendOutput::Ptr& output) {
-    ROS_INFO("Received Frontend Output from pipeline.");
     publishFrontendOutput(output);
     frontend_output_queue_.push(output);
   }
 
   inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
-    ROS_INFO("Received Mesher Output from pipeline.");
     publishMesherOutput(output);
     mesher_output_queue_.push(output);
   }
 
   inline void callbackLcdOutput(const VIO::LcdOutput::Ptr& output) {
-    ROS_INFO("Received Lcd Output from pipeline.");
     lcd_output_queue_.push(output);
   }
 
@@ -124,9 +120,6 @@ class RosDataProviderInterface : public DataProviderInterface {
   ThreadsafeQueue<FrontendOutput::Ptr> frontend_output_queue_;
   ThreadsafeQueue<MesherOutput::Ptr> mesher_output_queue_;
   ThreadsafeQueue<LcdOutput::Ptr> lcd_output_queue_;
-
-  // Store IMU data from last frame
-  ImuData imu_data_;
 
  private:
   void publishTf(const BackendOutput::Ptr& output);

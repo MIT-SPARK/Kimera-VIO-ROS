@@ -879,7 +879,7 @@ void RosDataProviderInterface::printParsedParams() const {
   LOG(INFO) << std::string(80, '=') << '\n' << " - Right camera info:";
   pipeline_params_.camera_params_.at(1).print();
   LOG(INFO) << std::string(80, '=') << '\n' << " - IMU info:";
-  imu_data_.print();
+  pipeline_params_.imu_params_.print();
   LOG(INFO) << std::string(80, '=') << '\n' << " - IMU params:";
   pipeline_params_.imu_params_.print();
   LOG(INFO) << std::string(80, '=') << '\n' << " - Backend params";

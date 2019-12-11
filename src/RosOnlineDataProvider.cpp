@@ -84,30 +84,35 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
   LOG(INFO) << "RosDataProvider destructor called.";
 }
 
-// TODO(marcus): with the readRosImage, this is a slow callback. Might be too slow...
+// TODO(marcus): with the readRosImage, this is a slow callback. Might be too
+// slow...
 void RosOnlineDataProvider::callbackStereoImages(
     const sensor_msgs::ImageConstPtr& left_msg,
     const sensor_msgs::ImageConstPtr& right_msg) {
-  static const CameraParams& left_cam_info = pipeline_params_.camera_params_.at(0);
-  static const CameraParams& right_cam_info = pipeline_params_.camera_params_.at(1);
- 
-  ROS_INFO("Pushing left frame to pipeline.");
+  static const CameraParams& left_cam_info =
+      pipeline_params_.camera_params_.at(0);
+  static const CameraParams& right_cam_info =
+      pipeline_params_.camera_params_.at(1);
+
   const Timestamp& timestamp_left = left_msg->header.stamp.toNSec();
+
+  CHECK(left_frame_callback_)
+      << "Did you forget to register the left frame callback?";
   left_frame_callback_(VIO::make_unique<Frame>(
       frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
 
-  ROS_INFO("Pushing right frame to pipeline.");
   const Timestamp& timestamp_right = right_msg->header.stamp.toNSec();
+
+  CHECK(right_frame_callback_)
+      << "Did you forget to register the right frame callback?";
   right_frame_callback_(VIO::make_unique<Frame>(
       frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
-  
+
   frame_count_++;
 }
 
 void RosOnlineDataProvider::callbackIMU(
     const sensor_msgs::ImuConstPtr& msgIMU) {
-  ROS_INFO("Pushing imu_data to pipeline.");
-
   VIO::ImuAccGyr imu_accgyr;
 
   imu_accgyr(0) = msgIMU->linear_acceleration.x;
@@ -126,6 +131,7 @@ void RosOnlineDataProvider::callbackIMU(
     timestamp -= imu_shift.toNSec();
   }
 
+  CHECK(imu_single_callback_) << "Did you forget to register the IMU callback?";
   imu_single_callback_(ImuMeasurement(timestamp, imu_accgyr));
 }
 

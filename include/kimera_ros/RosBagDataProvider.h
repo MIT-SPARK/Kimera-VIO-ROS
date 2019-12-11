@@ -76,6 +76,7 @@ class RosbagDataProvider : public RosDataProviderInterface {
 
  private:
   RosbagData rosbag_data_;
+  ImuData imu_data_;
   ros::Publisher clock_pub_;
   ros::Publisher gt_odometry_pub_;
 };
