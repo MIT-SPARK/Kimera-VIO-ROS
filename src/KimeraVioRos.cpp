@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 
   // Initialize ROS node
   ros::init(argc, argv, "kimera_vio");
-  ros::NodeHandle nh_ ("~");
+  ros::NodeHandle nh_("~");
 
   // Create dataset parser.
   VIO::RosDataProviderInterface::UniquePtr dataset_parser = nullptr;
@@ -50,6 +50,11 @@ int main(int argc, char* argv[]) {
   // Register callback for inputs.
   dataset_parser->registerImuSingleCallback(
       std::bind(&VIO::Pipeline::fillSingleImuQueue,
+                &vio_pipeline,
+                std::placeholders::_1));
+
+  dataset_parser->registerImuMultiCallback(
+      std::bind(&VIO::Pipeline::fillMultiImuQueue,
                 &vio_pipeline,
                 std::placeholders::_1));
 
@@ -79,9 +84,8 @@ int main(int argc, char* argv[]) {
                 std::ref(*CHECK_NOTNULL(dataset_parser.get())),
                 std::placeholders::_1));
 
-  // TODO(marcus): only register this if we have `use_lcd` enabled.
   bool use_lcd = false;
-  ros::param::get("use_lcd", use_lcd);
+  nh_.getParam("use_lcd", use_lcd);
   if (use_lcd) {
     vio_pipeline.registerLcdOutputCallback(
         std::bind(&VIO::RosDataProviderInterface::callbackLcdOutput,

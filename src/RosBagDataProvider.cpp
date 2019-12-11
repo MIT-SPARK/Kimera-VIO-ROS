@@ -220,15 +220,21 @@ bool RosbagDataProvider::spin() {
 
           timestamp_last_frame = timestamp_frame_k;
 
+          CHECK(imu_multi_callback_)
+              << "Did you forget to register the IMU callback?";
           imu_multi_callback_(imu_meas);
 
+          CHECK(left_frame_callback_)
+              << "Did you forget to register the left frame callback?";
           left_frame_callback_(VIO::make_unique<Frame>(
               k,
               timestamp_frame_k,
               left_cam_info,
               readRosImage(rosbag_data_.left_imgs_.at(k))));
 
-          left_frame_callback_(VIO::make_unique<Frame>(
+          CHECK(right_frame_callback_)
+              << "Did you forget to register the right frame callback?";
+          right_frame_callback_(VIO::make_unique<Frame>(
               k,
               timestamp_frame_k,
               right_cam_info,
