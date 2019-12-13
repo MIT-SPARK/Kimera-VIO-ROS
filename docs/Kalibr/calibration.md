@@ -1,6 +1,6 @@
 ### Kalibr Camera IMU Calibration
 
-This setup assumes the IMU is already calibrated (see step 5 [here](../hardware_setup.md)).  Additionally, you will need to know the noise density and random walk of the accelerometer and gyroscope.  We've included a `realsense_imu.yaml` file that has been used for calibrating a RealSense D435i camera. We found these value online (#TODO add link), but you may be interested in using [these](https://github.com/rpng/kalibr_allan) scripts to get the IMU instrinsics.  If you are have updated values for your specific IMU please update the file accordingly.
+This setup assumes the IMU is already calibrated (see step 5 [here](../hardware_setup.md)).  Additionally, you will need to know the noise density and random walk of the accelerometer and gyroscope.  We've included a `realsense_imu.yaml` file that has been used for calibrating a RealSense D435i camera. We found these value in [this](https://github.com/IntelRealSense/realsense-ros/issues/563) Github issue, but you may be interested in using [these](https://github.com/rpng/kalibr_allan) scripts to get the IMU instrinsics yourself.  If you are have updated values for your specific IMU please update the file accordingly.
 
 1. Collect calibration bagfiles for camera intrinsics and extrinsics [(see instructions)](https://www.youtube.com/watch?v=puNXsnrYWTY&app=desktop).  Use the Aprilgrid 6x6 0.8x0.8m (AO page) that can be downloaded [here](https://github.com/ethz-asl/kalibr/wiki/downloads) from Kalibr. Also download the corresponding yaml file.
 
