@@ -7,21 +7,38 @@
 Why do we use the infrared cameras on the D435i?
 The infrared cameras offer the option to run the [Kimera-VIO](https://github.com/MIT-SPARK/Kimera-VIO) stereo version on monochrome global shutter cameras, which are generally better suited for visual tracking.
 
-### Setup
+### Setup and Calibration
 
 1. Download and install the [Intel RealSense SDK](https://github.com/IntelRealSense/librealsense/blob/development/doc/distribution_linux.md)
 
 2. Download and install the [Intel RealSense ROS wrapper](https://github.com/IntelRealSense/realsense-ros)
 
-3. Adapt the RealSense ROS wrapper to publish a single interpolated IMU message [(see nodelet xml)](https://github.com/IntelRealSense/realsense-ros/blob/c2448916218ccfe49b0d642563493cb4e9bdcc3b/realsense2_camera/launch/includes/nodelet.launch.xml#L82)
+3. Adapt the RealSense ROS wrapper to publish a single interpolated IMU message in the launch file. See [nodelet xml](https://github.com/IntelRealSense/realsense-ros/blob/c2448916218ccfe49b0d642563493cb4e9bdcc3b/realsense2_camera/launch/includes/nodelet.launch.xml#L82) and the [README](https://github.com/IntelRealSense/realsense-ros/blob/development/README.md#launch-parameters) for more information. You may also want to synchronize all the camera messages to be sent with the same timestamp.
+
+```bash
+## Uniting the IMU can be done by setting 
+<arg name="unite_imu_method" default="linear_interpolation"/>
+
+## Synching camera messages can be done by setting
+<arg name="enable_sync" default="true"/>
+```
 
 4. Make sure to properly cover the infrared projector on the RealSense (this otherwise affects the quality of the infrared image with dots)
 
-5. Collect calibration bagfiles for camera intrinsics and extrinsics [(see instructions)](https://www.youtube.com/watch?v=puNXsnrYWTY&app=desktop)
+5. Calibrate the IMU instrinsics (see instructions [here](https://github.com/IntelRealSense/librealsense/tree/master/tools/rs-imu-calibration)).  The D435i IMUs do not come calibrated from the factory, and this step impacts the next calibration steps, as the camera scales IMU messages according to the intrinsic values.   More information on the calibration can be found [here](https://www.intel.com/content/dam/support/us/en/documents/emerging-technologies/intel-realsense-technology/RealSense_Depth_D435i_IMU_Calib.pdf). 
 
-6. Calibrate camera intrinsics and extrinsics using [Kalibr](https://github.com/ethz-asl/kalibr)
+6. Follow the Kalibr calibration step described [here](Kalibr/calibration.md).  For more information, visit the [Kalibr Wiki](https://github.com/ethz-asl/kalibr/wiki).
 
 7. Create configuration files for Kimera-VIO-ROS wrapper using [Kalibr2KimeraVIO-pinhole-radtan](https://github.com/MIT-SPARK/Kimera-VIO/tree/master/kalibr/config2kimeravio.py)
+
+```bash
+## Locate the camchain-imucam-<bagname>.yaml and realsense_imu.yaml files from step 6. 
+
+## Use the config2kimeravio.py file in Kimera-VIO/kalibr
+
+python ~/Documents/VNAV/agrobot/src/Kimera-VIO/kalibr/config2kimeravio.py -config 'stereo-radtan' -input_cam camchain-imucam-<bagname>.yaml -input_imu realsense_imu.yaml -output <path-to-configuration-file> -responsible 'John Smith' -date '12.03.2019' -camera 'RealSense D435i' -IMU 'RealSense D435i'
+```
+Copy the created `calibration.yaml` file to the `Kimera-VIO-ROS/param` folder you are using.
 
 8. Create/adapt your own specific launch file, similar to [example RealSense IR](https://github.com/MIT-SPARK/Kimera-VIO-ROS/tree/master/launch/kimera_ros_realsense_IR.launch)
 
