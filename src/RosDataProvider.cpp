@@ -10,8 +10,9 @@
 
 #include "kimera_ros/RosOnlineDataProvider.h"
 
-#include <kimera-vio/visualizer/Visualizer3D.h>
 #include <kimera-vio/pipeline/PipelineModule.h>
+#include <kimera-vio/pipeline/QueueSynchronizer.h>
+#include <kimera-vio/visualizer/Visualizer3D.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -173,12 +174,18 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
     const Timestamp& ts = backend_output->timestamp_;
 
     FrontendOutput::Ptr frontend_output = nullptr;
-    bool get_frontend = VIO::PipelineModuleBase::syncQueue<FrontendOutput::Ptr>(
-        ts, &frontend_output_queue_, &frontend_output, "RosDataProvider");
+    bool get_frontend =
+        SimpleQueueSynchronizer<FrontendOutput::Ptr>::getInstance()
+            .syncQueue(ts,
+                       &frontend_output_queue_,
+                       &frontend_output,
+                       "RosDataProvider");
 
     MesherOutput::Ptr mesher_output = nullptr;
-    bool get_mesher = VIO::PipelineModuleBase::syncQueue<MesherOutput::Ptr>(
-        ts, &mesher_output_queue_, &mesher_output, "RosDataProvider");
+    bool get_mesher =
+        SimpleQueueSynchronizer<MesherOutput::Ptr>::getInstance()
+            .syncQueue(
+                ts, &mesher_output_queue_, &mesher_output, "RosDataProvider");
 
     if (frontend_output && mesher_output) {
       CHECK_NOTNULL(frontend_output);
@@ -604,8 +611,7 @@ void RosDataProviderInterface::publishResiliency(
   CHECK(nh_private_.getParam("velocity_det_threshold", vel_det_threshold));
   CHECK(nh_private_.getParam("position_det_threshold", pos_det_threshold));
   CHECK(
-      nh_private_.getParam("stereo_ransac_threshold",
-      stereo_ransac_threshold));
+      nh_private_.getParam("stereo_ransac_threshold", stereo_ransac_threshold));
   CHECK(nh_private_.getParam("mono_ransac_threshold", mono_ransac_theshold));
   resiliency_msg.data[4] = pos_det_threshold;
   resiliency_msg.data[5] = vel_det_threshold;
