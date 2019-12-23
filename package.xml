@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>kimera_ros</name>
+  <name>kimera_vio_ros</name>
   <version>4.0.0</version>
   <description>KimeraVIO ROS Wrapper</description>
 
@@ -16,7 +16,7 @@
   <!-- KimeraVIO needs opencv >= 3.3.1, yet ROS uses 3.2.0.
        Hacky way of avoiding error in KimeraVIO by linking to 3.4.2-->
   <depend>opencv3_catkin</depend>
-  <depend>KimeraVIO</depend>
+  <depend>kimera_vio</depend>
 
   <depend>roscpp</depend>
   <depend>std_msgs</depend>

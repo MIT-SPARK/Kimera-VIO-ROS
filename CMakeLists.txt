@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(kimera_ros)
+project(kimera_vio_ros)
 
 find_package(catkin_simple REQUIRED)
 
@@ -20,7 +20,7 @@ cs_add_executable(${PROJECT_NAME}
   src/RosDataProvider.cpp
   src/RosBagDataProvider.cpp
   src/RosOnlineDataProvider.cpp)
-target_link_libraries(${PROJECT_NAME} KimeraVIO::KimeraVIO)
+target_link_libraries(${PROJECT_NAME} kimera_vio)
 
 cs_install()
 

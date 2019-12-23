@@ -7,6 +7,8 @@
 
 #include "kimera_ros/RosBagDataProvider.h"
 
+#include <glog/logging.h>
+
 #include <rosgraph_msgs/Clock.h>
 #include <sensor_msgs/Imu.h>
 
