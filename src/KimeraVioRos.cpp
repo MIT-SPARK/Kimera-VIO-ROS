@@ -17,9 +17,9 @@
 #include <kimera-vio/utils/Timer.h>
 
 // Dependencies from this repository
-#include "kimera_ros/RosBagDataProvider.h"
-#include "kimera_ros/RosDataProviderInterface.h"
-#include "kimera_ros/RosOnlineDataProvider.h"
+#include "kimera_vio_ros/RosBagDataProvider.h"
+#include "kimera_vio_ros/RosDataProviderInterface.h"
+#include "kimera_vio_ros/RosOnlineDataProvider.h"
 
 int main(int argc, char* argv[]) {
   // Initialize Google's flags library.

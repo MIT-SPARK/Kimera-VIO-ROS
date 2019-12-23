@@ -5,7 +5,7 @@
 
   <arg name="log_output" default="false"/>
   <arg name="log_output_path"
-       default="$(find kimera_ros)/output_logs/"
+       default="$(find kimera_vio_ros)/output_logs/"
        if="$(arg log_output)"/>
   <arg name="log_gt_data" default="false"/>
   <arg name="gt_topic" default=""
@@ -23,7 +23,7 @@
   <arg name="imu_topic"       value="/kitti/oxts/imu"/>
 
   <!-- Launch actual pipeline -->
-  <include file="$(find kimera_ros)/launch/kimera_ros.launch"
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
            pass_all_args="true"/>
 
  <!-- Launch static TF node from base_link to velo_link -->

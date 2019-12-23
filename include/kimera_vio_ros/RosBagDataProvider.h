@@ -19,7 +19,7 @@
 #include <rosbag/view.h>
 #include <sensor_msgs/Image.h>
 
-#include "kimera_ros/RosDataProviderInterface.h"
+#include "kimera_vio_ros/RosDataProviderInterface.h"
 
 namespace VIO {
 

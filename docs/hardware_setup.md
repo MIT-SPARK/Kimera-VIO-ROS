@@ -23,7 +23,7 @@ The infrared cameras offer the option to run the [Kimera-VIO](https://github.com
 
 7. Create configuration files for Kimera-VIO-ROS wrapper using [Kalibr2KimeraVIO-pinhole-radtan](https://github.com/MIT-SPARK/Kimera-VIO/tree/master/kalibr/config2kimeravio.py)
 
-8. Create/adapt your own specific launch file, similar to [example RealSense IR](https://github.com/MIT-SPARK/Kimera-VIO-ROS/tree/master/launch/kimera_ros_realsense_IR.launch)
+8. Create/adapt your own specific launch file, similar to [example RealSense IR](https://github.com/MIT-SPARK/Kimera-VIO-ROS/tree/master/launch/kimera_vio_ros_realsense_IR.launch)
 
 ### Testing
 
@@ -51,7 +51,7 @@ It is important to remember that when launching the VIO, the camera should be st
 
 4. Create configuration files for Kimera-VIO-ROS wrapper using [Kalibr2KimeraVIO-pinhole-equi](https://github.com/MIT-SPARK/Kimera-VIO/tree/master/kalibr/config2kimeravio.py) (or pinholde-radtan)
 
-5. Create/adapt your own specific launch file, similar to [example MyntEye S](https://github.com/MIT-SPARK/Kimera-VIO-ROS/tree/master/launch/kimera_ros_mynteye.launch)
+5. Create/adapt your own specific launch file, similar to [example MyntEye S](https://github.com/MIT-SPARK/Kimera-VIO-ROS/tree/master/launch/kimera_vio_ros_mynteye.launch)
 
 ### Testing
 

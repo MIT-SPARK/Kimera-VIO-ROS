@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "kimera_ros/RosOnlineDataProvider.h"
+#include "kimera_vio_ros/RosOnlineDataProvider.h"
 
 #include <kimera-vio/pipeline/PipelineModule.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>

@@ -89,14 +89,14 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.05000000074505806
       Style: Spheres
-      Topic: /kimera_ros/time_horizon_pointcloud
+      Topic: /kimera_vio_ros/time_horizon_pointcloud
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
     - Class: rviz/Image
       Enabled: false
-      Image Topic: /kimera_ros/debug_mesh_img
+      Image Topic: /kimera_vio_ros/debug_mesh_img
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -108,7 +108,7 @@ Visualization Manager:
       Value: false
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /kimera_ros/debug_mesh_img
+      Image Topic: /kimera_vio_ros/debug_mesh_img
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -125,13 +125,13 @@ Visualization Manager:
       Phong Shading: true
       Point Size: 1
       Polygon Mode: SOLID
-      PolygonMesh Topic: /kimera_ros/mesh
+      PolygonMesh Topic: /kimera_vio_ros/mesh
       Queue Size: 25
       Scene Color Scale: 1
       Shader Program: TEXTURE
       Show Normals: false
       Texture Transport Hint: raw
-      Texture topic: /kimera_ros/debug_mesh_img
+      Texture topic: /kimera_vio_ros/debug_mesh_img
       Value: true
     - Angle Tolerance: 0.10000000149011612
       Class: rviz/Odometry
@@ -164,14 +164,14 @@ Visualization Manager:
         Shaft Length: 1
         Shaft Radius: 0.05000000074505806
         Value: Axes
-      Topic: /kimera_ros/odometry
+      Topic: /kimera_vio_ros/odometry
       Unreliable: false
       Value: true
     - Class: rviz/Group
       Displays:
         - Class: rviz/Marker
           Enabled: false
-          Marker Topic: /kimera_ros/graph_nodes
+          Marker Topic: /kimera_vio_ros/graph_nodes
           Name: Nodes
           Namespaces:
             {}
@@ -179,7 +179,7 @@ Visualization Manager:
           Value: false
         - Class: rviz/Marker
           Enabled: true
-          Marker Topic: /kimera_ros/loop_edges
+          Marker Topic: /kimera_vio_ros/loop_edges
           Name: Loop Edges
           Namespaces:
             world: true
@@ -187,7 +187,7 @@ Visualization Manager:
           Value: true
         - Class: rviz/Marker
           Enabled: true
-          Marker Topic: /kimera_ros/rejected_loop_edges
+          Marker Topic: /kimera_vio_ros/rejected_loop_edges
           Name: Rejected Edges
           Namespaces:
             {}
@@ -195,7 +195,7 @@ Visualization Manager:
           Value: true
         - Class: rviz/Marker
           Enabled: true
-          Marker Topic: /kimera_ros/odometry_edges
+          Marker Topic: /kimera_vio_ros/odometry_edges
           Name: Odometry Edges
           Namespaces:
             world: true
@@ -221,7 +221,7 @@ Visualization Manager:
           Radius: 0.029999999329447746
           Shaft Diameter: 0.10000000149011612
           Shaft Length: 0.10000000149011612
-          Topic: /kimera_ros/optimized_trajectory
+          Topic: /kimera_vio_ros/optimized_trajectory
           Unreliable: false
           Value: false
       Enabled: true

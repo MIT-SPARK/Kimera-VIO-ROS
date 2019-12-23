@@ -15,7 +15,7 @@
        'log_output_path' location. -->
   <arg name="log_output" default="false"/>
   <arg name="log_output_path"
-       default="$(find kimera_ros)/output_logs/"/>
+       default="$(find kimera_vio_ros)/output_logs/"/>
   <!-- If true, log ground-truth poses to a csv file using the
        gt_logger_node, and processing data from the gt_topic rostopic -->
   <arg name="log_gt_data" default="false"/>
@@ -29,11 +29,11 @@
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
   <arg name="params_folder"
-                       value="$(find kimera_ros)/param/$(arg dataset_name)"/>
+                       value="$(find kimera_vio_ros)/param/$(arg dataset_name)"/>
 
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
-  <arg name="path_to_vocab" default="$(find KimeraVIO)/vocabulary/ORBvoc.yml"/>
+  <arg name="path_to_vocab" default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
 
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"                    default="/cam0/image_raw"/>
@@ -59,8 +59,8 @@
   <arg name="visualize"    default="false" />
 
   <!-- Launch main node  -->
-  <node name="kimera_ros" pkg="kimera_ros" type="kimera_ros"
-        output="screen" ns="kimera_ros"
+  <node name="kimera_vio_ros" pkg="kimera_vio_ros" type="kimera_vio_ros"
+        output="screen" ns="kimera_vio_ros"
         args="--left_cam_params_path=$(arg params_folder)/LeftCameraParams.yaml \
               --right_cam_params_path=$(arg params_folder)/RightCameraParams.yaml \
               --imu_params_path=$(arg params_folder)/ImuParams.yaml \
@@ -138,7 +138,7 @@
   </include>
 
   <!-- Log ground-truth data only if requested-->
-  <node if="$(arg log_gt_data)" name="gt_logger_node" pkg="kimera_ros"
+  <node if="$(arg log_gt_data)" name="gt_logger_node" pkg="kimera_vio_ros"
         type="gt_logger_node.py" output="screen">
     <param name="gt_topic"   value="$(arg gt_topic)"/>
     <param name="output_dir" value="$(arg log_output_path)"/>
