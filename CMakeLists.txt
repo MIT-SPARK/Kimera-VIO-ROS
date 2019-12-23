@@ -20,7 +20,7 @@ cs_add_executable(${PROJECT_NAME}
   src/RosDataProvider.cpp
   src/RosBagDataProvider.cpp
   src/RosOnlineDataProvider.cpp)
-target_link_libraries(${PROJECT_NAME} KimeraVIO)
+target_link_libraries(${PROJECT_NAME} KimeraVIO::KimeraVIO)
 
 cs_install()
 
