@@ -179,8 +179,7 @@ void RosbagDataProvider::publishBackendOutput(
 }
 
 bool RosbagDataProvider::spin() {
-  // Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
-  Timestamp timestamp_last_frame = std::numeric_limits<Timestamp>::min();
+  Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
 
   for (size_t k = 0; k < rosbag_data_.getNumberOfImages(); k++) {
     if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
@@ -221,8 +220,19 @@ bool RosbagDataProvider::spin() {
                    << "ACCGYR IMU: \n"
                    << imu_meas.acc_gyr_ << '\n';
 
+          // Remove the final entry on the data because addMeasurement() is inclusive
+          // on both ends. This leads to a timestamp ordering error.
+          // TODO(marcus): add interpolation option that is inclusive at beginning, exclusive at end.
+          CHECK_EQ(imu_meas.timestamps_.cols(), imu_meas.acc_gyr_.cols());
+          int num_cols = imu_meas.timestamps_.cols() - 1;
+          CHECK_GT(num_cols, 0);
+
+          imu_meas.timestamps_.conservativeResize(imu_meas.timestamps_.rows(), num_cols);
+          imu_meas.acc_gyr_.conservativeResize(imu_meas.acc_gyr_.rows(), num_cols);
+
           timestamp_last_frame = timestamp_frame_k;
 
+          // Send all data to Kimera-VIO
           CHECK(imu_multi_callback_)
               << "Did you forget to register the IMU callback?";
           imu_multi_callback_(imu_meas);
