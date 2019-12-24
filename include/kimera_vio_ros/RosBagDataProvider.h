@@ -53,12 +53,7 @@ class RosbagDataProvider : public RosDataProviderInterface {
   // Parse rosbag data
   // Optionally, send a ground-truth odometry topic if available in the rosbag.
   // If gt_odom_topic is empty (""), it will be ignored.
-  bool parseRosbag(const std::string& bag_path,
-                   const std::string& left_imgs_topic,
-                   const std::string& right_imgs_topic,
-                   const std::string& imu_topic,
-                   const std::string& gt_odom_topic,
-                   RosbagData* data);
+  bool parseRosbag(const std::string& bag_path, RosbagData* rosbag_data);
 
   // Get ground-truth nav state for VIO initialization.
   // It uses odometry messages inside of the rosbag as ground-truth (indexed
@@ -76,7 +71,8 @@ class RosbagDataProvider : public RosDataProviderInterface {
 
  private:
   RosbagData rosbag_data_;
-  ImuData imu_data_;
+  std::string rosbag_path_, left_imgs_topic_, right_imgs_topic_, imu_topic_,
+      gt_odom_topic_;
   ros::Publisher clock_pub_;
   ros::Publisher gt_odometry_pub_;
 };
