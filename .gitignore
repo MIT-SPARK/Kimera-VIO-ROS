@@ -33,3 +33,6 @@
 *.exe
 *.out
 *.app
+
+# Vscode files
+.vscode/
