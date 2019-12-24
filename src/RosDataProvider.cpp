@@ -241,8 +241,6 @@ void RosDataProviderInterface::publishTimeHorizonPointCloud(
   msg->width = points_with_id.size();
   msg->points.resize(points_with_id.size());
 
-  LOG(ERROR) << "Points with id size: " << msg->points.size();
-
   bool color_the_cloud = false;
   if (lmk_id_to_lmk_type_map.size() != 0) {
     color_the_cloud = true;
