@@ -179,7 +179,8 @@ void RosbagDataProvider::publishBackendOutput(
 }
 
 bool RosbagDataProvider::spin() {
-  Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
+  // Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
+  Timestamp timestamp_last_frame = std::numeric_limits<Timestamp>::min();
 
   for (size_t k = 0; k < rosbag_data_.getNumberOfImages(); k++) {
     if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
@@ -291,8 +292,9 @@ bool RosbagDataProvider::spin() {
     publishSyncedOutputs();
 
     LcdOutput::Ptr lcd_output = nullptr;
-    lcd_output_queue_.pop(lcd_output);
-    publishLcdOutput(lcd_output);
+    if (lcd_output_queue_.pop(lcd_output)) {
+      publishLcdOutput(lcd_output);
+    }
   }
 
   return true;
