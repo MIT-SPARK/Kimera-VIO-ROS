@@ -26,14 +26,31 @@ RosOnlineDataProvider::RosOnlineDataProvider()
       imu_subscriber_(),
       reinit_flag_subscriber_(),
       reinit_pose_subscriber_(),
-      vio_queue_(),
+      imu_queue_(),
+      imu_async_spinner_(nullptr),
       async_spinner_(nullptr) {
   ROS_INFO("Starting KimeraVIO wrapper for online");
 
-  // Start IMU subscriber
   static constexpr size_t kMaxImuQueueSize = 50u;
-  imu_subscriber_ = nh_.subscribe(
-      "imu", kMaxImuQueueSize, &RosOnlineDataProvider::callbackIMU, this);
+  // Create a dedicated queue for the Imu callback so that we can use an async
+  // spinner on it to process the data lighting fast.
+  ros::SubscribeOptions imu_subscriber_options =
+      ros::SubscribeOptions::create<sensor_msgs::Imu>(
+          "imu",
+          kMaxImuQueueSize,
+          boost::bind(&RosOnlineDataProvider::callbackIMU, this, _1),
+          ros::VoidPtr(),
+          &imu_queue_);
+
+  // Start IMU subscriber
+  imu_subscriber_ = nh_.subscribe(imu_subscriber_options);
+
+  // Imu Async Spinner: will process the imu_queue_ only, instead of ROS' global
+  // queue.
+  static constexpr size_t kSpinnerThreads = 0;
+  imu_async_spinner_ =
+      VIO::make_unique<ros::AsyncSpinner>(kSpinnerThreads, &imu_queue_);
+  imu_async_spinner_->start();
 
   // Subscribe to stereo images. Approx time sync, should be exact though...
   static constexpr size_t kMaxImagesQueueSize = 1u;
@@ -62,12 +79,11 @@ RosOnlineDataProvider::RosOnlineDataProvider()
                     &RosOnlineDataProvider::callbackReinitPose,
                     this);
 
-  // Define Callback Queue separate from Global Callback Queue for faster
-  // processing.
-  //nh_.setCallbackQueue(&vio_queue_);
-
-  //ros::AsyncSpinner async_spinner(kSpinnerThreads, &vio_queue_);
-  static constexpr size_t kSpinnerThreads = 0;
+  // This spinner will process the regular Global callback queue of ROS.
+  // Alternatively, we could make something like IMU async spinner with its
+  // own queue, but then we need a ros::SpinOnce somewhere, or another async
+  // spinner for the global queue (although I think we don't parse anything
+  // from the global queue...
   async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kSpinnerThreads);
   async_spinner_->start();
 

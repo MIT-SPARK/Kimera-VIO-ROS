@@ -40,7 +40,8 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
 
  private:
   // TODO (Toni): only use one node handle...
-  ros::CallbackQueue vio_queue_;
+  ros::CallbackQueue imu_queue_;
+  std::unique_ptr<ros::AsyncSpinner> imu_async_spinner_;
   std::unique_ptr<ros::AsyncSpinner> async_spinner_;
 
   FrameId frame_count_;
