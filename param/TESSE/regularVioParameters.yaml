@@ -1,16 +1,9 @@
 %YAML:1.0
-#IMU PARAMETERS
-# THESE PARAMS AREN"T USED
-gyroNoiseDensity: 0.00016968
-accNoiseDensity: 0.002
-gyroBiasSigma: 1.9393e-05
-accBiasSigma: 0.003
-##########################33333333
-imuIntegrationSigma: 1.0e-8
-n_gravity: [0.0, 0.0, -9.81]
-nominalImuRate: 0.005
+# Backend modality for regular VIO
+# 0: Structureless factors only, 4: SPR pipeline
+backend_modality: 0
 #INITIALIZATION PARAMETERS
-autoInitialize: 1 # Change for reinit from ext. pose
+autoInitialize: 1
 roundOnAutoInitialize: 0
 initialPositionSigma: 1e-05
 initialRollPitchSigma: 0.174533 # 10.0/180.0*M_PI
@@ -21,7 +14,7 @@ initialGyroBiasSigma: 0.01
 #VISION PARAMETERS
 linearizationMode: 0
 degeneracyMode: 1
-smartNoiseSigma: 3.0
+smartNoiseSigma: 3.25
 monoNoiseSigma: 1.8
 monoNormType: 2
 monoNormParam: 4.6851
@@ -32,8 +25,8 @@ regularityNoiseSigma: 0.03
 regularityNormType: 1
 regularityNormParam: 0.04
 rankTolerance: 1
-landmarkDistanceThreshold: 10
-outlierRejection: 3
+landmarkDistanceThreshold: 15
+outlierRejection: 8
 retriangulationThreshold: 0.001
 addBetweenStereoFactors: 1
 betweenRotationPrecision: 0 # Inverse of variance.
@@ -46,5 +39,5 @@ noMotionPositionSigma: 0.001
 noMotionRotationSigma: 0.0001
 constantVelSigma: 0.01
 numOptimize: 1
-horizon: 6 # In seconds.
+horizon: 5 # In seconds.
 useDogLeg: 0
