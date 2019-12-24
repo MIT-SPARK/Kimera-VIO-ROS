@@ -24,6 +24,7 @@ RosOnlineDataProvider::RosOnlineDataProvider()
       left_img_subscriber_(),
       right_img_subscriber_(),
       imu_subscriber_(),
+      gt_odom_subscriber_(),
       reinit_flag_subscriber_(),
       reinit_pose_subscriber_(),
       imu_queue_(),
@@ -66,7 +67,19 @@ RosOnlineDataProvider::RosOnlineDataProvider()
   sync_->registerCallback(
       boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
 
-  ////// Define Reinitializer Subscriber
+  // Define ground truth odometry Subsrciber
+  static constexpr size_t kMaxGtOdomQueueSize = 1u;
+  if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
+    LOG(INFO) << "Requested initialization from ground truth. "
+              << "Initializing ground-truth odometry one-shot subscriber.";
+    gt_odom_subscriber_ = 
+        nh_.subscribe("gt_odom",
+                      kMaxGtOdomQueueSize,
+                      &RosOnlineDataProvider::callbackGtOdomOnce,
+                      this);
+  }
+
+  // Define Reinitializer Subscriber
   static constexpr size_t kMaxReinitQueueSize = 50u;
   reinit_flag_subscriber_ =
       nh_.subscribe("reinit_flag",
@@ -144,6 +157,17 @@ void RosOnlineDataProvider::callbackIMU(
   imu_single_callback_(ImuMeasurement(timestamp, imu_accgyr));
 }
 
+// Ground-truth odometry callback
+void RosOnlineDataProvider::callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& msgGtOdom) {
+  LOG(WARNING) << "Using initial ground-truth state for initialization.";
+  msgGtOdomToVioNavState(
+      msgGtOdom,
+      &pipeline_params_.backend_params_->initial_ground_truth_state_);
+
+  // Shutdown subscriber to prevent new gt poses from interfering
+  gt_odom_subscriber_.shutdown();
+}
+
 // Reinitialization callback
 void RosOnlineDataProvider::callbackReinit(
     const std_msgs::Bool::ConstPtr& reinitFlag) {
@@ -171,6 +195,30 @@ void RosOnlineDataProvider::callbackReinitPose(
                          reinitPose.pose.position.y,
                          reinitPose.pose.position.z);
   reinit_packet_.setReinitPose(gtsam::Pose3(rotation, position));
+}
+
+void RosOnlineDataProvider::msgGtOdomToVioNavState(
+    const nav_msgs::Odometry::ConstPtr& gt_odom, VioNavState* vio_navstate) {
+  CHECK_NOTNULL(vio_navstate);
+
+  // World to Body rotation
+  gtsam::Rot3 W_R_B = gtsam::Rot3::Quaternion(gt_odom->pose.pose.orientation.w,
+                                              gt_odom->pose.pose.orientation.x,
+                                              gt_odom->pose.pose.orientation.y,
+                                              gt_odom->pose.pose.orientation.z);
+  gtsam::Point3 position(gt_odom->pose.pose.position.x,
+                         gt_odom->pose.pose.position.y,
+                         gt_odom->pose.pose.position.z);
+  gtsam::Vector3 velocity(gt_odom->twist.twist.linear.x,
+                          gt_odom->twist.twist.linear.y,
+                          gt_odom->twist.twist.linear.z);
+
+  vio_navstate->pose_ = gtsam::Pose3(W_R_B, position);
+  vio_navstate->velocity_ = velocity;
+  // TODO(Toni): how can we get the ground-truth biases? For sim, ins't it 0?
+  gtsam::Vector3 gyro_bias(0.0, 0.0, 0.0);
+  gtsam::Vector3 acc_bias(0.0, 0.0, 0.0);
+  vio_navstate->imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
 }
 
 bool RosOnlineDataProvider::spin() {

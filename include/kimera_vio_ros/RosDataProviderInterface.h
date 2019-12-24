@@ -83,9 +83,9 @@ class RosDataProviderInterface : public DataProviderInterface {
   // Publish VIO outputs.
   virtual void publishBackendOutput(const BackendOutput::Ptr& output);
 
-  virtual void publishFrontendOutput(const FrontendOutput::Ptr& output);
+  virtual void publishFrontendOutput(const FrontendOutput::Ptr& output) const;
 
-  virtual void publishMesherOutput(const MesherOutput::Ptr& output);
+  virtual void publishMesherOutput(const MesherOutput::Ptr& output) const;
 
   virtual bool publishSyncedOutputs();
 

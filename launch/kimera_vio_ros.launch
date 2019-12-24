@@ -95,9 +95,11 @@
 
     <!-- Subscriber topics -->
     <!-- if we run online, use remap -->
-    <remap from="left_cam"  to="$(arg left_cam_topic)"  if="$(arg online)"/>
-    <remap from="right_cam" to="$(arg right_cam_topic)" if="$(arg online)"/>
-    <remap from="imu"       to="$(arg imu_topic)"       if="$(arg online)"/>
+    <remap from="left_cam"  to="$(arg left_cam_topic)"              if="$(arg online)"/>
+    <remap from="right_cam" to="$(arg right_cam_topic)"             if="$(arg online)"/>
+    <remap from="imu"       to="$(arg imu_topic)"                   if="$(arg online)"/>
+    <remap from="gt_odom"   to="$(arg odometry_ground_truth_topic)" if="$(arg online)"/>
+
     <!-- if we run offline, use params -->
     <param name="rosbag_path"            value="$(arg rosbag_path)"     unless="$(arg online)"/>
     <param name="left_cam_rosbag_topic"  value="$(arg left_cam_topic)"  unless="$(arg online)"/>

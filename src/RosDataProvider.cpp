@@ -149,7 +149,7 @@ void RosDataProviderInterface::publishBackendOutput(
 }
 
 void RosDataProviderInterface::publishFrontendOutput(
-    const FrontendOutput::Ptr& output) {
+    const FrontendOutput::Ptr& output) const {
   CHECK_NOTNULL(output);
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
@@ -157,7 +157,7 @@ void RosDataProviderInterface::publishFrontendOutput(
 }
 
 void RosDataProviderInterface::publishMesherOutput(
-    const MesherOutput::Ptr& output) {
+    const MesherOutput::Ptr& output) const {
   CHECK_NOTNULL(output);
   if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
     publishPerFrameMesh3D(output);

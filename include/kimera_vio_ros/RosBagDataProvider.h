@@ -71,8 +71,13 @@ class RosbagDataProvider : public RosDataProviderInterface {
 
  private:
   RosbagData rosbag_data_;
-  std::string rosbag_path_, left_imgs_topic_, right_imgs_topic_, imu_topic_,
-      gt_odom_topic_;
+
+  std::string rosbag_path_;
+  std::string left_imgs_topic_;
+  std::string right_imgs_topic_;
+  std::string imu_topic_;
+  std::string gt_odom_topic_;
+
   ros::Publisher clock_pub_;
   ros::Publisher gt_odometry_pub_;
 };

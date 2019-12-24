@@ -33,7 +33,8 @@
   <arg name="imu_topic"        value="/tesse/imu"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
-  <arg name="odometry_ground_truth_topic" value="$(arg gt_topic)"/>
+  <arg name="odometry_ground_truth_topic" value="$(arg gt_topic)"
+       if="$(arg log_gt_data)"/>
 
   <!-- Launch actual pipeline -->
   <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"

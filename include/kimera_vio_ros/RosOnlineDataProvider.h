@@ -12,6 +12,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/time_synchronizer.h>
 #include <sensor_msgs/Imu.h>
+#include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
@@ -58,12 +59,20 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // IMU callback
   void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
 
+  // GT odometry callback
+  void callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& msgGtOdom);
+
   // Reinitialization callback
   void callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag);
 
   // Reinitialization pose
   void callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose);
 
+ private:
+  void msgGtOdomToVioNavState(const nav_msgs::Odometry::ConstPtr& gt_odom,
+                              VioNavState* vio_navstate);
+
+ private:
   // Message filters and to sync stereo images
   typedef image_transport::SubscriberFilter ImageSubscriber;
   ImageSubscriber left_img_subscriber_;
@@ -78,6 +87,9 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;
+
+  // Define subscriber for gt data
+  ros::Subscriber gt_odom_subscriber_;
 
   // Define subscriber for Reinit data
   ros::Subscriber reinit_flag_subscriber_;
