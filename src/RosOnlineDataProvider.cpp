@@ -13,7 +13,6 @@
 #include <glog/logging.h>
 
 #include <geometry_msgs/PoseStamped.h>
-#include <ros/callback_queue.h>
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/Bool.h>
 
@@ -27,55 +26,50 @@ RosOnlineDataProvider::RosOnlineDataProvider()
       imu_subscriber_(),
       reinit_flag_subscriber_(),
       reinit_pose_subscriber_(),
-      nh_imu_(),
-      nh_reinit_(),
-      nh_cam_() {
+      vio_queue_(),
+      async_spinner_(nullptr) {
   ROS_INFO("Starting KimeraVIO wrapper for online");
 
   // Start IMU subscriber
-  imu_subscriber_ =
-      nh_imu_.subscribe("imu", 50, &RosOnlineDataProvider::callbackIMU, this);
-
-  // Define Callback Queue for IMU Data
-  ros::CallbackQueue imu_queue;
-  nh_imu_.setCallbackQueue(&imu_queue);
-
-  // Spawn Async Spinner (Running on Custom Queue) for IMU
-  // 0 to use number of processor queues
-
-  ros::AsyncSpinner async_spinner_imu(0, &imu_queue);
-  async_spinner_imu.start();
+  static constexpr size_t kMaxImuQueueSize = 50u;
+  imu_subscriber_ = nh_.subscribe(
+      "imu", kMaxImuQueueSize, &RosOnlineDataProvider::callbackIMU, this);
 
   // Subscribe to stereo images. Approx time sync, should be exact though...
-  DCHECK(it_);
-  left_img_subscriber_.subscribe(*it_, "left_cam", 1);
-  right_img_subscriber_.subscribe(*it_, "right_cam", 1);
+  static constexpr size_t kMaxImagesQueueSize = 1u;
+  CHECK(it_);
+  left_img_subscriber_.subscribe(*it_, "left_cam", kMaxImagesQueueSize);
+  right_img_subscriber_.subscribe(*it_, "right_cam", kMaxImagesQueueSize);
+  static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
   sync_ = VIO::make_unique<message_filters::Synchronizer<sync_pol>>(
-      sync_pol(10), left_img_subscriber_, right_img_subscriber_);
+      sync_pol(kMaxImageSynchronizerQueueSize),
+      left_img_subscriber_,
+      right_img_subscriber_);
   DCHECK(sync_);
   sync_->registerCallback(
       boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
 
-  // Define Callback Queue for Cam Data
-  ros::CallbackQueue cam_queue;
-  nh_cam_.setCallbackQueue(&cam_queue);
-
-  // Spawn Async Spinner (Running on Custom Queue) for Cam
-  ros::AsyncSpinner async_spinner_cam(0, &cam_queue);
-  async_spinner_cam.start();
-
   ////// Define Reinitializer Subscriber
-  reinit_flag_subscriber_ = nh_reinit_.subscribe(
-      "reinit_flag", 10, &RosOnlineDataProvider::callbackReinit, this);
-  reinit_pose_subscriber_ = nh_reinit_.subscribe(
-      "reinit_pose", 10, &RosOnlineDataProvider::callbackReinitPose, this);
+  static constexpr size_t kMaxReinitQueueSize = 50u;
+  reinit_flag_subscriber_ =
+      nh_.subscribe("reinit_flag",
+                    kMaxReinitQueueSize,
+                    &RosOnlineDataProvider::callbackReinit,
+                    this);
+  reinit_pose_subscriber_ =
+      nh_.subscribe("reinit_pose",
+                    kMaxReinitQueueSize,
+                    &RosOnlineDataProvider::callbackReinitPose,
+                    this);
 
-  // Define Callback Queue for Reinit Data
-  ros::CallbackQueue reinit_queue;
-  nh_reinit_.setCallbackQueue(&reinit_queue);
+  // Define Callback Queue separate from Global Callback Queue for faster
+  // processing.
+  //nh_.setCallbackQueue(&vio_queue_);
 
-  ros::AsyncSpinner async_spinner_reinit(0, &reinit_queue);
-  async_spinner_reinit.start();
+  //ros::AsyncSpinner async_spinner(kSpinnerThreads, &vio_queue_);
+  static constexpr size_t kSpinnerThreads = 0;
+  async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kSpinnerThreads);
+  async_spinner_->start();
 
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
 }
@@ -95,16 +89,15 @@ void RosOnlineDataProvider::callbackStereoImages(
       pipeline_params_.camera_params_.at(1);
 
   const Timestamp& timestamp_left = left_msg->header.stamp.toNSec();
+  const Timestamp& timestamp_right = right_msg->header.stamp.toNSec();
 
   CHECK(left_frame_callback_)
       << "Did you forget to register the left frame callback?";
-  left_frame_callback_(VIO::make_unique<Frame>(
-      frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
-
-  const Timestamp& timestamp_right = right_msg->header.stamp.toNSec();
-
   CHECK(right_frame_callback_)
       << "Did you forget to register the right frame callback?";
+
+  left_frame_callback_(VIO::make_unique<Frame>(
+      frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
   right_frame_callback_(VIO::make_unique<Frame>(
       frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
 
@@ -158,12 +151,10 @@ void RosOnlineDataProvider::callbackReinitPose(
                                          reinitPose.pose.orientation.x,
                                          reinitPose.pose.orientation.y,
                                          reinitPose.pose.orientation.z));
-
   gtsam::Point3 position(reinitPose.pose.position.x,
                          reinitPose.pose.position.y,
                          reinitPose.pose.position.z);
-  gtsam::Pose3 pose = gtsam::Pose3(rotation, position);
-  reinit_packet_.setReinitPose(pose);
+  reinit_packet_.setReinitPose(gtsam::Pose3(rotation, position));
 }
 
 bool RosOnlineDataProvider::spin() {
@@ -179,6 +170,10 @@ bool RosOnlineDataProvider::spin() {
   mesher_output_queue_.shutdown();
   lcd_output_queue_.shutdown();
 
+  ROS_INFO("Shutting down queues ROS Async Spinner.");
+  CHECK(async_spinner_);
+  async_spinner_->stop();
+
   return false;
 }
 
@@ -192,7 +187,7 @@ bool RosOnlineDataProvider::spinOnce() {
     publishLcdOutput(lcd_output);
   }
 
-  ros::spinOnce();
+  // ros::spinOnce();
 
   return true;
 }

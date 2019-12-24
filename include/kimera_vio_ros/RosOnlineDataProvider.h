@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <ros/callback_queue.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/time_synchronizer.h>
@@ -35,18 +36,12 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Checks the current status of reinitialization flag
   inline bool getReinitFlag() const { return reinit_flag_; }
   // Resets the current status of reinitialization flag
-  void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
+  inline void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
 
  private:
   // TODO (Toni): only use one node handle...
-  // Define Node Handler for IMU Callback (and Queue)
-  ros::NodeHandle nh_imu_;
-
-  // Define Node Handler for Reinit Callback (and Queue)
-  ros::NodeHandle nh_reinit_;
-
-  // Define Node Handler for Cam Callback (and Queue)
-  ros::NodeHandle nh_cam_;
+  ros::CallbackQueue vio_queue_;
+  std::unique_ptr<ros::AsyncSpinner> async_spinner_;
 
   FrameId frame_count_;
 

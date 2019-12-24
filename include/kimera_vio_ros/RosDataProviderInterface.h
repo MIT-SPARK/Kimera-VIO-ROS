@@ -30,9 +30,9 @@
 #include <kimera-vio/frontend/StereoFrame.h>
 #include <kimera-vio/frontend/StereoImuSyncPacket.h>
 #include <kimera-vio/frontend/StereoMatchingParams.h>
-#include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/frontend/VioFrontEndParams.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
+#include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/utils/ThreadsafeQueue.h>
 
 namespace VIO {
@@ -59,17 +59,14 @@ class RosDataProviderInterface : public DataProviderInterface {
 
  public:
   inline void callbackBackendOutput(const VIO::BackendOutput::Ptr& output) {
-    publishBackendOutput(output);
     backend_output_queue_.push(output);
   }
 
   inline void callbackFrontendOutput(const VIO::FrontendOutput::Ptr& output) {
-    publishFrontendOutput(output);
     frontend_output_queue_.push(output);
   }
 
   inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
-    publishMesherOutput(output);
     mesher_output_queue_.push(output);
   }
 
@@ -80,7 +77,8 @@ class RosDataProviderInterface : public DataProviderInterface {
  protected:
   const cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;
 
-  const cv::Mat readRosDepthImage(const sensor_msgs::ImageConstPtr& img_msg) const;
+  const cv::Mat readRosDepthImage(
+      const sensor_msgs::ImageConstPtr& img_msg) const;
 
   // Publish VIO outputs.
   virtual void publishBackendOutput(const BackendOutput::Ptr& output);
@@ -139,7 +137,6 @@ class RosDataProviderInterface : public DataProviderInterface {
 
   void publishImuBias(const BackendOutput::Ptr& output) const;
 
-
   // Publish LCD/PGO outputs.
   void publishTf(const LcdOutput::Ptr& lcd_output);
 
@@ -154,13 +151,11 @@ class RosDataProviderInterface : public DataProviderInterface {
 
   pose_graph_tools::PoseGraph getPosegraphMsg();
 
-
   // Publish/print debugging information.
   void publishDebugImage(const Timestamp& timestamp,
                          const cv::Mat& debug_image) const;
 
   void printParsedParams() const;
-
 
  private:
   // Define publisher for debug images.

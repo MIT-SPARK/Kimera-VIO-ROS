@@ -97,6 +97,7 @@ const cv::Mat RosDataProviderInterface::readRosImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
+    // TODO(Toni): here we should consider using toCvShare...
     cv_ptr = cv_bridge::toCvCopy(img_msg);
   } catch (cv_bridge::Exception& exception) {
     ROS_FATAL("cv_bridge exception: %s", exception.what());
@@ -135,7 +136,6 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
 void RosDataProviderInterface::publishBackendOutput(
     const BackendOutput::Ptr& output) {
   CHECK_NOTNULL(output);
-
   publishTf(output);
   if (odometry_pub_.getNumSubscribers() > 0) {
     publishState(output);
@@ -151,7 +151,6 @@ void RosDataProviderInterface::publishBackendOutput(
 void RosDataProviderInterface::publishFrontendOutput(
     const FrontendOutput::Ptr& output) {
   CHECK_NOTNULL(output);
-
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
   }
@@ -160,7 +159,6 @@ void RosDataProviderInterface::publishFrontendOutput(
 void RosDataProviderInterface::publishMesherOutput(
     const MesherOutput::Ptr& output) {
   CHECK_NOTNULL(output);
-
   if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
     publishPerFrameMesh3D(output);
   }
@@ -171,6 +169,7 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
   BackendOutput::Ptr backend_output = nullptr;
   if (backend_output_queue_.pop(backend_output)) {
     CHECK_NOTNULL(backend_output);
+    publishBackendOutput(backend_output);
     const Timestamp& ts = backend_output->timestamp_;
 
     FrontendOutput::Ptr frontend_output = nullptr;
@@ -180,17 +179,18 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
                        &frontend_output_queue_,
                        &frontend_output,
                        "RosDataProvider");
+    CHECK(frontend_output);
+    publishFrontendOutput(frontend_output);
 
     MesherOutput::Ptr mesher_output = nullptr;
     bool get_mesher =
         SimpleQueueSynchronizer<MesherOutput::Ptr>::getInstance()
             .syncQueue(
                 ts, &mesher_output_queue_, &mesher_output, "RosDataProvider");
+    CHECK(mesher_output);
+    publishMesherOutput(mesher_output);
 
     if (frontend_output && mesher_output) {
-      CHECK_NOTNULL(frontend_output);
-      CHECK_NOTNULL(mesher_output);
-
       // Publish 2d mesh debug image
       if (debug_img_pub_.getNumSubscribers() > 0) {
         cv::Mat mesh_2d_img = Visualizer3D::visualizeMesh2D(
@@ -200,9 +200,7 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
       }
     }
 
-    if (frontend_output && backend_output) {
-      CHECK_NOTNULL(frontend_output);
-      CHECK_NOTNULL(backend_output);
+    if (frontend_output) {
       // Publish Resiliency
       if (resiliency_pub_.getNumSubscribers() > 0) {
         publishResiliency(frontend_output, backend_output);
