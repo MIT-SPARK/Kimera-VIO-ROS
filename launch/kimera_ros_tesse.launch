@@ -3,8 +3,9 @@
   <arg name="verbosity"      default="0"/>
   <arg name="backend_type"   default="1"/>
   <arg name="online"         default="true"/>
+  <arg name="use_lcd"        default="false"/>
+
   <param name="use_sim_time" value="true"/>
-  <arg name="use_lcd" default="true"/>
 
   <arg name="parallel"       default="true"/>
 
@@ -27,8 +28,8 @@
   <arg name="right_cam_frame_id" value="right_cam_kimera"/>
 
     <!-- Subscriber Topics -->
-  <arg name="left_cam_topic"   value="/tesse/left_cam"/>
-  <arg name="right_cam_topic"  value="/tesse/right_cam"/>
+  <arg name="left_cam_topic"   value="/tesse/left_cam/image_raw"/>
+  <arg name="right_cam_topic"  value="/tesse/right_cam/image_raw"/>
   <arg name="imu_topic"        value="/tesse/imu"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->

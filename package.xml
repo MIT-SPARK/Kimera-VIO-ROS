@@ -29,6 +29,9 @@
   <depend>tf</depend>
   <depend>pose_graph_tools</depend>
 
+  <depend>glog_catkin</depend>
+  <depend>gflags_catkin</depend>
+
   <depend>pcl_ros</depend>
   <depend>pcl_msgs</depend>
   <depend>pcl_conversions</depend>
