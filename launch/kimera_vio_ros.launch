@@ -41,7 +41,7 @@
   <arg name="imu_topic"                         default="/imu0"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
-  <arg name="odometry_ground_truth_topic"       default=""/>
+  <arg name="odometry_ground_truth_topic"       default="/gt_odom"/>
 
   <!-- Frame IDs -->
   <arg name="world_frame_id"     default="world"/>
