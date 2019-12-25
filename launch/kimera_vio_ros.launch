@@ -106,7 +106,7 @@
     <param name="right_cam_rosbag_topic" value="$(arg right_cam_topic)" unless="$(arg online)"/>
     <param name="imu_rosbag_topic"       value="$(arg imu_topic)"       unless="$(arg online)"/>
     <param name="ground_truth_odometry_rosbag_topic"
-             value="$(arg odometry_ground_truth_topic)" unless="$(arg online)"/>
+           value="$(arg odometry_ground_truth_topic)" unless="$(arg online)"/>
 
     <!-- Other subscription topics -->
     <remap from="reinit_flag" to="/kimera_vio/reinit_flag"/>
@@ -135,8 +135,9 @@
 
   <!-- Launch visualizer -->
   <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
-    <arg name="frame" value="$(arg world_frame_id)" />
-    <arg name="graph_topic" value="pose_graph" />
+    <arg name="frame"         value="$(arg world_frame_id)" />
+    <arg name="graph_topic"   value="pose_graph" />
+    <arg name="ns"            value="/kimera_vio_ros"/>
   </include>
 
   <!-- Log ground-truth data only if requested-->
