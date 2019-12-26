@@ -40,9 +40,11 @@ RosbagDataProvider::RosbagDataProvider()
 
   // Ros publishers specific to rosbag data provider
   clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("/clock", 10);
-  /// Advertise to the same topic than what it was writen in the rosbag.
-  gt_odometry_pub_ =
-      nh_.advertise<nav_msgs::Odometry>(gt_odom_topic_, 10);
+
+  if (!gt_odom_topic_.empty()) {
+    gt_odometry_pub_ =
+        nh_.advertise<nav_msgs::Odometry>(gt_odom_topic_, 10);
+  }
 }
 
 bool RosbagDataProvider::spin() {
