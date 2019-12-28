@@ -1,16 +1,17 @@
 <launch>
-  <arg name="dataset_name"   value="TESSE"/>
+  <arg name="dataset_name"   value="tesse"/>
   <arg name="verbosity"      default="0"/>
   <arg name="backend_type"   default="1"/>
   <arg name="online"         default="true"/>
+  <arg name="use_lcd"        default="false"/>
+
   <param name="use_sim_time" value="true"/>
-  <arg name="use_lcd" default="true"/>
 
   <arg name="parallel"       default="true"/>
 
   <arg name="log_output" default="true"/>
   <arg name="log_output_path"
-       default="$(find kimera_ros)/output_logs/$(arg dataset_name)"
+       default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
        if="$(arg log_output)"/>
   <arg name="log_gt_data" default="true"/>
   <arg name="gt_topic"    default="/tesse/odom"
@@ -27,15 +28,16 @@
   <arg name="right_cam_frame_id" value="right_cam_kimera"/>
 
     <!-- Subscriber Topics -->
-  <arg name="left_cam_topic"   value="/tesse/left_cam"/>
-  <arg name="right_cam_topic"  value="/tesse/right_cam"/>
+  <arg name="left_cam_topic"   value="/tesse/left_cam/image_raw"/>
+  <arg name="right_cam_topic"  value="/tesse/right_cam/image_raw"/>
   <arg name="imu_topic"        value="/tesse/imu"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
-  <arg name="odometry_ground_truth_topic" value="$(arg gt_topic)"/>
+  <arg name="odometry_ground_truth_topic" value="$(arg gt_topic)"
+       if="$(arg log_gt_data)"/>
 
   <!-- Launch actual pipeline -->
-  <include file="$(find kimera_ros)/launch/kimera_ros.launch"
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
     pass_all_args="true"/>
 
 </launch>

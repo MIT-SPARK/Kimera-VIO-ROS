@@ -70,9 +70,9 @@ git clone git@github.com:MIT-SPARK/Kimera-VIO-ROS.git
 wstool init # Use unless wstool is already initialized
 
 # For ssh:
-wstool merge Kimera-VIO-ROS/install/kimera_ros_ssh.rosinstall
+wstool merge Kimera-VIO-ROS/install/kimera_vio_ros_ssh.rosinstall
 # For https
-# wstool merge Kimera-VIO-ROS/install/kimera_ros_https.rosinstall
+# wstool merge Kimera-VIO-ROS/install/kimera_vio_ros_https.rosinstall
 
 # Finally, download and update repos:
 wstool update
@@ -96,12 +96,12 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
 
   2. In another terminal, launch KimeraVIO ROS wrapper:
   ```bash
-  roslaunch kimera_ros kimera_ros_euroc.launch
+  roslaunch kimera_vio_ros kimera_vio_ros_euroc.launch
   ```
 
   3. In another terminal, launch rviz for visualization:
   ```bash
-  rviz -d $(rospack find kimera_ros)/rviz/kimera_vio_euroc.rviz
+  rviz -d $(rospack find kimera_vio_ros)/rviz/kimera_vio_euroc.rviz
   ```
   > Note: this rviz configuration makes use of a rviz plugin: [mesh_rviz_plugins](https://github.com/ToniRV/mesh_rviz_plugins). To visualize the textured 3D mesh, clone this plugin to your catkin workspace and catkin build it (note that this should be done automatically via `wstool`).
 
@@ -121,13 +121,13 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
   This is particularly useful when debugging to avoid potential ROS networking issues.
   - To run, launch the KimeraVIO ROS wrapper with the `online` parameter set to `false` and specify the rosbag's path:
   ```bash
-  roslaunch kimera_ros kimera_ros_euroc.launch online:=false rosbag_path:="PATH/TO/ROSBAG"
+  roslaunch kimera_vio_ros kimera_vio_ros_euroc.launch online:=false rosbag_path:="PATH/TO/ROSBAG"
   ```
 
 ## Other datasets
 The launch file and parameters can also be configured for other datasets. For example, here we provide a [kitti rosbag for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, in one terminal, launch the Kimera ROS wrapper with the launch file we configured for kitti:
 ```
-roslaunch kimera_ros kimera_ros_kitti.launch
+roslaunch kimera_vio_ros kimera_vio_ros_kitti.launch
 ```
   - In another terminal, launch a Kitti rosbag:
 ```
@@ -135,7 +135,7 @@ rosbag play --clock /PATH/TO/KITTI_ROSBAG
 ```
   - In rviz, you can use the provided config file provided at rviz/kimera_vio_kitti.rviz
   ```bash
-  rviz -d $(rospack find kimera_ros)/rviz/kimera_ros_kitti.rviz
+  rviz -d $(rospack find kimera_vio_ros)/rviz/kimera_vio_ros_kitti.rviz
   ```
 
 # Hardware use
