@@ -10,7 +10,6 @@
 #include <glog/logging.h>
 
 #include <rosgraph_msgs/Clock.h>
-#include <sensor_msgs/Imu.h>
 
 namespace VIO {
 
@@ -23,7 +22,16 @@ RosbagDataProvider::RosbagDataProvider()
       imu_topic_(""),
       gt_odom_topic_(""),
       clock_pub_(),
-      gt_odometry_pub_() {
+      imu_pub_(),
+      left_img_pub_(),
+      right_img_pub_(),
+      gt_odometry_pub_(),
+      timestamp_last_kf_(0),
+      timestamp_last_imu_(0),
+      timestamp_last_gt_(0),
+      k_last_kf_(0),
+      k_last_imu_(0),
+      k_last_gt_(0) {
   ROS_INFO("Starting KimeraVIO wrapper for offline");
 
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
@@ -40,10 +48,12 @@ RosbagDataProvider::RosbagDataProvider()
 
   // Ros publishers specific to rosbag data provider
   clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("/clock", 10);
+  imu_pub_ = nh_.advertise<sensor_msgs::Imu>(imu_topic_, 10);
+  left_img_pub_ = nh_.advertise<sensor_msgs::Image>(left_imgs_topic_, 10);
+  right_img_pub_ = nh_.advertise<sensor_msgs::Image>(right_imgs_topic_, 10);
 
   if (!gt_odom_topic_.empty()) {
-    gt_odometry_pub_ =
-        nh_.advertise<nav_msgs::Odometry>(gt_odom_topic_, 10);
+    gt_odometry_pub_ = nh_.advertise<nav_msgs::Odometry>(gt_odom_topic_, 10);
   }
 }
 
@@ -61,7 +71,7 @@ bool RosbagDataProvider::spin() {
   // Send image data to VIO:
   Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
 
-  for (size_t k = 0; k < rosbag_data_.getNumberOfImages(); k++) {
+  for (size_t k = 0; k < rosbag_data_.left_imgs_.size(); k++) {
     if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
       // Main spin of the data provider: Interpolates IMU data
       // and builds StereoImuSyncPacket
@@ -74,7 +84,7 @@ bool RosbagDataProvider::spin() {
           pipeline_params_.camera_params_.at(1);
 
       if (timestamp_frame_k > timestamp_last_frame) {
-        // Send left frame data to Kimera.
+        // Send left frame data to Kimera:
         CHECK(left_frame_callback_)
             << "Did you forget to register the left frame callback?";
         left_frame_callback_(VIO::make_unique<Frame>(
@@ -82,8 +92,8 @@ bool RosbagDataProvider::spin() {
             timestamp_frame_k,
             left_cam_info,
             readRosImage(rosbag_data_.left_imgs_.at(k))));
-
-        // Send right frame data to Kimera.
+        
+        // Send right frame data to Kimera:
         CHECK(right_frame_callback_)
             << "Did you forget to register the right frame callback?";
         right_frame_callback_(VIO::make_unique<Frame>(
@@ -91,11 +101,6 @@ bool RosbagDataProvider::spin() {
             timestamp_frame_k,
             right_cam_info,
             readRosImage(rosbag_data_.right_imgs_.at(k))));
-
-        // Publish ground-truth data if available
-        if (rosbag_data_.gt_odometry_.size() > k) {
-          publishGroundTruthOdometry(rosbag_data_.gt_odometry_.at(k));
-        }
 
         VLOG(10) << "Finished VIO processing for frame k = " << k;
 
@@ -196,6 +201,7 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
             << "Did you forget to register the IMU callback?";
         imu_single_callback_(ImuMeasurement(imu_data_timestamp, imu_accgyr));
 
+        rosbag_data->imu_msgs_.push_back(imu_msg);
         last_imu_timestamp = imu_data_timestamp;
       } else {
         ROS_FATAL(
@@ -247,17 +253,19 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   // Sanity check:
   ROS_ERROR_COND(rosbag_data->left_imgs_.size() == 0 ||
                      rosbag_data->right_imgs_.size() == 0,
-                 "No images parsed from rosbag!");
-  // Without saving imu data offline, we can't perform this check.
-  // ROS_ERROR_COND(imu_data_.imu_buffer_.size() <=
-  // rosbag_data->left_imgs_.size(),
-  //                "Less than or equal number fo imu data as image data.");
+                 "No images parsed from rosbag.");
   ROS_ERROR_COND(
-      !gt_odom_topic_.empty() && rosbag_data_.gt_odometry_.size() > 0,
+      rosbag_data->left_imgs_.size() != rosbag_data->right_imgs_.size(),
+      "Unequal number of images from left and right cmaeras.");
+  ROS_ERROR_COND(
+      rosbag_data->imu_msgs_.size() <= rosbag_data->left_imgs_.size(),
+      "Less than or equal number of imu data as image data.");
+  ROS_ERROR_COND(
+      !gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() == 0,
       "Requested to parse ground-truth odometry, but parsed 0 msgs.");
-  ROS_ERROR_COND(!gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() !=
+  ROS_ERROR_COND(!gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() <
                                                 rosbag_data->left_imgs_.size(),
-                 "Different number of ground_truth data than image data.");
+                 "Fewer ground_truth data than image data.");
   return true;
 }
 
@@ -289,6 +297,8 @@ VioNavState RosbagDataProvider::getGroundTruthVioNavState(
 
 void RosbagDataProvider::publishBackendOutput(
     const BackendOutput::Ptr& output) {
+  CHECK_NOTNULL(output);
+  publishInputs(output->timestamp_);
   RosDataProviderInterface::publishBackendOutput(output);
   publishClock(output->timestamp_);
 }
@@ -299,9 +309,40 @@ void RosbagDataProvider::publishClock(const Timestamp& timestamp) const {
   clock_pub_.publish(clock);
 }
 
-void RosbagDataProvider::publishGroundTruthOdometry(
-    const nav_msgs::OdometryConstPtr& gt_odom) const {
-  gt_odometry_pub_.publish(gt_odom);
+void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
+  // Publish all imu messages to ROS:
+  if (rosbag_data_.imu_msgs_.size() > k_last_imu_) {
+    while (timestamp_last_imu_ < timestamp_kf &&
+           k_last_imu_ < rosbag_data_.imu_msgs_.size()) {
+      imu_pub_.publish(rosbag_data_.imu_msgs_.at(k_last_imu_));
+      k_last_imu_++;
+      timestamp_last_imu_ = RosbagDataProvider::msgToTimestamp(
+          rosbag_data_.imu_msgs_.at(k_last_imu_));
+    }
+  }
+
+  // Publish ground-truth data if available:
+  if (rosbag_data_.gt_odometry_.size() > k_last_gt_) {
+    while (timestamp_last_gt_ < timestamp_kf &&
+            k_last_gt_ < rosbag_data_.gt_odometry_.size()) {
+      gt_odometry_pub_.publish(rosbag_data_.gt_odometry_.at(k_last_gt_));
+      k_last_gt_++;
+      timestamp_last_gt_ = RosbagDataProvider::msgToTimestamp(
+          rosbag_data_.gt_odometry_.at(k_last_gt_));
+    }
+  }
+
+  // Publish left and right images:
+  if (rosbag_data_.left_imgs_.size() > k_last_kf_ &&
+      rosbag_data_.right_imgs_.size() > k_last_kf_) {
+    while (timestamp_last_kf_ < timestamp_kf &&
+           k_last_kf_ < rosbag_data_.left_imgs_.size()) {
+      left_img_pub_.publish(rosbag_data_.left_imgs_.at(k_last_kf_));
+      right_img_pub_.publish(rosbag_data_.right_imgs_.at(k_last_kf_));
+      k_last_kf_++;
+      timestamp_last_kf_ = rosbag_data_.timestamps_.at(k_last_kf_);
+    }
+  }
 }
 
 }  // namespace VIO
