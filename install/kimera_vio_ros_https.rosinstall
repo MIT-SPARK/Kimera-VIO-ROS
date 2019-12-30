@@ -52,11 +52,11 @@
     local-name: Kimera-VIO-ROS
     uri: https://github.com/MIT-SPARK/Kimera-VIO-ROS.git
     version: master
--git:
+- git:
     local-name: glog_catkin
     uri: https://github.com/ethz-asl/glog_catkin.git
     version: master
--git:
+- git:
     local-name: gflags_catkin
     uri: https://github.com/ethz-asl/gflags_catkin.git
     version: master
