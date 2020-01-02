@@ -47,13 +47,15 @@ RosbagDataProvider::RosbagDataProvider()
   CHECK(!imu_topic_.empty());
 
   // Ros publishers specific to rosbag data provider
-  clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("/clock", 10);
-  imu_pub_ = nh_.advertise<sensor_msgs::Imu>(imu_topic_, 10);
-  left_img_pub_ = nh_.advertise<sensor_msgs::Image>(left_imgs_topic_, 10);
-  right_img_pub_ = nh_.advertise<sensor_msgs::Image>(right_imgs_topic_, 10);
+  static constexpr size_t kQueueSize = 10u;
+
+  clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("/clock", kQueueSize);
+  imu_pub_ = nh_.advertise<sensor_msgs::Imu>(imu_topic_, kQueueSize);
+  left_img_pub_ = nh_.advertise<sensor_msgs::Image>(left_imgs_topic_, kQueueSize);
+  right_img_pub_ = nh_.advertise<sensor_msgs::Image>(right_imgs_topic_, kQueueSize);
 
   if (!gt_odom_topic_.empty()) {
-    gt_odometry_pub_ = nh_.advertise<nav_msgs::Odometry>(gt_odom_topic_, 10);
+    gt_odometry_pub_ = nh_.advertise<nav_msgs::Odometry>(gt_odom_topic_, kQueueSize);
   }
 }
 
@@ -151,7 +153,7 @@ bool RosbagDataProvider::spin() {
 bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
                                      RosbagData* rosbag_data) {
   LOG(INFO) << "Parsing rosbag data.";
-  CHECK_NOTNULL(rosbag_data);
+  CHECK(rosbag_data);
 
   // Fill in rosbag to data_
   rosbag::Bag bag;
@@ -297,7 +299,7 @@ VioNavState RosbagDataProvider::getGroundTruthVioNavState(
 
 void RosbagDataProvider::publishBackendOutput(
     const BackendOutput::Ptr& output) {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   publishInputs(output->timestamp_);
   RosDataProviderInterface::publishBackendOutput(output);
   publishClock(output->timestamp_);
@@ -316,8 +318,8 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
            k_last_imu_ < rosbag_data_.imu_msgs_.size()) {
       imu_pub_.publish(rosbag_data_.imu_msgs_.at(k_last_imu_));
       k_last_imu_++;
-      timestamp_last_imu_ = RosbagDataProvider::msgToTimestamp(
-          rosbag_data_.imu_msgs_.at(k_last_imu_));
+      timestamp_last_imu_ = 
+          rosbag_data_.imu_msgs_.at(k_last_imu_)->header.stamp.toNSec();
     }
   }
 
@@ -327,8 +329,8 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
             k_last_gt_ < rosbag_data_.gt_odometry_.size()) {
       gt_odometry_pub_.publish(rosbag_data_.gt_odometry_.at(k_last_gt_));
       k_last_gt_++;
-      timestamp_last_gt_ = RosbagDataProvider::msgToTimestamp(
-          rosbag_data_.gt_odometry_.at(k_last_gt_));
+      timestamp_last_gt_ = 
+          rosbag_data_.gt_odometry_.at(k_last_gt_)->header.stamp.toNSec();
     }
   }
 

@@ -70,22 +70,6 @@ class RosbagDataProvider : public RosDataProviderInterface {
   // Publish raw input data to ROS at keyframe rate
   void publishInputs(const Timestamp& timestamp_kf);
 
-  // Get nanosecond timestamp from a ROS message
-  inline static Timestamp msgToTimestamp(
-      const sensor_msgs::ImageConstPtr& msg) {
-    return msg->header.stamp.toNSec();
-  }
-
-  inline static ImuStamp msgToTimestamp(
-      const sensor_msgs::ImuConstPtr& msg) {
-    return msg->header.stamp.toNSec();
-  }
-
-  inline static Timestamp msgToTimestamp(
-      const nav_msgs::OdometryConstPtr& msg) {
-    return msg->header.stamp.toNSec();
-  }
-
  private:
   RosbagData rosbag_data_;
 
