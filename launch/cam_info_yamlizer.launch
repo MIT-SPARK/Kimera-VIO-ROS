@@ -1,0 +1,24 @@
+<launch>
+  <arg name="dataset_name" default="test"/>
+
+  <!-- Frame IDs -->
+  <arg name="base_link_frame_id" value="base_link_gt"/>
+  <arg name="left_cam_frame_id"  value="left_cam"/>
+  <arg name="right_cam_frame_id" value="right_cam"/>
+
+  <!-- ROS Topics -->
+  <arg name="left_cam_info_topic"  value="/tesse/left_cam/camera_info"/>
+  <arg name="right_cam_info_topic" value="/tesse/right_cam/camera_info"/>
+
+  <node pkg="kimera_vio_ros" type="camera_info_yamlizer_node.py"
+        name="cam_info_yamelizer" output="screen">
+    <param name="base_link_frame_id" value="$(arg base_link_frame_id)"/>
+    <param name="left_cam_frame_id"  value="$(arg left_cam_frame_id)"/>
+    <param name="right_cam_frame_id" value="$(arg right_cam_frame_id)"/>
+    
+    <param name="left_cam_info_topic"  value="$(arg left_cam_info_topic)"/>
+    <param name="right_cam_info_topic" value="$(arg right_cam_info_topic)"/>
+    <param name="output_dir"
+           value="$(find kimera_vio_ros)/param/$(arg dataset_name)"/>
+  </node>
+</launch>
