@@ -153,7 +153,7 @@ bool RosbagDataProvider::spin() {
 bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
                                      RosbagData* rosbag_data) {
   LOG(INFO) << "Parsing rosbag data.";
-  CHECK(rosbag_data);
+  CHECK_NOTNULL(rosbag_data);
 
   // Fill in rosbag to data_
   rosbag::Bag bag;
