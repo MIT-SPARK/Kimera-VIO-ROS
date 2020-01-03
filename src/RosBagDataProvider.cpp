@@ -183,10 +183,9 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   // For some datasets, we have duplicated measurements for the same time.
   Timestamp last_imu_timestamp = 0;
   for (const rosbag::MessageInstance& msg : view) {
-    // Get topic.
     const std::string& msg_topic = msg.getTopic();
 
-    // IMU
+    // Check if msg is an IMU measurement.
     sensor_msgs::ImuConstPtr imu_msg = msg.instantiate<sensor_msgs::Imu>();
     if (imu_msg != nullptr && msg_topic == imu_topic_) {
       ImuAccGyr imu_accgyr;
@@ -211,44 +210,48 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
             "rosbag.");
       }
       start_parsing_stereo = true;
-    } else {
-      // Check if msg is an image.
-      sensor_msgs::ImageConstPtr img = msg.instantiate<sensor_msgs::Image>();
-      if (img != nullptr) {
-        if (start_parsing_stereo) {
-          // Check left or right image.
-          if (msg_topic == left_imgs_topic_) {
-            // Timestamp is in nanoseconds
-            rosbag_data->timestamps_.push_back(img->header.stamp.toNSec());
-            rosbag_data->left_imgs_.push_back(img);
-          } else if (msg_topic == right_imgs_topic_) {
-            rosbag_data->right_imgs_.push_back(img);
-          } else {
-            ROS_WARN_STREAM("Img with unexpected topic: " << msg_topic);
-          }
+      continue;
+    }
+
+    // Check if msg is an image.
+    sensor_msgs::ImageConstPtr img_msg = msg.instantiate<sensor_msgs::Image>();
+    if (img_msg != nullptr) {
+      if (start_parsing_stereo) {
+        // Check left or right image.
+        if (msg_topic == left_imgs_topic_) {
+          // Timestamp is in nanoseconds
+          rosbag_data->timestamps_.push_back(img_msg->header.stamp.toNSec());
+          rosbag_data->left_imgs_.push_back(img_msg);
+        } else if (msg_topic == right_imgs_topic_) {
+          rosbag_data->right_imgs_.push_back(img_msg);
         } else {
-          ROS_WARN(
-              "Skipping first frame in rosbag, since IMU data not yet "
-              "available.");
+          ROS_WARN_STREAM("Img with unexpected topic: " << msg_topic);
         }
       } else {
-        nav_msgs::OdometryConstPtr gt_odometry =
-            msg.instantiate<nav_msgs::Odometry>();
-        if (gt_odometry != nullptr) {
-          if (msg_topic == gt_odom_topic_) {
-            rosbag_data->gt_odometry_.push_back(gt_odometry);
-          } else {
-            ROS_ERROR(
-                "Unrecognized topic name for odometry msg. We were"
-                " expecting ground-truth odometry on this topic.");
-          }
-        } else {
-          ROS_ERROR_STREAM(
-              "Could not find the type of this rosbag msg from topic:\n"
-              << msg.getTopic());
-        }
+        ROS_WARN(
+            "Skipping first frame in rosbag, since IMU data not yet "
+            "available.");
       }
+      continue;
     }
+
+    // Check if msg is a ground-truth odometry message.
+    nav_msgs::OdometryConstPtr gt_odom_msg =
+        msg.instantiate<nav_msgs::Odometry>();
+    if (gt_odom_msg != nullptr) {
+      if (msg_topic == gt_odom_topic_) {
+        rosbag_data->gt_odometry_.push_back(gt_odom_msg);
+      } else {
+        ROS_ERROR(
+            "Unrecognized topic name for odometry msg. We were"
+            " expecting ground-truth odometry on this topic.");
+      }
+    } else {
+      ROS_ERROR_STREAM(
+          "Could not find the type of this rosbag msg from topic:\n"
+          << msg.getTopic());
+    }
+    continue;
   }
   bag.close();
 
