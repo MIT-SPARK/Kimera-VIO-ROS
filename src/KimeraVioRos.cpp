@@ -1,6 +1,7 @@
 /* @file   KimeraVioRos.cpp
  * @brief  ROS Wrapper for Spark-VIO
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #include <future>

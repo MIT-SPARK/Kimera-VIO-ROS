@@ -3,6 +3,7 @@
  * @brief  ROS wrapper for online processing.
  * @author Yun Chang
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #include "kimera_vio_ros/RosOnlineDataProvider.h"
@@ -23,6 +24,10 @@ RosOnlineDataProvider::RosOnlineDataProvider()
       frame_count_(FrameId(0)),
       left_img_subscriber_(),
       right_img_subscriber_(),
+      left_info_subscriber_(),
+      right_info_subscriber_(),
+      sync_img_(),
+      sync_img_info_(),
       imu_subscriber_(),
       gt_odom_subscriber_(),
       reinit_flag_subscriber_(),
@@ -59,20 +64,53 @@ RosOnlineDataProvider::RosOnlineDataProvider()
   left_img_subscriber_.subscribe(*it_, "left_cam", kMaxImagesQueueSize);
   right_img_subscriber_.subscribe(*it_, "right_cam", kMaxImagesQueueSize);
   static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
-  sync_ = VIO::make_unique<message_filters::Synchronizer<sync_pol>>(
-      sync_pol(kMaxImageSynchronizerQueueSize),
-      left_img_subscriber_,
-      right_img_subscriber_);
-  DCHECK(sync_);
-  sync_->registerCallback(
-      boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
+
+  bool use_online_cam_params = false;
+  CHECK(nh_private_.getParam("use_online_cam_params", use_online_cam_params));
+
+  // Determine whether to use camera info topics for camera parameters:
+  if (!use_online_cam_params) {
+    sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
+        sync_pol_img(kMaxImageSynchronizerQueueSize),
+        left_img_subscriber_,
+        right_img_subscriber_);
+
+    DCHECK(sync_img_);
+    sync_img_->registerCallback(boost::bind(
+        &RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
+  } else {
+    LOG(WARNING)
+        << "Using online camera parameters instead of YAML parameter files.";
+
+    left_info_subscriber_.subscribe(
+        nh_, "left_cam/camera_info", kMaxImagesQueueSize);
+    right_info_subscriber_.subscribe(
+        nh_, "right_cam/camera_info", kMaxImagesQueueSize);
+
+    sync_img_info_ =
+        VIO::make_unique<message_filters::Synchronizer<sync_pol_info>>(
+            sync_pol_info(kMaxImageSynchronizerQueueSize),
+            left_img_subscriber_,
+            right_img_subscriber_,
+            left_info_subscriber_,
+            right_info_subscriber_);
+
+    DCHECK(sync_img_info_);
+    sync_img_info_->registerCallback(
+        boost::bind(&RosOnlineDataProvider::callbackStereoImageswithCamInfo,
+                    this,
+                    _1,
+                    _2,
+                    _3,
+                    _4));
+  }
 
   // Define ground truth odometry Subsrciber
   static constexpr size_t kMaxGtOdomQueueSize = 1u;
   if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
     LOG(INFO) << "Requested initialization from ground truth. "
               << "Initializing ground-truth odometry one-shot subscriber.";
-    gt_odom_subscriber_ = 
+    gt_odom_subscriber_ =
         nh_.subscribe("gt_odom",
                       kMaxGtOdomQueueSize,
                       &RosOnlineDataProvider::callbackGtOdomOnce,
@@ -112,9 +150,9 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
 void RosOnlineDataProvider::callbackStereoImages(
     const sensor_msgs::ImageConstPtr& left_msg,
     const sensor_msgs::ImageConstPtr& right_msg) {
-  static const CameraParams& left_cam_info =
+  static const VIO::CameraParams& left_cam_info =
       pipeline_params_.camera_params_.at(0);
-  static const CameraParams& right_cam_info =
+  static const VIO::CameraParams& right_cam_info =
       pipeline_params_.camera_params_.at(1);
 
   const Timestamp& timestamp_left = left_msg->header.stamp.toNSec();
@@ -131,6 +169,29 @@ void RosOnlineDataProvider::callbackStereoImages(
       frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
 
   frame_count_++;
+}
+
+void RosOnlineDataProvider::callbackStereoImageswithCamInfo(
+    const sensor_msgs::ImageConstPtr& left_img,
+    const sensor_msgs::ImageConstPtr& right_img,
+    const sensor_msgs::CameraInfoConstPtr& left_info,
+    const sensor_msgs::CameraInfoConstPtr& right_info) {
+  // First pass camera parameters to VIO only once:
+  // TODO(marcus): consider value-added from real-time cam param updates?
+  static bool cam_params_received = false;
+  if (!cam_params_received) {
+    msgCamInfoToCameraParams(left_info,
+                             left_cam_frame_id_,
+                             &pipeline_params_.camera_params_.at(0));
+    msgCamInfoToCameraParams(right_info,
+                             right_cam_frame_id_,
+                             &pipeline_params_.camera_params_.at(1));
+    pipeline_params_.camera_params_.at(0).print();
+    pipeline_params_.camera_params_.at(1).print();
+    cam_params_received = true;
+  }
+
+  callbackStereoImages(left_img, right_img);
 }
 
 void RosOnlineDataProvider::callbackIMU(
@@ -158,7 +219,8 @@ void RosOnlineDataProvider::callbackIMU(
 }
 
 // Ground-truth odometry callback
-void RosOnlineDataProvider::callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& msgGtOdom) {
+void RosOnlineDataProvider::callbackGtOdomOnce(
+    const nav_msgs::Odometry::ConstPtr& msgGtOdom) {
   LOG(WARNING) << "Using initial ground-truth state for initialization.";
   msgGtOdomToVioNavState(
       msgGtOdom,
@@ -198,7 +260,8 @@ void RosOnlineDataProvider::callbackReinitPose(
 }
 
 void RosOnlineDataProvider::msgGtOdomToVioNavState(
-    const nav_msgs::Odometry::ConstPtr& gt_odom, VioNavState* vio_navstate) {
+    const nav_msgs::Odometry::ConstPtr& gt_odom,
+    VioNavState* vio_navstate) {
   CHECK_NOTNULL(vio_navstate);
 
   // World to Body rotation

@@ -3,6 +3,7 @@
  * @brief  Parse rosbad and run KimeraVIO
  * @author Yun Chang
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #include "kimera_vio_ros/RosBagDataProvider.h"

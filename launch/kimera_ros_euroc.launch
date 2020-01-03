@@ -20,6 +20,8 @@
   <arg name="use_lcd"   default="false"/>
   <arg name="visualize" default="false"/>
 
+  <arg name="use_online_cam_params" value="false"/>
+
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path" default="/home/tonirv/datasets/euroc/V1_01_easy/V1_01_easy.bag"
     unless="$(arg online)"/>

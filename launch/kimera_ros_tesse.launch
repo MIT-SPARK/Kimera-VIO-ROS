@@ -17,6 +17,8 @@
   <arg name="gt_topic"    default="/tesse/odom"
        if="$(arg log_gt_data)"/>
 
+  <arg name="use_online_cam_params" default="false"/>
+
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path"
     default="/home/tonirv/Code/ROS/tess_ws/src/TESSE_interface/ROS/tesse_ros_bridge/scripts/2019-08-28-16-57-09.bag"
@@ -28,9 +30,11 @@
   <arg name="right_cam_frame_id" value="right_cam_kimera"/>
 
     <!-- Subscriber Topics -->
-  <arg name="left_cam_topic"   value="/tesse/left_cam/image_raw"/>
-  <arg name="right_cam_topic"  value="/tesse/right_cam/image_raw"/>
-  <arg name="imu_topic"        value="/tesse/imu"/>
+  <arg name="left_cam_topic"       value="/tesse/left_cam/image_raw"/>
+  <arg name="left_cam_info_topic"  value="/tesse/left_cam/camera_info"/>
+  <arg name="right_cam_topic"      value="/tesse/right_cam/image_raw"/>
+  <arg name="right_cam_info_topic" value="/tesse/right_cam/camera_info"/>
+  <arg name="imu_topic"            value="/tesse/imu"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
   <arg name="odometry_ground_truth_topic" value="$(arg gt_topic)"

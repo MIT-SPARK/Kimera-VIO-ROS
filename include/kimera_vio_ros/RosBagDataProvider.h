@@ -3,6 +3,7 @@
  * @brief  ROS wrapper
  * @author Yun Chang
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #pragma once

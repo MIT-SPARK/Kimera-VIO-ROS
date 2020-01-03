@@ -11,6 +11,9 @@
   <param name="use_sim_time" value="true"/>
   <arg name="rosbag_path" unless="$(arg online)"/>
 
+  <!-- Use CameraInfo topics to get parameters, instead of yaml files -->
+  <arg name="use_online_cam_params" default="false"/>
+
   <!-- If true, SparkVio will log output of all modules to the
        'log_output_path' location. -->
   <arg name="log_output" default="false"/>
@@ -29,7 +32,7 @@
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
   <arg name="params_folder"
-                       value="$(find kimera_vio_ros)/param/$(arg dataset_name)"/>
+       value="$(find kimera_vio_ros)/param/$(arg dataset_name)"/>
 
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
@@ -37,7 +40,9 @@
 
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"                    default="/cam0/image_raw"/>
+  <arg name="left_cam_info_topic"               default="/cam0/camera_info"/>
   <arg name="right_cam_topic"                   default="/cam1/image_raw"/>
+  <arg name="right_cam_info_topic"              default="/cam1/camera_info"/>
   <arg name="imu_topic"                         default="/imu0"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
@@ -83,8 +88,9 @@
               --visualize=$(arg visualize)
               --parallel_run=$(arg parallel)">
 
-    <param name="online_run"        value="$(arg online)"/>
-    <param name="use_lcd"           value="$(arg use_lcd)"/>
+    <param name="online_run"            value="$(arg online)"/>
+    <param name="use_lcd"               value="$(arg use_lcd)"/>
+    <param name="use_online_cam_params" value="$(arg use_online_cam_params)"/>
 
     <!-- Frame IDs for Odometry -->
     <param name="world_frame_id"     value="$(arg world_frame_id)"/>
@@ -100,6 +106,9 @@
     <remap from="imu"       to="$(arg imu_topic)"                   if="$(arg online)"/>
     <remap from="gt_topic"  to="$(arg odometry_ground_truth_topic)"
            if="$(eval arg('online') and arg('odometry_ground_truth_topic') != '')"/>
+
+    <remap from="left_cam/camera_info"  to="$(arg left_cam_info_topic)"  if="$(arg online)"/>
+    <remap from="right_cam/camera_info" to="$(arg right_cam_info_topic)" if="$(arg online)"/>
 
     <!-- if we run offline, use params -->
     <param name="rosbag_path"            value="$(arg rosbag_path)"     unless="$(arg online)"/>

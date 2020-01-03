@@ -3,6 +3,7 @@
  * @brief  Base class for ROS wrappers for KimeraVIO.
  * @author Yun Chang
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #pragma once
@@ -97,6 +98,15 @@ class RosDataProviderInterface : public DataProviderInterface {
   void publishStaticTf(const gtsam::Pose3& pose,
                        const std::string& parent_frame_id,
                        const std::string& child_frame_id);
+
+ protected:
+  void msgTFtoPose(const geometry_msgs::Transform& tf, gtsam::Pose3* pose);
+
+  void poseToMsgTF(const gtsam::Pose3& pose, geometry_msgs::Transform* tf);
+
+  void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
+                                const std::string& cam_frame_id,
+                                VIO::CameraParams* cam_params);
 
  protected:
   // Define Node Handler for general use (Parameter server)
