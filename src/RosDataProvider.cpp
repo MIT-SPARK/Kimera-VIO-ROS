@@ -137,7 +137,7 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
 
 void RosDataProviderInterface::publishBackendOutput(
     const BackendOutput::Ptr& output) {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   publishTf(output);
   if (odometry_pub_.getNumSubscribers() > 0) {
     publishState(output);
@@ -152,7 +152,7 @@ void RosDataProviderInterface::publishBackendOutput(
 
 void RosDataProviderInterface::publishFrontendOutput(
     const FrontendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
   }
@@ -160,7 +160,7 @@ void RosDataProviderInterface::publishFrontendOutput(
 
 void RosDataProviderInterface::publishMesherOutput(
     const MesherOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
     publishPerFrameMesh3D(output);
   }
@@ -170,7 +170,7 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
   // First acquire a backend output packet, as it is slowest.
   BackendOutput::Ptr backend_output = nullptr;
   if (backend_output_queue_.pop(backend_output)) {
-    CHECK_NOTNULL(backend_output);
+    CHECK(backend_output);
     publishBackendOutput(backend_output);
     const Timestamp& ts = backend_output->timestamp_;
 
@@ -213,7 +213,7 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
 
 void RosDataProviderInterface::publishLcdOutput(
     const LcdOutput::Ptr& lcd_output) {
-  CHECK_NOTNULL(lcd_output);
+  CHECK(lcd_output);
 
   publishTf(lcd_output);
   if (trajectory_pub_.getNumSubscribers() > 0) {
@@ -226,7 +226,7 @@ void RosDataProviderInterface::publishLcdOutput(
 
 void RosDataProviderInterface::publishTimeHorizonPointCloud(
     const BackendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   const Timestamp& timestamp = output->timestamp_;
   const PointsWithIdMap& points_with_id = output->landmarks_with_id_map_;
   const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map =
@@ -313,7 +313,7 @@ void RosDataProviderInterface::publishDebugImage(
 
 void RosDataProviderInterface::publishPerFrameMesh3D(
     const MesherOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
 
   const Mesh2D& mesh_2d = output->mesh_2d_;
   const Mesh3D& mesh_3d = output->mesh_3d_;
@@ -420,7 +420,7 @@ void RosDataProviderInterface::publishPerFrameMesh3D(
 
 void RosDataProviderInterface::publishState(
     const BackendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   // Get latest estimates for odometry.
   const Timestamp& ts = output->timestamp_;
   const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
@@ -494,7 +494,7 @@ void RosDataProviderInterface::publishState(
 }
 
 void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
-  CHECK_NOTNULL(output);
+  CHECK(output);
 
   const Timestamp& timestamp = output->timestamp_;
   const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
@@ -511,7 +511,7 @@ void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
 
 void RosDataProviderInterface::publishFrontendStats(
     const FrontendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
 
   // Get frontend data for resiliency output
   const DebugTrackerInfo& debug_tracker_info = output->getTrackerInfo();
@@ -548,8 +548,8 @@ void RosDataProviderInterface::publishFrontendStats(
 void RosDataProviderInterface::publishResiliency(
     const FrontendOutput::Ptr& frontend_output,
     const BackendOutput::Ptr& backend_output) const {
-  CHECK_NOTNULL(frontend_output);
-  CHECK_NOTNULL(backend_output);
+  CHECK(frontend_output);
+  CHECK(backend_output);
 
   // Get frontend and velocity covariance data for resiliency output
   const DebugTrackerInfo& debug_tracker_info =
@@ -617,7 +617,7 @@ void RosDataProviderInterface::publishResiliency(
 
 void RosDataProviderInterface::publishImuBias(
     const BackendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
 
   // Get imu bias to output
   const ImuBias& imu_bias = output->W_State_Blkf_.imu_bias_;
@@ -648,7 +648,7 @@ void RosDataProviderInterface::publishImuBias(
 
 void RosDataProviderInterface::publishOptimizedTrajectory(
     const LcdOutput::Ptr& lcd_output) const {
-  CHECK_NOTNULL(lcd_output);
+  CHECK(lcd_output);
 
   // Get pgo-optimized trajectory
   const Timestamp& ts = lcd_output->timestamp_kf_;
@@ -811,7 +811,7 @@ pose_graph_tools::PoseGraph RosDataProviderInterface::getPosegraphMsg() {
 
 void RosDataProviderInterface::publishPoseGraph(
     const LcdOutput::Ptr& lcd_output) {
-  CHECK_NOTNULL(lcd_output);
+  CHECK(lcd_output);
 
   // Get the factor graph
   const Timestamp& ts = lcd_output->timestamp_kf_;
@@ -825,7 +825,7 @@ void RosDataProviderInterface::publishPoseGraph(
 }
 
 void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
-  CHECK_NOTNULL(lcd_output);
+  CHECK(lcd_output);
 
   const Timestamp& ts = lcd_output->timestamp_kf_;
   const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
