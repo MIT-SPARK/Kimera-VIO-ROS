@@ -1,6 +1,6 @@
 /**
  * @file   rosbag-data-source.cpp
- * @brief  Parse rosbad and run KimeraVIO
+ * @brief  Parse rosbag and run KimeraVIO
  * @author Yun Chang
  * @author Antoni Rosinol
  * @author Marcus Abate

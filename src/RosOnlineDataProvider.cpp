@@ -27,7 +27,7 @@ RosOnlineDataProvider::RosOnlineDataProvider()
       left_info_subscriber_(),
       right_info_subscriber_(),
       sync_img_(),
-      sync_img_info_(),
+      sync_info_(),
       imu_subscriber_(),
       gt_odom_subscriber_(),
       reinit_flag_subscriber_(),
@@ -64,17 +64,16 @@ RosOnlineDataProvider::RosOnlineDataProvider()
   left_img_subscriber_.subscribe(*it_, "left_cam", kMaxImagesQueueSize);
   right_img_subscriber_.subscribe(*it_, "right_cam", kMaxImagesQueueSize);
   static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
+  sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
+      sync_pol_img(kMaxImageSynchronizerQueueSize),
+      left_img_subscriber_,
+      right_img_subscriber_);
 
   bool use_online_cam_params = false;
   CHECK(nh_private_.getParam("use_online_cam_params", use_online_cam_params));
 
   // Determine whether to use camera info topics for camera parameters:
   if (!use_online_cam_params) {
-    sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
-        sync_pol_img(kMaxImageSynchronizerQueueSize),
-        left_img_subscriber_,
-        right_img_subscriber_);
-
     DCHECK(sync_img_);
     sync_img_->registerCallback(boost::bind(
         &RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
@@ -87,22 +86,14 @@ RosOnlineDataProvider::RosOnlineDataProvider()
     right_info_subscriber_.subscribe(
         nh_, "right_cam/camera_info", kMaxImagesQueueSize);
 
-    sync_img_info_ =
-        VIO::make_unique<message_filters::Synchronizer<sync_pol_info>>(
-            sync_pol_info(kMaxImageSynchronizerQueueSize),
-            left_img_subscriber_,
-            right_img_subscriber_,
-            left_info_subscriber_,
-            right_info_subscriber_);
+    sync_info_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_info>>(
+        sync_pol_info(kMaxImageSynchronizerQueueSize),
+        left_info_subscriber_,
+        right_info_subscriber_);
 
-    DCHECK(sync_img_info_);
-    sync_img_info_->registerCallback(
-        boost::bind(&RosOnlineDataProvider::callbackStereoImageswithCamInfo,
-                    this,
-                    _1,
-                    _2,
-                    _3,
-                    _4));
+    DCHECK(sync_info_);
+    sync_info_->registerCallback(
+        boost::bind(&RosOnlineDataProvider::callbackCameraInfo, this, _1, _2));
   }
 
   // Define ground truth odometry Subsrciber
@@ -171,27 +162,28 @@ void RosOnlineDataProvider::callbackStereoImages(
   frame_count_++;
 }
 
-void RosOnlineDataProvider::callbackStereoImageswithCamInfo(
-    const sensor_msgs::ImageConstPtr& left_img,
-    const sensor_msgs::ImageConstPtr& right_img,
-    const sensor_msgs::CameraInfoConstPtr& left_info,
-    const sensor_msgs::CameraInfoConstPtr& right_info) {
-  // First pass camera parameters to VIO only once:
-  // TODO(marcus): consider value-added from real-time cam param updates?
-  static bool cam_params_received = false;
-  if (!cam_params_received) {
-    msgCamInfoToCameraParams(left_info,
-                             left_cam_frame_id_,
-                             &pipeline_params_.camera_params_.at(0));
-    msgCamInfoToCameraParams(right_info,
-                             right_cam_frame_id_,
-                             &pipeline_params_.camera_params_.at(1));
-    pipeline_params_.camera_params_.at(0).print();
-    pipeline_params_.camera_params_.at(1).print();
-    cam_params_received = true;
-  }
+void RosOnlineDataProvider::callbackCameraInfo(
+    const sensor_msgs::CameraInfoConstPtr& left_msg,
+    const sensor_msgs::CameraInfoConstPtr& right_msg) {
+  // Initialize CameraParams for pipeline.
+  msgCamInfoToCameraParams(
+      left_msg, left_cam_frame_id_, &pipeline_params_.camera_params_.at(0));
+  msgCamInfoToCameraParams(
+      right_msg, right_cam_frame_id_, &pipeline_params_.camera_params_.at(1));
 
-  callbackStereoImages(left_img, right_img);
+  pipeline_params_.camera_params_.at(0).print();
+  pipeline_params_.camera_params_.at(1).print();
+
+  // Register StereoFrame callback now.
+  CHECK(sync_img_);
+  sync_img_->registerCallback(
+      boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
+
+  // Unregister this callback as it is no longer needed.
+  LOG(INFO)
+      << "Unregistering CameraInfo subscribers as data has been received.";
+  left_info_subscriber_.unsubscribe();
+  right_info_subscriber_.unsubscribe();
 }
 
 void RosOnlineDataProvider::callbackIMU(

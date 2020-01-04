@@ -908,7 +908,7 @@ void RosDataProviderInterface::msgCamInfoToCameraParams(
         cam_params->distortion_model_ == "radial-tangential" ||
         cam_params->distortion_model_ == "equidistant");
 
-  const std::vector<double> distortion_coeffs = cam_info->D;
+  const std::vector<double>& distortion_coeffs = cam_info->D;
   CHECK_EQ(distortion_coeffs.size(), 4);
   VIO::CameraParams::convertDistortionVectorToMatrix(
       distortion_coeffs, &cam_params->distortion_coeff_);

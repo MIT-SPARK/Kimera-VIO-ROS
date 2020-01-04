@@ -1,5 +1,5 @@
 /* @file   KimeraVioRos.cpp
- * @brief  ROS Wrapper for Spark-VIO
+ * @brief  ROS Wrapper for Kimera-VIO
  * @author Antoni Rosinol
  * @author Marcus Abate
  */
