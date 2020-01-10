@@ -10,4 +10,4 @@ repositories:
     # url: https://github.com/MIT-SPARK/Kimera-VIO.git
     # version: master
     url: https://github.com/ruffsl/Kimera-VIO.git
-    version: patch-1
+    version: patch-3
