@@ -120,13 +120,14 @@ RUN . $UNDERLAY_WS/install/setup.sh && \
       --cmake-args \
         --no-warn-unused-cli \
         -DCMAKE_CXX_FLAGS="\
-          -Wno-sign-compare \
-          -Wno-unused-value \
-          -Wno-unused-variable \
-          -Wno-unused-but-set-variable \
-          -Wno-reorder \
           -Wno-parentheses \
-          -Wno-unused-parameter"
+          -Wno-reorder \
+          -Wno-sign-compare \
+          -Wno-unused-but-set-variable \
+          -Wno-unused-function \
+          -Wno-unused-parameter \
+          -Wno-unused-value \
+          -Wno-unused-variable"
       # --event-handlers console_direct+
 
 # copy ros manifests
