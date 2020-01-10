@@ -15,7 +15,7 @@
 
   <!-- KimeraVIO needs opencv >= 3.3.1, yet ROS uses 3.2.0.
        Hacky way of avoiding error in KimeraVIO by linking to 3.4.2-->
-  <depend>opencv3_catkin</depend>
+  <depend>libopencv-dev</depend>
   <depend>kimera_vio</depend>
 
   <depend>roscpp</depend>
