@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>kimera_ros</name>
+  <name>kimera_vio_ros</name>
   <version>4.0.0</version>
   <description>KimeraVIO ROS Wrapper</description>
 
@@ -28,6 +28,9 @@
   <depend>cv_bridge</depend>
   <depend>tf</depend>
   <depend>pose_graph_tools</depend>
+
+  <depend>libgflags-dev</depend>
+  <depend>libgoogle-glog-dev</depend>
 
   <depend>pcl_ros</depend>
   <depend>pcl_msgs</depend>

@@ -10,7 +10,7 @@
        the log_output_path location. -->
   <arg name="log_output" default="true"/>
   <arg name="log_output_path"
-    default="$(find kimera_ros)/output_logs/$(arg dataset_name)"
+    default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
        if="$(arg log_output)"/>
   <!-- Set to true and specify gt_topic if you want to log ground-truth data -->
   <arg name="log_gt_data" default="false"/>
@@ -40,6 +40,6 @@
   <arg name="right_cam_frame_id" value="cam1"/>
 
   <!-- Launch actual pipeline -->
-  <include file="$(find kimera_ros)/launch/kimera_ros.launch"
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
     pass_all_args="true"/>
 </launch>

@@ -7,54 +7,60 @@
 
 #pragma once
 
+#include <ros/callback_queue.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/time_synchronizer.h>
 #include <sensor_msgs/Imu.h>
+#include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
 
-#include "kimera-ros/base-data-source.h"
-#include "kimera-ros/stereo-image-buffer.h"
+#include "kimera_vio_ros/RosDataProviderInterface.h"
 
 // using namespace StereoImageBuffer;
 
 namespace VIO {
 
-class RosDataProvider : public RosBaseDataProvider {
+class RosOnlineDataProvider : public RosDataProviderInterface {
  public:
-  RosDataProvider();
-  virtual ~RosDataProvider();
-  virtual bool spin() override;
+  KIMERA_DELETE_COPY_CONSTRUCTORS(RosOnlineDataProvider);
+  KIMERA_POINTER_TYPEDEFS(RosOnlineDataProvider);
+
+  RosOnlineDataProvider();
+
+  virtual ~RosOnlineDataProvider();
+
+  bool spin() override;
+
+  bool spinOnce();
 
   // Checks the current status of reinitialization flag
   inline bool getReinitFlag() const { return reinit_flag_; }
   // Resets the current status of reinitialization flag
-  void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
+  inline void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
 
  private:
   // TODO (Toni): only use one node handle...
-  // Define Node Handler for IMU Callback (and Queue)
-  ros::NodeHandle nh_imu_;
+  ros::CallbackQueue imu_queue_;
+  std::unique_ptr<ros::AsyncSpinner> imu_async_spinner_;
+  std::unique_ptr<ros::AsyncSpinner> async_spinner_;
 
-  // Define Node Handler for Reinit Callback (and Queue)
-  ros::NodeHandle nh_reinit_;
-
-  // Define Node Handler for Cam Callback (and Queue)
-  ros::NodeHandle nh_cam_;
-
-  Timestamp last_timestamp_;      // Timestamp correponding to last frame
-  Timestamp last_imu_timestamp_;  // Timestamp corresponding to last imu meas
-  int frame_count_;                // Keep track of number of frames processed
-
-  StereoBuffer stereo_buffer_;
+  FrameId frame_count_;
 
   // Reinitialization flag and packet (pose, vel, bias)
   bool reinit_flag_ = false;
   ReinitPacket reinit_packet_ = ReinitPacket();
 
  private:
+  // Left camera callback
+  void callbackStereoImages(const sensor_msgs::ImageConstPtr& left_msg,
+                            const sensor_msgs::ImageConstPtr& right_msg);
+
   // IMU callback
   void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
+
+  // GT odometry callback
+  void callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& msgGtOdom);
 
   // Reinitialization callback
   void callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag);
@@ -62,10 +68,11 @@ class RosDataProvider : public RosBaseDataProvider {
   // Reinitialization pose
   void callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose);
 
-  // Callback for stereo images and main spin
-  void callbackCamAndProcessStereo(const sensor_msgs::ImageConstPtr& msgLeft,
-                                   const sensor_msgs::ImageConstPtr& msgRight);
+ private:
+  void msgGtOdomToVioNavState(const nav_msgs::Odometry::ConstPtr& gt_odom,
+                              VioNavState* vio_navstate);
 
+ private:
   // Message filters and to sync stereo images
   typedef image_transport::SubscriberFilter ImageSubscriber;
   ImageSubscriber left_img_subscriber_;
@@ -80,6 +87,9 @@ class RosDataProvider : public RosBaseDataProvider {
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;
+
+  // Define subscriber for gt data
+  ros::Subscriber gt_odom_subscriber_;
 
   // Define subscriber for Reinit data
   ros::Subscriber reinit_flag_subscriber_;

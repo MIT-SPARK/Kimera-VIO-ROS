@@ -5,12 +5,15 @@
  * @author Antoni Rosinol
  */
 
-#include "kimera-ros/ros-data-source.h"
-
 #include <string>
 #include <vector>
 
-#include <tf2_ros/static_transform_broadcaster.h>
+#include "kimera_vio_ros/RosOnlineDataProvider.h"
+
+#include <kimera-vio/pipeline/PipelineModule.h>
+#include <kimera-vio/pipeline/QueueSynchronizer.h>
+#include <kimera-vio/visualizer/Visualizer3D.h>
+
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
@@ -20,6 +23,7 @@
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_msgs/PolygonMesh.h>
@@ -27,33 +31,16 @@
 
 namespace VIO {
 
-RosBaseDataProvider::RosBaseDataProvider()
-    : DataProvider(),
+RosDataProviderInterface::RosDataProviderInterface()
+    : DataProviderInterface(),
       it_(nullptr),
-      stereo_calib_(),
-      vio_output_(),
       nh_(),
       nh_private_("~"),
-      vio_output_queue_("VIO output"),
+      backend_output_queue_("Backend output"),
+      frontend_output_queue_("Frontend output"),
+      mesher_output_queue_("Mesher output"),
       lcd_output_queue_("LCD output") {
   ROS_INFO(">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<");
-
-  // Parse calibration info for camera and IMU
-  // Calibration info on parameter server (Parsed from yaml)
-  parseCameraData(&stereo_calib_);
-  parseImuData(&imu_data_, &pipeline_params_.imu_params_);
-  // parse backend/frontend parameters
-  // Mind that parseBackendParams modifies the imu_params_ if using the default!
-  // TODO(TONI) the parseImuData is completely flawed, since parse backend
-  // is actually parsing the imu params!!
-
-  parseBackendParams();
-
-  CHECK(pipeline_params_.backend_params_);
-  parseFrontendParams();
-
-  parseLCDParams();
-  CHECK_NOTNULL(&pipeline_params_.lcd_params_);
 
   // Print parameters to check.
   printParsedParams();
@@ -86,25 +73,31 @@ RosBaseDataProvider::RosBaseDataProvider()
   mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5, true);
   debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
 
-  // Static TFs for left/right cameras
-  const gtsam::Pose3& body_Pose_left_cam =
-      stereo_calib_.left_camera_info_.body_Pose_cam_;
-  const gtsam::Pose3& body_Pose_right_cam =
-      stereo_calib_.right_camera_info_.body_Pose_cam_;
-  publishStaticTf(body_Pose_left_cam,
+  publishStaticTf(pipeline_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
                   left_cam_frame_id_);
-  publishStaticTf(body_Pose_right_cam,
+  publishStaticTf(pipeline_params_.camera_params_.at(1).body_Pose_cam_,
                   base_link_frame_id_,
                   right_cam_frame_id_);
 }
 
-RosBaseDataProvider::~RosBaseDataProvider() {}
+RosDataProviderInterface::~RosDataProviderInterface() {
+  LOG(INFO) << "RosBaseDataProvider destructor called.";
+}
 
-cv::Mat RosBaseDataProvider::readRosImage(
+// TODO(marcus): From this documentation
+//  (http://wiki.ros.org/cv_bridge/Tutorials/UsingCvBridgeToConvertBetweenROSImagesAndOpenCVImages)
+//  we should be using toCvShare to get a CvImage pointer. However, this is a
+//  shared pointer and the ROS message data isn't freed. This means anyone else
+//  can modify this from another cb and our version will change too. Even the
+//  const isn't enough because people can just copy that and still have access
+//  to underlying data. Neet a smarter way to move these around yet make this
+//  faster.
+const cv::Mat RosDataProviderInterface::readRosImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
+    // TODO(Toni): here we should consider using toCvShare...
     cv_ptr = cv_bridge::toCvCopy(img_msg);
   } catch (cv_bridge::Exception& exception) {
     ROS_FATAL("cv_bridge exception: %s", exception.what());
@@ -122,7 +115,7 @@ cv::Mat RosBaseDataProvider::readRosImage(
   return cv_ptr->image;
 }
 
-cv::Mat RosBaseDataProvider::readRosDepthImage(
+const cv::Mat RosDataProviderInterface::readRosDepthImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
@@ -140,250 +133,113 @@ cv::Mat RosBaseDataProvider::readRosDepthImage(
   return img_depth;
 }
 
-bool RosBaseDataProvider::parseCameraData(StereoCalibration* stereo_calib) {
-  CHECK_NOTNULL(stereo_calib);
-  // Parse camera calibration info (from param server)
-
-  // Rate
-  double rate;
-  nh_private_.getParam("camera_rate_hz", rate);
-
-  // Resoltuion
-  std::vector<int> resolution;
-  CHECK(nh_private_.getParam("camera_resolution", resolution));
-  CHECK_EQ(resolution.size(), 2);
-
-  // Get distortion/intrinsics/extrinsics for each camera
-  for (int i = 0; i < 2; i++) {
-    std::string camera_name;
-    CameraParams camera_param_i;
-    // Fill in rate and resolution
-    camera_param_i.image_size_ = cv::Size(resolution[0], resolution[1]);
-    // Terminology wrong but following rest of the repo
-    camera_param_i.frame_rate_ = 1.0 / rate;
-
-    if (i == 0) {
-      camera_name = "left_camera_";
-    } else {
-      camera_name = "right_camera_";
-    }
-    // Parse intrinsics (camera matrix)
-    std::vector<double> intrinsics;
-    nh_private_.getParam(camera_name + "intrinsics", intrinsics);
-    CHECK_EQ(intrinsics.size(), 4u);
-    camera_param_i.intrinsics_ = intrinsics;
-    // Conver intrinsics to camera matrix (OpenCV format)
-    camera_param_i.camera_matrix_ = cv::Mat::eye(3, 3, CV_64F);
-    camera_param_i.camera_matrix_.at<double>(0, 0) = intrinsics[0];
-    camera_param_i.camera_matrix_.at<double>(1, 1) = intrinsics[1];
-    camera_param_i.camera_matrix_.at<double>(0, 2) = intrinsics[2];
-    camera_param_i.camera_matrix_.at<double>(1, 2) = intrinsics[3];
-
-    // Parse extrinsics (rotation and translation)
-    std::vector<double> extrinsics;
-    // Encode calibration frame to body frame
-    std::vector<double> frame_change;
-    CHECK(nh_private_.getParam(camera_name + "extrinsics", extrinsics));
-    CHECK(nh_private_.getParam("calibration_to_body_frame", frame_change));
-    CHECK_EQ(extrinsics.size(), 16u);
-    CHECK_EQ(frame_change.size(), 16u);
-    // Place into matrix
-    // 4 4 is hardcoded here because currently only accept extrinsic input
-    // in homoegeneous format [R T ; 0 1]
-    cv::Mat E_calib = cv::Mat::zeros(4, 4, CV_64F);
-    cv::Mat calib2body = cv::Mat::zeros(4, 4, CV_64F);
-    for (int k = 0; k < 16; k++) {
-      int row = k / 4;  // Integer division, truncation of fractional part.
-      int col = k % 4;
-      E_calib.at<double>(row, col) = extrinsics[k];
-      calib2body.at<double>(row, col) = frame_change[k];
-    }
-
-    // TODO(Yun): Check frames convention!
-    // Extrinsics in body frame
-    cv::Mat E_body = calib2body * E_calib;
-
-    // restore back to vector form
-    std::vector<double> extrinsics_body;
-    for (int k = 0; k < 16; k++) {
-      int row = k / 4;  // Integer division, truncation of fractional part.
-      int col = k % 4;
-      extrinsics_body.push_back(E_body.at<double>(row, col));
-    }
-
-    camera_param_i.body_Pose_cam_ =
-        UtilsOpenCV::poseVectorToGtsamPose3(extrinsics_body);
-
-    // Distortion model
-    std::string distortion_model;
-    nh_private_.getParam("distortion_model", distortion_model);
-    camera_param_i.distortion_model_ = distortion_model;
-
-    // Parse distortion
-    std::vector<double> d_coeff;
-    nh_private_.getParam(camera_name + "distortion_coefficients", d_coeff);
-    cv::Mat distortion_coeff;
-
-    // TODO(Toni): this is super prone to errors, do not rely only on d_coeff
-    // size to know what distortion params we are using...
-    switch (d_coeff.size()) {
-      case (4): {
-        CHECK_EQ(camera_param_i.distortion_model_, "radial-tangential");
-        // If given 4 coefficients
-        // TODO(Toni): why 'or'? Should be only one no?
-        ROS_INFO(
-            "Using radtan or equidistant model (4 coefficients) for camera %d",
-            i);
-        distortion_coeff = cv::Mat::zeros(1, 4, CV_64F);
-        distortion_coeff.at<double>(0, 0) = d_coeff[0];  // k1
-        distortion_coeff.at<double>(0, 1) = d_coeff[1];  // k2
-        distortion_coeff.at<double>(0, 3) = d_coeff[2];  // p1 or k3
-        distortion_coeff.at<double>(0, 4) = d_coeff[3];  // p2 or k4
-        break;
-    }
-      case (5): {
-        CHECK_EQ(camera_param_i.distortion_model_, "radial-tangential");
-        // If given 5 coefficients
-        ROS_INFO("Using radtan model (5 coefficients) for camera %d", i);
-        distortion_coeff = cv::Mat::zeros(1, 5, CV_64F);
-        for (int k = 0; k < 5; k++) {
-          distortion_coeff.at<double>(0, k) = d_coeff[k];  // k1, k2, k3, p1, p2
-        }
-        break;
-    }
-    default: { // otherwise
-        ROS_FATAL("Unsupported distortion format.");
-    }
-    }
-
-    camera_param_i.distortion_coeff_ = distortion_coeff;
-
-    // TODO(unknown): add skew (can add switch statement when parsing
-    // intrinsics)
-    // TODO(TONI): wtf! before we parse 5 params if radial-tangential,
-    // but now we only use 4? We don't care or what?
-    camera_param_i.calibration_ =
-        gtsam::Cal3DS2(intrinsics[0],                       // fx
-                       intrinsics[1],                       // fy
-                       0.0,                                 // skew
-                       intrinsics[2],                       // u0
-                       intrinsics[3],                       // v0
-                       distortion_coeff.at<double>(0, 0),   //  k1
-                       distortion_coeff.at<double>(0, 1),   //  k2
-                       distortion_coeff.at<double>(0, 3),   //  p1
-                       distortion_coeff.at<double>(0, 4));  //  p2
-
-    if (i == 0) {
-      stereo_calib->left_camera_info_ = camera_param_i;
-    } else {
-      stereo_calib->right_camera_info_ = camera_param_i;
-    }
-  }
-
-  // Calculate the pose of right camera relative to the left camera
-  stereo_calib->camL_Pose_camR_ =
-      (stereo_calib->left_camera_info_.body_Pose_cam_)
-          .between(stereo_calib->right_camera_info_.body_Pose_cam_);
-
-  ROS_INFO("Parsed stereo camera calibration");
-  return true;
-}
-
-bool RosBaseDataProvider::parseImuData(ImuData* imu_data,
-                                       ImuParams* imu_params) const {
-  CHECK_NOTNULL(imu_data);
-  CHECK_NOTNULL(imu_params);
-  // Parse IMU calibration info (from param server)
-  double rate = 0.0;
-  CHECK(nh_private_.getParam("imu_rate_hz", rate));
-  double gyro_noise = 0.0;
-  CHECK(nh_private_.getParam("gyroscope_noise_density", gyro_noise));
-  double gyro_walk = 0.0;
-  CHECK(nh_private_.getParam("gyroscope_random_walk", gyro_walk));
-  double acc_noise = 0.0;
-  CHECK(nh_private_.getParam("accelerometer_noise_density", acc_noise));
-  double acc_walk = 0.0;
-  CHECK(nh_private_.getParam("accelerometer_random_walk", acc_walk));
-  double imu_shift = 0.0;  // check the actual sign of how it is applied (weird)
-  CHECK(nh_private_.getParam("imu_shift", imu_shift));
-  LOG_IF(WARNING, imu_shift != 0.0) << "Adding/Substracting a timestamp shift to"
-                                       " IMU of: " << imu_shift;
-  CHECK_GT(rate, 0.0);
-  CHECK_GT(gyro_noise, 0.0);
-  CHECK_GT(gyro_walk, 0.0);
-  CHECK_GT(acc_noise, 0.0);
-  CHECK_GT(acc_walk, 0.0);
-
-  // TODO(Sandro): Do we need these parameters??
-  imu_data->nominal_imu_rate_ = 1.0 / rate;
-  imu_data->imu_rate_ = 1.0 / rate;
-  imu_data->imu_rate_std_ = 0.00500009;          // set to 0 for now
-  imu_data->imu_rate_maxMismatch_ = 0.00500019;  // set to 0 for now
-
-  // Gyroscope and accelerometer noise parameters
-  // TODO(Toni): why are we not parsing these from .yaml file????
-  imu_params->gyro_noise_ = gyro_noise;
-  imu_params->gyro_walk_ = gyro_walk;
-  imu_params->acc_noise_ = acc_noise;
-  imu_params->acc_walk_ = acc_walk;
-  // imu_shift is defined as t_imu = t_cam + imu_shift (see: Kalibr)
-  imu_params->imu_shift_ = imu_shift;
-
-  ROS_INFO("Parsed IMU calibration");
-  return true;
-}
-
-void RosBaseDataProvider::publishVioOutput(const SpinOutputPacket& vio_output) {
-  publishTf(vio_output);
+void RosDataProviderInterface::publishBackendOutput(
+    const BackendOutput::Ptr& output) {
+  CHECK_NOTNULL(output);
+  publishTf(output);
   if (odometry_pub_.getNumSubscribers() > 0) {
-    publishState(vio_output);
-  }
-  // Publish 3d mesh (not the time-horizon one! just the per-frame one)
-  if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
-    publishPerFrameMesh3D(vio_output);
-  }
-  // Publish 2d mesh debug image
-  if (debug_img_pub_.getNumSubscribers() > 0) {
-    publishDebugImage(vio_output.getTimestamp(), vio_output.mesh_2d_img_);
-  }
-  if (pointcloud_pub_.getNumSubscribers() > 0) {
-    publishTimeHorizonPointCloud(vio_output.getTimestamp(),
-                                 vio_output.points_with_id_VIO_,
-                                 vio_output.lmk_id_to_lmk_type_map_);
-  }
-  if (frontend_stats_pub_.getNumSubscribers() > 0) {
-    publishFrontendStats(vio_output);
-  }
-  // Publish Resiliency
-  if (resiliency_pub_.getNumSubscribers() > 0) {
-    publishResiliency(vio_output);
+    publishState(output);
   }
   if (imu_bias_pub_.getNumSubscribers() > 0) {
-    publishImuBias(vio_output);
+    publishImuBias(output);
+  }
+  if (pointcloud_pub_.getNumSubscribers() > 0) {
+    publishTimeHorizonPointCloud(output);
   }
 }
 
-void RosBaseDataProvider::publishLcdOutput(const LoopClosureDetectorOutputPayload& lcd_output) {
+void RosDataProviderInterface::publishFrontendOutput(
+    const FrontendOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
+  if (frontend_stats_pub_.getNumSubscribers() > 0) {
+    publishFrontendStats(output);
+  }
+}
+
+void RosDataProviderInterface::publishMesherOutput(
+    const MesherOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
+  if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
+    publishPerFrameMesh3D(output);
+  }
+}
+
+bool RosDataProviderInterface::publishSyncedOutputs() {
+  // First acquire a backend output packet, as it is slowest.
+  BackendOutput::Ptr backend_output = nullptr;
+  if (backend_output_queue_.pop(backend_output)) {
+    CHECK_NOTNULL(backend_output);
+    publishBackendOutput(backend_output);
+    const Timestamp& ts = backend_output->timestamp_;
+
+    FrontendOutput::Ptr frontend_output = nullptr;
+    bool get_frontend =
+        SimpleQueueSynchronizer<FrontendOutput::Ptr>::getInstance()
+            .syncQueue(ts,
+                       &frontend_output_queue_,
+                       &frontend_output,
+                       "RosDataProvider");
+    CHECK(frontend_output);
+    publishFrontendOutput(frontend_output);
+
+    MesherOutput::Ptr mesher_output = nullptr;
+    bool get_mesher =
+        SimpleQueueSynchronizer<MesherOutput::Ptr>::getInstance()
+            .syncQueue(
+                ts, &mesher_output_queue_, &mesher_output, "RosDataProvider");
+    CHECK(mesher_output);
+    publishMesherOutput(mesher_output);
+
+    if (frontend_output && mesher_output) {
+      // Publish 2d mesh debug image
+      if (debug_img_pub_.getNumSubscribers() > 0) {
+        cv::Mat mesh_2d_img = Visualizer3D::visualizeMesh2D(
+            mesher_output->mesh_2d_for_viz_,
+            frontend_output->stereo_frame_lkf_.getLeftFrame().img_);
+        publishDebugImage(backend_output->timestamp_, mesh_2d_img);
+      }
+    }
+
+    if (frontend_output) {
+      // Publish Resiliency
+      if (resiliency_pub_.getNumSubscribers() > 0) {
+        publishResiliency(frontend_output, backend_output);
+      }
+    }
+
+    return get_frontend && get_mesher;
+  }
+
+  return false;
+}
+
+void RosDataProviderInterface::publishLcdOutput(
+    const LcdOutput::Ptr& lcd_output) {
+  CHECK_NOTNULL(lcd_output);
+
   publishTf(lcd_output);
-  if (trajectory_pub_.getNumSubscribers() > 0 ) {
+  if (trajectory_pub_.getNumSubscribers() > 0) {
     publishOptimizedTrajectory(lcd_output);
   }
-  if (posegraph_pub_.getNumSubscribers() > 0 ) {
+  if (posegraph_pub_.getNumSubscribers() > 0) {
     publishPoseGraph(lcd_output);
   }
 }
 
-void RosBaseDataProvider::publishTimeHorizonPointCloud(
-    const Timestamp& timestamp, const PointsWithIdMap& points_with_id,
-    const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map) const {
+void RosDataProviderInterface::publishTimeHorizonPointCloud(
+    const BackendOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
+  const Timestamp& timestamp = output->timestamp_;
+  const PointsWithIdMap& points_with_id = output->landmarks_with_id_map_;
+  const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map =
+      output->lmk_id_to_lmk_type_map_;
+
   PointCloudXYZRGB::Ptr msg(new PointCloudXYZRGB);
   msg->header.frame_id = world_frame_id_;
   msg->is_dense = true;
   msg->height = 1;
   msg->width = points_with_id.size();
   msg->points.resize(points_with_id.size());
-
-  LOG(ERROR) << "Points with id size: " << msg->points.size();
 
   bool color_the_cloud = false;
   if (lmk_id_to_lmk_type_map.size() != 0) {
@@ -439,8 +295,9 @@ void RosBaseDataProvider::publishTimeHorizonPointCloud(
   pointcloud_pub_.publish(msg);
 }
 
-void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
-                                            const cv::Mat& debug_image) const {
+void RosDataProviderInterface::publishDebugImage(
+    const Timestamp& timestamp,
+    const cv::Mat& debug_image) const {
   // CHECK(debug_image.type(), CV_8UC1);
   std_msgs::Header h;
   h.stamp.fromNSec(timestamp);
@@ -451,27 +308,29 @@ void RosBaseDataProvider::publishDebugImage(const Timestamp& timestamp,
 }
 
 // void RosBaseDataProvider::publishTimeHorizonMesh3D(
-//    const SpinOutputPacket& vio_output) {
-//  const Mesh3D& mesh_3d = vio_output.mesh_3d_;
+//    const MesherOutput::Ptr& output) {
+//  const Mesh3D& mesh_3d = output->mesh_3d_;
 //  size_t number_mesh_3d_polygons = mesh_3d.getNumberOfPolygons();
 //}
 
-void RosBaseDataProvider::publishPerFrameMesh3D(
-    const SpinOutputPacket& vio_output) const {
-  const Mesh2D& mesh_2d = vio_output.mesh_2d_;
-  const Mesh3D& mesh_3d = vio_output.mesh_3d_;
+void RosDataProviderInterface::publishPerFrameMesh3D(
+    const MesherOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
+
+  const Mesh2D& mesh_2d = output->mesh_2d_;
+  const Mesh3D& mesh_3d = output->mesh_3d_;
   size_t number_mesh_2d_polygons = mesh_2d.getNumberOfPolygons();
   size_t mesh_2d_poly_dim = mesh_2d.getMeshPolygonDimension();
 
   static const size_t cam_width =
-      stereo_calib_.left_camera_info_.image_size_.width;
+      pipeline_params_.camera_params_.at(0).image_size_.width;
   static const size_t cam_height =
-      stereo_calib_.left_camera_info_.image_size_.height;
+      pipeline_params_.camera_params_.at(0).image_size_.height;
   DCHECK_GT(cam_width, 0);
   DCHECK_GT(cam_height, 0);
 
   pcl_msgs::PolygonMesh::Ptr msg(new pcl_msgs::PolygonMesh());
-  msg->header.stamp.fromNSec(vio_output.getTimestamp());
+  msg->header.stamp.fromNSec(output->timestamp_);
   msg->header.frame_id = world_frame_id_;
 
   // Create point cloud to hold vertices.
@@ -561,14 +420,19 @@ void RosBaseDataProvider::publishPerFrameMesh3D(
   return;
 }  // namespace VIO
 
-void RosBaseDataProvider::publishState(
-    const SpinOutputPacket& vio_output) const {
+void RosDataProviderInterface::publishState(
+    const BackendOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
   // Get latest estimates for odometry.
-  const gtsam::Pose3& pose = vio_output.getEstimatedPose();
-  const gtsam::Vector3& velocity = vio_output.getEstimatedVelocity();
-  const Timestamp& ts = vio_output.getTimestamp();
-  const gtsam::Matrix6& pose_cov = vio_output.getEstimatedPoseCov();
-  const gtsam::Matrix3& vel_cov = vio_output.getEstimatedVelCov();
+  const Timestamp& ts = output->timestamp_;
+  const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
+  const gtsam::Rot3& rotation = pose.rotation();
+  const gtsam::Quaternion& quaternion = rotation.toQuaternion();
+  const gtsam::Vector3& velocity = output->W_State_Blkf_.velocity_;
+  const gtsam::Matrix6& pose_cov =
+      gtsam::sub(output->state_covariance_lkf_, 0, 6, 0, 6);
+  const gtsam::Matrix3& vel_cov =
+      gtsam::sub(output->state_covariance_lkf_, 6, 9, 6, 9);
 
   // First publish odometry estimate
   nav_msgs::Odometry odometry_msg;
@@ -584,8 +448,6 @@ void RosBaseDataProvider::publishState(
   odometry_msg.pose.pose.position.z = pose.z();
 
   // Orientation
-  const gtsam::Rot3& rotation = pose.rotation();
-  const gtsam::Quaternion& quaternion = rotation.toQuaternion();
   odometry_msg.pose.pose.orientation.w = quaternion.w();
   odometry_msg.pose.pose.orientation.x = quaternion.x();
   odometry_msg.pose.pose.orientation.y = quaternion.y();
@@ -633,9 +495,11 @@ void RosBaseDataProvider::publishState(
   odometry_pub_.publish(odometry_msg);
 }
 
-void RosBaseDataProvider::publishTf(const SpinOutputPacket& vio_output) {
-  const Timestamp& timestamp = vio_output.getTimestamp();
-  const gtsam::Pose3& pose = vio_output.getEstimatedPose();
+void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
+  CHECK_NOTNULL(output);
+
+  const Timestamp& timestamp = output->timestamp_;
+  const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
   const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
   // Publish base_link TF.
   geometry_msgs::TransformStamped odom_tf;
@@ -653,10 +517,12 @@ void RosBaseDataProvider::publishTf(const SpinOutputPacket& vio_output) {
   tf_broadcaster_.sendTransform(odom_tf);
 }
 
-void RosBaseDataProvider::publishFrontendStats(
-    const SpinOutputPacket& vio_output) const {
+void RosDataProviderInterface::publishFrontendStats(
+    const FrontendOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
+
   // Get frontend data for resiliency output
-  const DebugTrackerInfo& debug_tracker_info = vio_output.getTrackerInfo();
+  const DebugTrackerInfo& debug_tracker_info = output->getTrackerInfo();
 
   // Create message type
   std_msgs::Float64MultiArray frontend_stats_msg;
@@ -687,12 +553,19 @@ void RosBaseDataProvider::publishFrontendStats(
   frontend_stats_pub_.publish(frontend_stats_msg);
 }
 
-void RosBaseDataProvider::publishResiliency(
-    const SpinOutputPacket& vio_output) const {
+void RosDataProviderInterface::publishResiliency(
+    const FrontendOutput::Ptr& frontend_output,
+    const BackendOutput::Ptr& backend_output) const {
+  CHECK_NOTNULL(frontend_output);
+  CHECK_NOTNULL(backend_output);
+
   // Get frontend and velocity covariance data for resiliency output
-  const DebugTrackerInfo& debug_tracker_info = vio_output.getTrackerInfo();
-  const gtsam::Matrix3& vel_cov = vio_output.getEstimatedVelCov();
-  const gtsam::Matrix6& pose_cov = vio_output.getEstimatedPoseCov();
+  const DebugTrackerInfo& debug_tracker_info =
+      frontend_output->getTrackerInfo();
+  const gtsam::Matrix6& pose_cov =
+      gtsam::sub(backend_output->state_covariance_lkf_, 0, 6, 0, 6);
+  const gtsam::Matrix3& vel_cov =
+      gtsam::sub(backend_output->state_covariance_lkf_, 6, 9, 6, 9);
 
   // Create message type for quality of SparkVIO
   std_msgs::Float64MultiArray resiliency_msg;
@@ -750,10 +623,12 @@ void RosBaseDataProvider::publishResiliency(
   resiliency_pub_.publish(resiliency_msg);
 }
 
-void RosBaseDataProvider::publishImuBias(
-    const SpinOutputPacket& vio_output) const {
+void RosDataProviderInterface::publishImuBias(
+    const BackendOutput::Ptr& output) const {
+  CHECK_NOTNULL(output);
+
   // Get imu bias to output
-  const ImuBias& imu_bias = vio_output.getEstimatedBias();
+  const ImuBias& imu_bias = output->W_State_Blkf_.imu_bias_;
   const Vector3& accel_bias = imu_bias.accelerometer();
   const Vector3& gyro_bias = imu_bias.gyroscope();
 
@@ -779,11 +654,13 @@ void RosBaseDataProvider::publishImuBias(
   imu_bias_pub_.publish(imu_bias_msg);
 }
 
-void RosBaseDataProvider::publishOptimizedTrajectory(
-    const LoopClosureDetectorOutputPayload& lcd_output) const {
+void RosDataProviderInterface::publishOptimizedTrajectory(
+    const LcdOutput::Ptr& lcd_output) const {
+  CHECK_NOTNULL(lcd_output);
+
   // Get pgo-optimized trajectory
-  const Timestamp& ts = lcd_output.timestamp_kf_;
-  const gtsam::Values& trajectory = lcd_output.states_;
+  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const gtsam::Values& trajectory = lcd_output->states_;
   // Create message type
   nav_msgs::Path path;
 
@@ -813,11 +690,12 @@ void RosBaseDataProvider::publishOptimizedTrajectory(
   trajectory_pub_.publish(path);
 }
 
-void RosBaseDataProvider::updateRejectedEdges() {
+void RosDataProviderInterface::updateRejectedEdges() {
   // first update the rejected edges
-  for(pose_graph_tools::PoseGraphEdge& loop_closure_edge: loop_closure_edges_) {
+  for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
+       loop_closure_edges_) {
     bool is_inlier = false;
-    for (pose_graph_tools::PoseGraphEdge& inlier_edge: inlier_edges_) {
+    for (pose_graph_tools::PoseGraphEdge& inlier_edge : inlier_edges_) {
       if (loop_closure_edge.key_from == inlier_edge.key_from &&
           loop_closure_edge.key_to == inlier_edge.key_to) {
         is_inlier = true;
@@ -832,9 +710,10 @@ void RosBaseDataProvider::updateRejectedEdges() {
   }
 
   // Then update the loop edges
-  for (pose_graph_tools::PoseGraphEdge& inlier_edge: inlier_edges_) {
+  for (pose_graph_tools::PoseGraphEdge& inlier_edge : inlier_edges_) {
     bool previously_stored = false;
-    for (pose_graph_tools::PoseGraphEdge& loop_closure_edge: loop_closure_edges_) {
+    for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
+         loop_closure_edges_) {
       if (inlier_edge.key_from == loop_closure_edge.key_from &&
           inlier_edge.key_to == loop_closure_edge.key_to) {
         previously_stored = true;
@@ -848,25 +727,26 @@ void RosBaseDataProvider::updateRejectedEdges() {
   }
 }
 
-void RosBaseDataProvider::updateNodesAndEdges(
+void RosDataProviderInterface::updateNodesAndEdges(
     const gtsam::NonlinearFactorGraph& nfg,
     const gtsam::Values& values) {
-
   inlier_edges_.clear();
   odometry_edges_.clear();
   // first store the factors as edges
   for (size_t i = 0; i < nfg.size(); i++) {
     // check if between factor
-    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(nfg[i])) {
+    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
+            nfg[i])) {
       // convert to between factor
       const gtsam::BetweenFactor<gtsam::Pose3>& factor =
-            *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(nfg[i]);
+          *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
+              nfg[i]);
       // convert between factor to PoseGraphEdge type
       pose_graph_tools::PoseGraphEdge edge;
       edge.header.frame_id = world_frame_id_;
       edge.key_from = factor.front();
       edge.key_to = factor.back();
-      if (edge.key_to == edge.key_from + 1) { // check if odom
+      if (edge.key_to == edge.key_from + 1) {  // check if odom
         edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
       } else {
         edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
@@ -877,7 +757,8 @@ void RosBaseDataProvider::updateNodesAndEdges(
       edge.pose.position.y = translation.y();
       edge.pose.position.z = translation.z();
       // transforms - rotation (to quaternion)
-      const gtsam::Quaternion& quaternion = factor.measured().rotation().toQuaternion();
+      const gtsam::Quaternion& quaternion =
+          factor.measured().rotation().toQuaternion();
       edge.pose.orientation.x = quaternion.x();
       edge.pose.orientation.y = quaternion.y();
       edge.pose.orientation.z = quaternion.z();
@@ -902,9 +783,9 @@ void RosBaseDataProvider::updateNodesAndEdges(
     pose_graph_tools::PoseGraphNode node;
     node.key = key_list[i];
 
-    const gtsam::Pose3 &value = values.at<gtsam::Pose3>(i);
-    const gtsam::Point3 &translation = value.translation();
-    const gtsam::Quaternion &quaternion = value.rotation().toQuaternion();
+    const gtsam::Pose3& value = values.at<gtsam::Pose3>(i);
+    const gtsam::Point3& translation = value.translation();
+    const gtsam::Quaternion& quaternion = value.rotation().toQuaternion();
 
     // pose - translation
     node.pose.position.x = translation.x();
@@ -922,25 +803,28 @@ void RosBaseDataProvider::updateNodesAndEdges(
   return;
 }
 
-pose_graph_tools::PoseGraph RosBaseDataProvider::getPosegraphMsg() {
+pose_graph_tools::PoseGraph RosDataProviderInterface::getPosegraphMsg() {
   // pose graph getter
   pose_graph_tools::PoseGraph pose_graph;
-  pose_graph.edges = odometry_edges_; // add odometry edges to pg
+  pose_graph.edges = odometry_edges_;  // add odometry edges to pg
   // then add loop closure edges to pg
   pose_graph.edges.insert(pose_graph.edges.end(),
-      loop_closure_edges_.begin(), loop_closure_edges_.end());
+                          loop_closure_edges_.begin(),
+                          loop_closure_edges_.end());
   // then add the nodes
   pose_graph.nodes = pose_graph_nodes_;
 
   return pose_graph;
 }
 
-void RosBaseDataProvider::publishPoseGraph(
-    const LoopClosureDetectorOutputPayload& lcd_output) {
+void RosDataProviderInterface::publishPoseGraph(
+    const LcdOutput::Ptr& lcd_output) {
+  CHECK_NOTNULL(lcd_output);
+
   // Get the factor graph
-  const Timestamp& ts = lcd_output.timestamp_kf_;
-  const gtsam::NonlinearFactorGraph& nfg = lcd_output.nfg_;
-  const gtsam::Values& values = lcd_output.states_;
+  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const gtsam::NonlinearFactorGraph& nfg = lcd_output->nfg_;
+  const gtsam::Values& values = lcd_output->states_;
   updateNodesAndEdges(nfg, values);
   pose_graph_tools::PoseGraph graph = getPosegraphMsg();
   graph.header.stamp.fromNSec(ts);
@@ -948,10 +832,11 @@ void RosBaseDataProvider::publishPoseGraph(
   posegraph_pub_.publish(graph);
 }
 
-void RosBaseDataProvider::publishTf(
-    const LoopClosureDetectorOutputPayload& lcd_output) {
-  const Timestamp& ts = lcd_output.timestamp_kf_;
-  const gtsam::Pose3& w_Pose_map = lcd_output.W_Pose_Map_;
+void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
+  CHECK_NOTNULL(lcd_output);
+
+  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
   const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
   // Publish map TF.
   geometry_msgs::TransformStamped map_tf;
@@ -969,9 +854,10 @@ void RosBaseDataProvider::publishTf(
   tf_broadcaster_.sendTransform(map_tf);
 }
 
-void RosBaseDataProvider::publishStaticTf(const gtsam::Pose3& pose,
-                                          const std::string& parent_frame_id,
-                                          const std::string& child_frame_id) {
+void RosDataProviderInterface::publishStaticTf(
+    const gtsam::Pose3& pose,
+    const std::string& parent_frame_id,
+    const std::string& child_frame_id) {
   static tf2_ros::StaticTransformBroadcaster static_broadcaster;
   geometry_msgs::TransformStamped static_transform_stamped;
   // TODO(Toni): Warning: using ros::Time::now(), will that bring issues?
@@ -989,41 +875,20 @@ void RosBaseDataProvider::publishStaticTf(const gtsam::Pose3& pose,
   static_broadcaster.sendTransform(static_transform_stamped);
 }
 
-void RosBaseDataProvider::printParsedParams() const {
-  LOG(INFO) << std::string(80, '=') << '\n'
-            << ">>>>>>>>> RosDataProvider::print <<<<<<<<<<<" << '\n'
-            << "camL_Pose_camR_: " << stereo_calib_.camL_Pose_camR_ << '\n'
-            << " - Left camera params: ";
-  stereo_calib_.left_camera_info_.print();
-  LOG(INFO) << std::string(80, '=') << '\n'
-            << " - Right camera params:";
-  stereo_calib_.right_camera_info_.print();
-  LOG(INFO) << std::string(80, '=') << '\n'
-            << " - IMU info:";
-  imu_data_.print();
-  LOG(INFO) << std::string(80, '=') << '\n'
-            << " - IMU params:";
+void RosDataProviderInterface::printParsedParams() const {
+  LOG(INFO) << std::string(80, '=') << '\n' << " - Left camera info:";
+  pipeline_params_.camera_params_.at(0).print();
+  LOG(INFO) << std::string(80, '=') << '\n' << " - Right camera info:";
+  pipeline_params_.camera_params_.at(1).print();
+  LOG(INFO) << std::string(80, '=') << '\n' << " - IMU info:";
   pipeline_params_.imu_params_.print();
-  LOG(INFO) << std::string(80, '=') << '\n'
-            << " - Backend params";
+  LOG(INFO) << std::string(80, '=') << '\n' << " - IMU params:";
+  pipeline_params_.imu_params_.print();
+  LOG(INFO) << std::string(80, '=') << '\n' << " - Backend params";
   pipeline_params_.backend_params_->print();
   LOG(INFO) << std::string(80, '=');
   pipeline_params_.lcd_params_.print();
   LOG(INFO) << std::string(80, '=');
-}
-
-// VIO output callback at keyframe rate
-void RosBaseDataProvider::callbackKeyframeRateVioOutput(
-    const SpinOutputPacket& vio_output) {
-  // The code here should be lighting fast or we will be blocking the backend
-  // thread in the VIO. This is actually running in the backend thread, as
-  // such do not modify things other than thread-safe stuff.
-  vio_output_queue_.push(vio_output);
-}
-
-void RosBaseDataProvider::callbackLoopClosureOutput(
-    const LoopClosureDetectorOutputPayload& lcd_output) {
-  lcd_output_queue_.push(lcd_output);
 }
 
 }  // namespace VIO
