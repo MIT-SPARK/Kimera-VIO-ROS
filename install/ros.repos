@@ -4,25 +4,25 @@ repositories:
     # url: https://github.com/MIT-SPARK/Kimera-VIO-ROS.git
     # version: master
     url: https://github.com/ruffsl/Kimera-VIO-ROS.git
-    version: patch-1
-  MIT-SPARK/pose_graph_tools:
-    type: git
-    url: https://github.com/MIT-SPARK/pose_graph_tools.git
-    version: master
-  ToniRV/mesh_rviz_plugins:
-    type: git
-    url: https://github.com/ToniRV/mesh_rviz_plugins.git
-    version: master
-    # url: https://github.com/ruffsl/mesh_rviz_plugins.git
-    # version: patch-1
-  ToniRV/kimera_rviz_markers:
-    type: git
-    url: https://github.com/ToniRV/kimera_rviz_markers.git
-    version: master
-  catkin/catkin_simple:
-    type: git
-    url: https://github.com/catkin/catkin_simple.git
-    version: master
+    version: eloquent
+  # MIT-SPARK/pose_graph_tools:
+  #   type: git
+  #   url: https://github.com/MIT-SPARK/pose_graph_tools.git
+  #   version: master
+  # ToniRV/mesh_rviz_plugins:
+  #   type: git
+  #   url: https://github.com/ToniRV/mesh_rviz_plugins.git
+  #   version: master
+  #   # url: https://github.com/ruffsl/mesh_rviz_plugins.git
+  #   # version: patch-1
+  # ToniRV/kimera_rviz_markers:
+  #   type: git
+  #   url: https://github.com/ToniRV/kimera_rviz_markers.git
+  #   version: master
+  # catkin/catkin_simple:
+  #   type: git
+  #   url: https://github.com/catkin/catkin_simple.git
+  #   version: master
 
 # - git:
 #     local-name: cmake_external_project_catkin
