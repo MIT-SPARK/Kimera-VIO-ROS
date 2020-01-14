@@ -1,7 +1,18 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(kimera_vio_ros)
 
-find_package(catkin_simple REQUIRED)
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 
 ### System Dependencies
 find_package(Boost REQUIRED COMPONENTS
@@ -13,15 +24,13 @@ if(NOT TARGET Boost::boost)
   INTERFACE_INCLUDE_DIRECTORIES "${Boost_INCLUDE_DIRS}")
 endif()
 
-catkin_simple()
+# catkin_simple()
 
-cs_add_executable(${PROJECT_NAME}
-  src/KimeraVioRos.cpp
-  src/RosDataProvider.cpp
-  src/RosBagDataProvider.cpp
-  src/RosOnlineDataProvider.cpp)
-target_link_libraries(${PROJECT_NAME} kimera_vio)
+# cs_add_executable(${PROJECT_NAME}
+#   src/KimeraVioRos.cpp
+#   src/RosDataProvider.cpp
+#   src/RosBagDataProvider.cpp
+#   src/RosOnlineDataProvider.cpp)
+# target_link_libraries(${PROJECT_NAME} kimera_vio)
 
-cs_install()
-
-cs_export()
+ament_package()
