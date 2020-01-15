@@ -5,10 +5,12 @@ repositories:
     # version: master
     url: https://github.com/ruffsl/Kimera-VIO-ROS.git
     version: eloquent
-  # MIT-SPARK/pose_graph_tools:
-  #   type: git
-  #   url: https://github.com/MIT-SPARK/pose_graph_tools.git
-  #   version: master
+  MIT-SPARK/pose_graph_tools:
+    type: git
+    # url: https://github.com/MIT-SPARK/pose_graph_tools.git
+    # version: master
+    url: https://github.com/ruffsl/pose_graph_tools.git
+    version: eloquent
   # ToniRV/mesh_rviz_plugins:
   #   type: git
   #   url: https://github.com/ToniRV/mesh_rviz_plugins.git
