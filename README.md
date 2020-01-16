@@ -96,7 +96,7 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
 
   2. In another terminal, launch KimeraVIO ROS wrapper:
   ```bash
-  roslaunch kimera_vio_ros kimera_vio_ros_euroc.launch
+  roslaunch kimera_vio_ros kimera_ros_euroc.launch
   ```
 
   3. In another terminal, launch rviz for visualization:
