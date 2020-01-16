@@ -36,3 +36,6 @@
 
 # Vscode files
 .vscode/
+
+# Clion files
+.idea/
