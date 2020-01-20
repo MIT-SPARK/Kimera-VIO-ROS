@@ -12,27 +12,27 @@
 #include <opencv2/core/matx.hpp>
 #include <string>
 
-#include <nav_msgs/Odometry.h>
+#include <nav_msgs/msg/odometry.h>
 #include <ros/console.h>
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
-#include <sensor_msgs/Image.h>
+#include <sensor_msgs/msg/image.h>
 
-#include "kimera_vio_ros/RosDataProviderInterface.h"
+#include "kimera_vio_ros/RosDataProviderInterface.hpp"
 
 namespace VIO {
 
 struct RosbagData {
   inline size_t getNumberOfImages() const { return left_imgs_.size(); }
   // The names of the images from left camera
-  std::vector<sensor_msgs::ImageConstPtr> left_imgs_;
+  std::vector<sensor_msgs::msg::ImageConstPtr> left_imgs_;
   // The names of the images from right camera
-  std::vector<sensor_msgs::ImageConstPtr> right_imgs_;
+  std::vector<sensor_msgs::msg::ImageConstPtr> right_imgs_;
   // Vector of timestamps see issue in .cpp file
   std::vector<Timestamp> timestamps_;
   // Ground-truth Odometry (only if available).
-  std::vector<nav_msgs::OdometryConstPtr> gt_odometry_;
+  std::vector<nav_msgs::msg::OdometryConstPtr> gt_odometry_;
 };
 
 class RosbagDataProvider : public RosDataProviderInterface {
@@ -67,7 +67,7 @@ class RosbagDataProvider : public RosDataProviderInterface {
 
   // Publish ground-truth odometry
   void publishGroundTruthOdometry(
-      const nav_msgs::OdometryConstPtr& gt_odom) const;
+      const nav_msgs::msg::OdometryConstPtr& gt_odom) const;
 
  private:
   RosbagData rosbag_data_;

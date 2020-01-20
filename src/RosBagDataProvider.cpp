@@ -5,7 +5,7 @@
  * @author Antoni Rosinol
  */
 
-#include "kimera_vio_ros/RosBagDataProvider.h"
+#include "kimera_vio_ros/RosBagDataProvider.hpp"
 
 #include <glog/logging.h>
 
