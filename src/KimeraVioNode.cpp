@@ -25,8 +25,9 @@ KimeraVioNode::KimeraVioNode()
   auto imu_opt = rclcpp::SubscriptionOptions();
   imu_opt.callback_group = callback_group_imu_;
 
+  std::string imu_topic = "imu";
   imu_sub_ = this->create_subscription<Imu>(
-    "topic",
+    imu_topic,
     rclcpp::QoS(10),
     std::bind(
       &KimeraVioNode::imu_cb,
