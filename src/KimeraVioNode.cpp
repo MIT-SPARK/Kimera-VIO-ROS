@@ -6,14 +6,14 @@ std::string string_thread_id()
   return std::to_string(hashed);
 }
 
-std::string KimeraVioNodeNode::timing_string()
+std::string KimeraVioNode::timing_string()
 {
   rclcpp::Time time = this->now();
   return std::to_string(time.nanoseconds());
 }
 
-KimeraVioNodeNode::KimeraVioNodeNode()
-: Node("KimeraVioNodeNode")
+KimeraVioNode::KimeraVioNode()
+: Node("KimeraVioNode")
 {
   callback_group_subscriber1_ = this->create_callback_group(
     rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
@@ -29,7 +29,7 @@ KimeraVioNodeNode::KimeraVioNodeNode()
     "topic",
     rclcpp::QoS(10),
     std::bind(
-      &KimeraVioNodeNode::subscriber1_cb,
+      &KimeraVioNode::subscriber1_cb,
       this,
       std::placeholders::_1),
     sub1_opt);
@@ -38,13 +38,13 @@ KimeraVioNodeNode::KimeraVioNodeNode()
     "topic",
     rclcpp::QoS(10),
     std::bind(
-      &KimeraVioNodeNode::subscriber2_cb,
+      &KimeraVioNode::subscriber2_cb,
       this,
       std::placeholders::_1),
     sub2_opt);
 }
 
-void KimeraVioNodeNode::subscriber1_cb(const std_msgs::msg::String::SharedPtr msg)
+void KimeraVioNode::subscriber1_cb(const std_msgs::msg::String::SharedPtr msg)
 {
   auto message_received_at = timing_string();
 
@@ -54,7 +54,7 @@ void KimeraVioNodeNode::subscriber1_cb(const std_msgs::msg::String::SharedPtr ms
   RCLCPP_INFO(this->get_logger(), thread_string, msg->data.c_str());
 }
 
-void KimeraVioNodeNode::subscriber2_cb(const std_msgs::msg::String::SharedPtr msg)
+void KimeraVioNode::subscriber2_cb(const std_msgs::msg::String::SharedPtr msg)
 {
   auto message_received_at = timing_string();
 

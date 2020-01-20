@@ -7,9 +7,9 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 
-class KimeraVioNodeNode : public rclcpp::Node{
+class KimeraVioNode : public rclcpp::Node{
 public:
-    KimeraVioNodeNode();
+    KimeraVioNode();
 
 private:
     void subscriber1_cb(const std_msgs::msg::String::SharedPtr msg);
