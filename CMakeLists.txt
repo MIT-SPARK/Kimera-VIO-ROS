@@ -14,6 +14,22 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 
+# find_package(Gflags REQUIRED)
+# find_package(Glog 0.3.5 REQUIRED)
+find_package(GTSAM REQUIRED)
+# find_package(opengv REQUIRED)
+find_package(OpenCV 3.3.1 REQUIRED)
+# find_package(DBoW2 REQUIRED)
+find_package(kimera_vio REQUIRED)
+find_package(PCL REQUIRED QUIET COMPONENTS common io)
+
+find_package(pose_graph_msgs)
+find_package(pose_graph_visualizer)
+
+find_package(pcl_ros)
+find_package(pcl_msgs)
+find_package(pcl_conversions)
+
 ### System Dependencies
 find_package(Boost REQUIRED COMPONENTS
   serialization system filesystem thread date_time regex timer chrono)
@@ -24,13 +40,69 @@ if(NOT TARGET Boost::boost)
   INTERFACE_INCLUDE_DIRECTORIES "${Boost_INCLUDE_DIRS}")
 endif()
 
-# catkin_simple()
+include_directories(
+  include
+  ${PCL_COMMON_INCLUDE_DIRS}
+)
 
-# cs_add_executable(${PROJECT_NAME}
-#   src/KimeraVioRos.cpp
-#   src/RosDataProvider.cpp
-#   src/RosBagDataProvider.cpp
-#   src/RosOnlineDataProvider.cpp)
-# target_link_libraries(${PROJECT_NAME} kimera_vio)
+set(executable_name kimera_vio_node)
+add_executable(${executable_name}
+  src/KimeraVio.cpp
+  # src/KimeraVioRos.cpp
+  # src/RosDataProvider.cpp
+  # src/RosBagDataProvider.cpp
+  # src/RosOnlineDataProvider.cpp
+)
+
+set(library_name ${PROJECT_NAME})
+add_library(${library_name} SHARED
+  src/KimeraVioNode.cpp
+  # src/RosDataProvider.cpp
+  # src/RosBagDataProvider.cpp
+  # src/RosOnlineDataProvider.cpp
+)
+
+set(dependencies
+  geometry_msgs
+  # gtsam
+  kimera_vio
+  pcl_conversions
+  pcl_msgs
+  # pcl_ros
+  pose_graph_msgs
+  pose_graph_visualizer
+  rclcpp
+)
+
+ament_target_dependencies(${executable_name}
+  ${dependencies}
+)
+
+target_link_libraries(${executable_name} ${library_name})
+target_link_libraries(${PROJECT_NAME} kimera_vio)
+
+ament_target_dependencies(${library_name}
+  ${dependencies}
+)
+
+install(TARGETS ${executable_name} ${library_name}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY include/
+  DESTINATION include/
+)
+
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME})
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+ament_export_include_directories(include)
 
 ament_package()
