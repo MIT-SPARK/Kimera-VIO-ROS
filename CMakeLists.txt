@@ -30,6 +30,9 @@ find_package(pcl_ros)
 find_package(pcl_msgs)
 find_package(pcl_conversions)
 
+find_package(message_filters)
+find_package(image_transport)
+
 ### System Dependencies
 find_package(Boost REQUIRED COMPONENTS
   serialization system filesystem thread date_time regex timer chrono)
@@ -72,6 +75,8 @@ set(dependencies
   pose_graph_msgs
   pose_graph_visualizer
   rclcpp
+  message_filters
+  image_transport
 )
 
 ament_target_dependencies(${executable_name}
