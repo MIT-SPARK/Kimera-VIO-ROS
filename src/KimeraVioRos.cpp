@@ -10,16 +10,16 @@
 #include <glog/logging.h>
 
 // Dependencies from ROS
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
 
 // Dependencies from VIO
 #include <kimera-vio/pipeline/Pipeline.h>
 #include <kimera-vio/utils/Timer.h>
 
 // Dependencies from this repository
-#include "kimera_vio_ros/RosBagDataProvider.h"
-#include "kimera_vio_ros/RosDataProviderInterface.h"
-#include "kimera_vio_ros/RosOnlineDataProvider.h"
+// #include "kimera_vio_ros/RosBagDataProvider.hpp"
+#include "kimera_vio_ros/RosDataProviderInterface.hpp"
+#include "kimera_vio_ros/RosOnlineDataProvider.hpp"
 
 int main(int argc, char* argv[]) {
   // Initialize Google's flags library.
@@ -28,19 +28,19 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
   // Initialize ROS node
-  ros::init(argc, argv, "kimera_vio");
-  ros::NodeHandle nh_("~");
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("kimera_vio");
 
   // Create dataset parser.
   VIO::RosDataProviderInterface::UniquePtr dataset_parser = nullptr;
   bool online_run = false;
-  CHECK(nh_.getParam("online_run", online_run));
+  CHECK(node->get_parameter("online_run", online_run));
   if (online_run) {
     // Running ros online.
     dataset_parser = VIO::make_unique<VIO::RosOnlineDataProvider>();
   } else {
-    // Parse rosbag.
-    dataset_parser = VIO::make_unique<VIO::RosbagDataProvider>();
+    // // Parse rosbag.
+    // dataset_parser = VIO::make_unique<VIO::RosbagDataProvider>();
   }
   CHECK(dataset_parser);
 
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
                 std::placeholders::_1));
 
   bool use_lcd = false;
-  nh_.getParam("use_lcd", use_lcd);
+  node->get_parameter("use_lcd", use_lcd);
   if (use_lcd) {
     vio_pipeline.registerLcdOutputCallback(
         std::bind(&VIO::RosDataProviderInterface::callbackLcdOutput,
@@ -103,30 +103,31 @@ int main(int argc, char* argv[]) {
     auto handle_pipeline = std::async(std::launch::async,
                                       &VIO::Pipeline::spin,
                                       &vio_pipeline);
-    ros::start();
+    rclcpp::WallRate loop_rate(500ms);
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.
-    while (ros::ok()) {//&& vio_pipeline.spinViz()) {
-      continue;
+    while (rclcpp::ok()) {//&& vio_pipeline.spinViz()) {
+      rclcpp::spin_some(node);
+      loop_rate.sleep();
     }
-    ROS_INFO("Shutting down ROS and VIO pipeline.");
-    ros::shutdown();
+    RCLCPP_INFO(node->get_logger(), "Shutting down ROS and VIO pipeline.");
+    rclcpp::shutdown();
     vio_pipeline.shutdown();
     handle_pipeline.get();
     is_pipeline_successful = !handle.get();
   } else {
-    ros::start();
+    // ros::start();
     while (ros::ok() && dataset_parser->spin()) {
       vio_pipeline.spin();
     }
-    ROS_INFO("Shutting down ROS and VIO pipeline.");
-    ros::shutdown();
+    RCLCPP_INFO(node->get_logger(), "Shutting down ROS and VIO pipeline.");
+    rclcpp::shutdown();
     vio_pipeline.shutdown();
     is_pipeline_successful = true;
   }
   auto spin_duration = VIO::utils::Timer::toc(tic);
-  ROS_WARN_STREAM("Spin took: " << spin_duration.count() << " ms.");
-  ROS_INFO_STREAM("Pipeline successful? "
+  RCLCPP_WARN(node->get_logger(), "Spin took: " << spin_duration.count() << " ms.");
+  RCLCPP_INFO(node->get_logger(), "Pipeline successful? "
                   << (is_pipeline_successful ? "Yes!" : "No!"));
   return is_pipeline_successful ? EXIT_SUCCESS : EXIT_FAILURE;
 }

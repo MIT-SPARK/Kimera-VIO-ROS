@@ -8,26 +8,27 @@
 #include <string>
 #include <vector>
 
-#include "kimera_vio_ros/RosOnlineDataProvider.h"
+//#include "kimera_vio_ros/RosOnlineDataProvider.hpp"
+#include "kimera_vio_ros/RosDataProviderInterface.hpp"
 
 #include <kimera-vio/pipeline/PipelineModule.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>
 #include <kimera-vio/visualizer/Visualizer3D.h>
 
 #include <cv_bridge/cv_bridge.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <nav_msgs/Odometry.h>
-#include <nav_msgs/Path.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/image_encodings.h>
-#include <std_msgs/Bool.h>
-#include <std_msgs/Float64MultiArray.h>
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "nav_msgs/msg/path.hpp"
+#include "sensor_msgs/msg/image.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+//#include <sensor_msgs/msg/image_encodings.h>
+#include "std_msgs/msg/bool.hpp"
+#include "std_msgs/msg/float64_multi_array.hpp"
 #include <tf2_ros/static_transform_broadcaster.h>
 
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl_msgs/PolygonMesh.h>
-#include <pcl_ros/point_cloud.h>
+#include "pcl_msgs/msg/polygon_mesh.hpp"
+//#include "pcl_ros/point_cloud.h"
 
 namespace VIO {
 

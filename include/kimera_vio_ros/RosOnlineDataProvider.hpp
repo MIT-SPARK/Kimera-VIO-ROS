@@ -11,11 +11,11 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/time_synchronizer.h>
-#include <sensor_msgs/Imu.h>
-#include <nav_msgs/Odometry.h>
-#include <std_msgs/Bool.h>
+#include <sensor_msgs/msg/imu.h>
+#include <nav_msgs/msg/odometry.h>
+#include <std_msgs/msg/bool.h>  
 
-#include "kimera_vio_ros/RosDataProviderInterface.h"
+#include "kimera_vio_ros/RosDataProviderInterface.hpp"
 
 // using namespace StereoImageBuffer;
 
@@ -53,23 +53,23 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
 
  private:
   // Left camera callback
-  void callbackStereoImages(const sensor_msgs::ImageConstPtr& left_msg,
-                            const sensor_msgs::ImageConstPtr& right_msg);
+  void callbackStereoImages(const sensor_msgs::msg::ImageConstPtr& left_msg,
+                            const sensor_msgs::msg::ImageConstPtr& right_msg);
 
   // IMU callback
-  void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
+  void callbackIMU(const sensor_msgs::msg::ImuConstPtr& msgIMU);
 
   // GT odometry callback
-  void callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& msgGtOdom);
+  void callbackGtOdomOnce(const nav_msgs::msg::Odometry::ConstPtr& msgGtOdom);
 
   // Reinitialization callback
-  void callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag);
+  void callbackReinit(const std_msgs::msg::Bool::ConstPtr& reinitFlag);
 
   // Reinitialization pose
-  void callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose);
+  void callbackReinitPose(const geometry_msgs::msg::PoseStamped& reinitPose);
 
  private:
-  void msgGtOdomToVioNavState(const nav_msgs::Odometry::ConstPtr& gt_odom,
+  void msgGtOdomToVioNavState(const nav_msgs::msg::Odometry::ConstPtr& gt_odom,
                               VioNavState* vio_navstate);
 
  private:
@@ -80,8 +80,8 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
 
   // Declare Approx Synchronization Policy and Synchronizer for stereo images.
   // TODO(Toni): should be exact sync policy
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
-                                                          sensor_msgs::Image>
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image,
+                                                          sensor_msgs::msg::Image>
       sync_pol;
   std::unique_ptr<message_filters::Synchronizer<sync_pol>> sync_;
 

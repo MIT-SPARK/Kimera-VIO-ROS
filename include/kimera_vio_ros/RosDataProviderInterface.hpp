@@ -16,14 +16,16 @@
 #define PCL_NO_PRECOMPILE  // Define this before you include any PCL headers
                            // to include the templated algorithms
 #include <pcl/point_types.h>
-#include <pcl_ros/point_cloud.h>
+//#include <pcl_ros/point_cloud.h>
+
+#include "sensor_msgs/msg/image.hpp"
 
 #include <image_transport/subscriber_filter.h>
-#include <pose_graph_tools/PoseGraph.h>
-#include <pose_graph_tools/PoseGraphEdge.h>
-#include <pose_graph_tools/PoseGraphNode.h>
-#include <ros/ros.h>
-#include <tf/transform_broadcaster.h>
+#include "pose_graph_msgs/msg/pose_graph.hpp"
+#include "pose_graph_msgs/msg/pose_graph_edge.hpp"
+#include "pose_graph_msgs/msg/pose_graph_node.hpp"
+#include "rclcpp/rclcpp.hpp"
+//#include <tf/transform_broadcaster.h>
 
 #include <kimera-vio/common/vio_types.h>
 #include <kimera-vio/dataprovider/DataProviderInterface.h>
@@ -75,10 +77,10 @@ class RosDataProviderInterface : public DataProviderInterface {
   }
 
  protected:
-  const cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;
+  const cv::Mat readRosImage(const sensor_msgs::msg::Image& img_msg) const;
 
   const cv::Mat readRosDepthImage(
-      const sensor_msgs::ImageConstPtr& img_msg) const;
+      const sensor_msgs::msg::Image& img_msg) const;
 
   // Publish VIO outputs.
   virtual void publishBackendOutput(const BackendOutput::Ptr& output);
@@ -149,7 +151,7 @@ class RosDataProviderInterface : public DataProviderInterface {
 
   void updateRejectedEdges();
 
-  pose_graph_tools::PoseGraph getPosegraphMsg();
+  pose_graph_msgs::msg::PoseGraph getPosegraphMsg();
 
   // Publish/print debugging information.
   void publishDebugImage(const Timestamp& timestamp,
@@ -176,10 +178,10 @@ class RosDataProviderInterface : public DataProviderInterface {
   tf::TransformBroadcaster tf_broadcaster_;
 
   // Stored pose graph related objects
-  std::vector<pose_graph_tools::PoseGraphEdge> loop_closure_edges_;
-  std::vector<pose_graph_tools::PoseGraphEdge> odometry_edges_;
-  std::vector<pose_graph_tools::PoseGraphEdge> inlier_edges_;
-  std::vector<pose_graph_tools::PoseGraphNode> pose_graph_nodes_;
+  std::vector<pose_graph_tools::msg::PoseGraphEdge> loop_closure_edges_;
+  std::vector<pose_graph_tools::msg::PoseGraphEdge> odometry_edges_;
+  std::vector<pose_graph_tools::msg::PoseGraphEdge> inlier_edges_;
+  std::vector<pose_graph_tools::msg::PoseGraphNode> pose_graph_nodes_;
 
   // Typedefs
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
