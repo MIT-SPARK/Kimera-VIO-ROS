@@ -4,6 +4,10 @@
 #include <string>
 #include <thread>
 
+// Still need gflags for parameters in VIO
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+
 #include "image_transport/subscriber_filter.h"
 
 #include "message_filters/subscriber.h"
