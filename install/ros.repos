@@ -25,9 +25,15 @@ repositories:
   #   type: git
   #   url: https://github.com/catkin/catkin_simple.git
   #   version: master
-
-# - git:
-#     local-name: cmake_external_project_catkin
-#     uri: https://github.com/zurich-eye/cmake_external_project_catkin.git
-#     version: master
-
+  # ros-perception/image_common:
+  #   type: git
+  #   # url: https://github.com/ros-perception/image_common.git
+  #   # version: ros2
+  #   url: https://github.com/ruffsl/image_common.git
+  #   version: options
+  # ros2/message_filters:
+  #   type: git
+  #   # url: https://github.com/ros2/message_filters.git
+  #   # version: master
+  #   url: https://github.com/ruffsl/message_filters.git
+  #   version: options
