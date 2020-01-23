@@ -12,9 +12,9 @@
 
 #include <glog/logging.h>
 
-#include <geometry_msgs/PoseStamped.h>
-#include <sensor_msgs/image_encodings.h>
-#include <std_msgs/Bool.h>
+#include "geometry_msgs/PoseStamped.h"
+#include "sensor_msgs/image_encodings.h"
+#include "std_msgs/Bool.h"
 
 namespace VIO {
 
