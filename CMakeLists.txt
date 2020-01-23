@@ -20,6 +20,7 @@ find_package(pose_graph_msgs)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 
+find_package(cv_bridge REQUIRED)
 find_package(tf2_ros REQUIRED)
 
 # find_package(Gflags REQUIRED)
@@ -79,6 +80,7 @@ set(dependencies
   sensor_msgs
   std_msgs
   # gtsam
+  cv_bridge
   tf2_ros
   kimera_vio
   pcl_conversions
