@@ -21,9 +21,9 @@ RUN vcs import src < overlay.repos
 ENV ROS_WS /opt/ros_ws
 RUN mkdir -p $ROS_WS/src
 WORKDIR $ROS_WS
-COPY ./ src/Kimera-VIO-ROS
-# COPY ./install/ros.repos ./
-# RUN vcs import src < ros.repos
+COPY ./install/ros.repos ./
+RUN vcs import src < ros.repos
+COPY ./ src/MIT-SPARK/Kimera-VIO-ROS
 
 # copy manifests for caching
 WORKDIR /opt
