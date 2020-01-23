@@ -12,7 +12,15 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(pcl_msgs)
+find_package(pose_graph_msgs)
+find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+
+find_package(tf2_ros REQUIRED)
 
 # find_package(Gflags REQUIRED)
 # find_package(Glog 0.3.5 REQUIRED)
@@ -23,11 +31,9 @@ find_package(OpenCV 3.3.1 REQUIRED)
 find_package(kimera_vio REQUIRED)
 find_package(PCL REQUIRED QUIET COMPONENTS common io)
 
-find_package(pose_graph_msgs)
 find_package(pose_graph_visualizer)
 
-find_package(pcl_ros)
-find_package(pcl_msgs)
+#find_package(pcl_ros)
 find_package(pcl_conversions)
 
 find_package(message_filters)
@@ -67,12 +73,16 @@ add_library(${library_name} SHARED
 
 set(dependencies
   geometry_msgs
+  nav_msgs
+  pcl_msgs
+  pose_graph_msgs
+  sensor_msgs
+  std_msgs
   # gtsam
+  tf2_ros
   kimera_vio
   pcl_conversions
-  pcl_msgs
   # pcl_ros
-  pose_graph_msgs
   pose_graph_visualizer
   rclcpp
   message_filters
