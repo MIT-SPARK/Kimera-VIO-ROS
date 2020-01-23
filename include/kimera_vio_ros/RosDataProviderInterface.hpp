@@ -16,14 +16,12 @@
 #define PCL_NO_PRECOMPILE  // Define this before you include any PCL headers
                            // to include the templated algorithms
 #include <pcl/point_types.h>
+#include <pcl_msgs/msg/polygon_mesh.hpp>
+//#include <pcl_ros/point_cloud.h>
 //#include <pcl_ros/point_cloud.h>
 
-#include "sensor_msgs/msg/image.hpp"
 
 #include <image_transport/subscriber_filter.h>
-#include "pose_graph_msgs/msg/pose_graph.hpp"
-#include "pose_graph_msgs/msg/pose_graph_edge.hpp"
-#include "pose_graph_msgs/msg/pose_graph_node.hpp"
 #include "rclcpp/rclcpp.hpp"
 //#include <tf/transform_broadcaster.h>
 
@@ -36,6 +34,23 @@
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/utils/ThreadsafeQueue.h>
+
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "nav_msgs/msg/path.hpp"
+#include "pcl_msgs/msg/polygon_mesh.hpp"
+#include "pose_graph_msgs/msg/pose_graph.hpp"
+#include "pose_graph_msgs/msg/pose_graph_edge.hpp"
+#include "pose_graph_msgs/msg/pose_graph_node.hpp"
+#include "sensor_msgs/image_encodings.hpp"
+#include "sensor_msgs/msg/image.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "std_msgs/msg/float64_multi_array.hpp"
+//#include <sensor_msgs/msg/image_encodings.h>
+
+//#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/transform_broadcaster.h>
+//#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 namespace VIO {
 
@@ -50,7 +65,7 @@ struct PointNormalUV {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
 
-class RosDataProviderInterface : public DataProviderInterface {
+class RosDataProviderInterface : public DataProviderInterface, rclcpp::Node{
  public:
   KIMERA_DELETE_COPY_CONSTRUCTORS(RosDataProviderInterface);
   KIMERA_POINTER_TYPEDEFS(RosDataProviderInterface);
@@ -77,10 +92,10 @@ class RosDataProviderInterface : public DataProviderInterface {
   }
 
  protected:
-  const cv::Mat readRosImage(const sensor_msgs::msg::Image& img_msg) const;
+  const cv::Mat readRosImage(const sensor_msgs::msg::Image::ConstSharedPtr& img_msg) const;
 
   const cv::Mat readRosDepthImage(
-      const sensor_msgs::msg::Image& img_msg) const;
+      const sensor_msgs::msg::Image::ConstSharedPtr& img_msg) const;
 
   // Publish VIO outputs.
   virtual void publishBackendOutput(const BackendOutput::Ptr& output);
@@ -101,10 +116,6 @@ class RosDataProviderInterface : public DataProviderInterface {
                        const std::string& child_frame_id);
 
  protected:
-  // Define Node Handler for general use (Parameter server)
-  ros::NodeHandle nh_;
-  ros::NodeHandle nh_private_;
-
   // Define image transport for this and derived classes.
   std::unique_ptr<image_transport::ImageTransport> it_;
 
@@ -163,28 +174,28 @@ class RosDataProviderInterface : public DataProviderInterface {
   // Define publisher for debug images.
   image_transport::Publisher debug_img_pub_;
 
+  // Typedefs
+//  typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
+
   // Publishers
-  ros::Publisher pointcloud_pub_;
+//  rclcpp::Publisher<PointCloudXYZRGB> pointcloud_pub_;
   // Published 3d mesh per frame (not time horizon of opitimization!)
-  ros::Publisher mesh_3d_frame_pub_;
-  ros::Publisher odometry_pub_;
-  ros::Publisher resiliency_pub_;
-  ros::Publisher frontend_stats_pub_;
-  ros::Publisher imu_bias_pub_;
-  ros::Publisher trajectory_pub_;
-  ros::Publisher posegraph_pub_;
+  rclcpp::Publisher<pcl_msgs::msg::PolygonMesh>::SharedPtr mesh_3d_frame_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometry_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr resiliency_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr frontend_stats_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr imu_bias_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr trajectory_pub_;
+  rclcpp::Publisher<pose_graph_msgs::msg::PoseGraph>::SharedPtr posegraph_pub_;
 
   // Define tf broadcaster for world to base_link (IMU) and to map (PGO).
-  tf::TransformBroadcaster tf_broadcaster_;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
   // Stored pose graph related objects
-  std::vector<pose_graph_tools::msg::PoseGraphEdge> loop_closure_edges_;
-  std::vector<pose_graph_tools::msg::PoseGraphEdge> odometry_edges_;
-  std::vector<pose_graph_tools::msg::PoseGraphEdge> inlier_edges_;
-  std::vector<pose_graph_tools::msg::PoseGraphNode> pose_graph_nodes_;
-
-  // Typedefs
-  typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
+  std::vector<pose_graph_msgs::msg::PoseGraphEdge> loop_closure_edges_;
+  std::vector<pose_graph_msgs::msg::PoseGraphEdge> odometry_edges_;
+  std::vector<pose_graph_msgs::msg::PoseGraphEdge> inlier_edges_;
+  std::vector<pose_graph_msgs::msg::PoseGraphNode> pose_graph_nodes_;
 };
 
 }  // namespace VIO

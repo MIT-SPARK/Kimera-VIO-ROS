@@ -58,7 +58,7 @@ set(executable_name kimera_vio_node)
 add_executable(${executable_name}
   src/KimeraVio.cpp
   # src/KimeraVioRos.cpp
-  # src/RosDataProvider.cpp
+  # src/RosDataProviderInterface.cpp
   # src/RosBagDataProvider.cpp
   # src/RosOnlineDataProvider.cpp
 )
@@ -66,7 +66,7 @@ add_executable(${executable_name}
 set(library_name ${PROJECT_NAME})
 add_library(${library_name} SHARED
   src/KimeraVioNode.cpp
-  # src/RosDataProvider.cpp
+   src/RosDataProviderInterface.cpp
   # src/RosBagDataProvider.cpp
   # src/RosOnlineDataProvider.cpp
 )

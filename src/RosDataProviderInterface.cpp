@@ -16,62 +16,62 @@
 #include <kimera-vio/visualizer/Visualizer3D.h>
 
 #include <cv_bridge/cv_bridge.h>
-#include "geometry_msgs/msg/transform_stamped.hpp"
-#include "nav_msgs/msg/odometry.hpp"
-#include "nav_msgs/msg/path.hpp"
-#include "sensor_msgs/msg/image.hpp"
-#include "sensor_msgs/msg/imu.hpp"
-//#include <sensor_msgs/msg/image_encodings.h>
+
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include <tf2_ros/static_transform_broadcaster.h>
 
 #include <pcl_conversions/pcl_conversions.h>
-#include "pcl_msgs/msg/polygon_mesh.hpp"
 //#include "pcl_ros/point_cloud.h"
 
 namespace VIO {
 
 RosDataProviderInterface::RosDataProviderInterface()
     : DataProviderInterface(),
+      Node("foo"),
       it_(nullptr),
-      nh_(),
-      nh_private_("~"),
       backend_output_queue_("Backend output"),
       frontend_output_queue_("Frontend output"),
       mesher_output_queue_("Mesher output"),
-      lcd_output_queue_("LCD output") {
-  ROS_INFO(">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<");
+      lcd_output_queue_("LCD output")
+      {
+  RCLCPP_INFO(this->get_logger(), ">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<");
+
+  tf_broadcaster_ =  std::make_unique<tf2_ros::TransformBroadcaster>(this->shared_from_this());
 
   // Print parameters to check.
   printParsedParams();
 
-  it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
+  it_ = VIO::make_unique<image_transport::ImageTransport>(this->shared_from_this());
 
   // Get ROS params
-  CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
+  CHECK(this->get_parameter("~/base_link_frame_id", base_link_frame_id_));
   CHECK(!base_link_frame_id_.empty());
-  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
+  CHECK(this->get_parameter("~/world_frame_id", world_frame_id_));
   CHECK(!world_frame_id_.empty());
-  CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
+  CHECK(this->get_parameter("~/map_frame_id", map_frame_id_));
   CHECK(!map_frame_id_.empty());
-  CHECK(nh_private_.getParam("left_cam_frame_id", left_cam_frame_id_));
+  CHECK(this->get_parameter("~/left_cam_frame_id", left_cam_frame_id_));
   CHECK(!left_cam_frame_id_.empty());
-  CHECK(nh_private_.getParam("right_cam_frame_id", right_cam_frame_id_));
+  CHECK(this->get_parameter("~/right_cam_frame_id", right_cam_frame_id_));
   CHECK(!right_cam_frame_id_.empty());
 
   // Publishers
-  odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10, true);
+  odometry_pub_ =
+      this->create_publisher<nav_msgs::msg::Odometry>("odometry", 10);
   frontend_stats_pub_ =
-      nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 10);
+      this->create_publisher<std_msgs::msg::Float64MultiArray>("frontend_stats", 10);
   resiliency_pub_ =
-      nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 10);
-  imu_bias_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 10);
-  trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 10);
-  posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 10);
-  pointcloud_pub_ =
-      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10, true);
-  mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5, true);
+      this->create_publisher<std_msgs::msg::Float64MultiArray>("resiliency", 10);
+  imu_bias_pub_ = 
+      this->create_publisher<std_msgs::msg::Float64MultiArray>("imu_bias", 10);
+  trajectory_pub_ = 
+      this->create_publisher<nav_msgs::msg::Path>("optimized_trajectory", 10);
+  posegraph_pub_ = 
+      this->create_publisher<pose_graph_msgs::msg::PoseGraph>("pose_graph", 10);
+//  pointcloud_pub_ =
+//      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10, true);
+  mesh_3d_frame_pub_ = this->create_publisher<pcl_msgs::msg::PolygonMesh>("mesh", 5);
   debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
 
   publishStaticTf(pipeline_params_.camera_params_.at(0).body_Pose_cam_,
@@ -95,14 +95,14 @@ RosDataProviderInterface::~RosDataProviderInterface() {
 //  to underlying data. Neet a smarter way to move these around yet make this
 //  faster.
 const cv::Mat RosDataProviderInterface::readRosImage(
-    const sensor_msgs::ImageConstPtr& img_msg) const {
+    const sensor_msgs::msg::Image::ConstSharedPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
     // TODO(Toni): here we should consider using toCvShare...
     cv_ptr = cv_bridge::toCvCopy(img_msg);
   } catch (cv_bridge::Exception& exception) {
-    ROS_FATAL("cv_bridge exception: %s", exception.what());
-    ros::shutdown();
+    RCLCPP_FATAL(this->get_logger(), "cv_bridge exception: %s", exception.what());
+    rclcpp::shutdown();
   }
 
   if (img_msg->encoding == sensor_msgs::image_encodings::BGR8) {
@@ -117,14 +117,14 @@ const cv::Mat RosDataProviderInterface::readRosImage(
 }
 
 const cv::Mat RosDataProviderInterface::readRosDepthImage(
-    const sensor_msgs::ImageConstPtr& img_msg) const {
+    const sensor_msgs::msg::Image::ConstSharedPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
     cv_ptr =
         cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::TYPE_16UC1);
   } catch (cv_bridge::Exception& exception) {
-    ROS_FATAL("cv_bridge exception: %s", exception.what());
-    ros::shutdown();
+    RCLCPP_FATAL(this->get_logger(), "cv_bridge exception: %s", exception.what());
+    rclcpp::shutdown();
   }
   cv::Mat img_depth = cv_ptr->image;
   if (img_depth.type() != CV_16UC1) {
@@ -138,21 +138,21 @@ void RosDataProviderInterface::publishBackendOutput(
     const BackendOutput::Ptr& output) {
   CHECK_NOTNULL(output);
   publishTf(output);
-  if (odometry_pub_.getNumSubscribers() > 0) {
+  if (odometry_pub_->get_subscription_count() > 0) {
     publishState(output);
   }
-  if (imu_bias_pub_.getNumSubscribers() > 0) {
+  if (imu_bias_pub_->get_subscription_count() > 0) {
     publishImuBias(output);
   }
-  if (pointcloud_pub_.getNumSubscribers() > 0) {
-    publishTimeHorizonPointCloud(output);
-  }
+//  if (pointcloud_pub_->get_subscription_count() > 0) {
+//    publishTimeHorizonPointCloud(output);
+//  }
 }
 
 void RosDataProviderInterface::publishFrontendOutput(
     const FrontendOutput::Ptr& output) const {
   CHECK_NOTNULL(output);
-  if (frontend_stats_pub_.getNumSubscribers() > 0) {
+  if (frontend_stats_pub_->get_subscription_count() > 0) {
     publishFrontendStats(output);
   }
 }
@@ -160,7 +160,7 @@ void RosDataProviderInterface::publishFrontendOutput(
 void RosDataProviderInterface::publishMesherOutput(
     const MesherOutput::Ptr& output) const {
   CHECK_NOTNULL(output);
-  if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
+  if (mesh_3d_frame_pub_->get_subscription_count() > 0) {
     publishPerFrameMesh3D(output);
   }
 }
@@ -203,7 +203,7 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
 
     if (frontend_output) {
       // Publish Resiliency
-      if (resiliency_pub_.getNumSubscribers() > 0) {
+      if (resiliency_pub_->get_subscription_count() > 0) {
         publishResiliency(frontend_output, backend_output);
       }
     }
@@ -219,89 +219,91 @@ void RosDataProviderInterface::publishLcdOutput(
   CHECK_NOTNULL(lcd_output);
 
   publishTf(lcd_output);
-  if (trajectory_pub_.getNumSubscribers() > 0) {
+  if (trajectory_pub_->get_subscription_count() > 0) {
     publishOptimizedTrajectory(lcd_output);
   }
-  if (posegraph_pub_.getNumSubscribers() > 0) {
+  if (posegraph_pub_->get_subscription_count() > 0) {
     publishPoseGraph(lcd_output);
   }
 }
 
-void RosDataProviderInterface::publishTimeHorizonPointCloud(
-    const BackendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
-  const Timestamp& timestamp = output->timestamp_;
-  const PointsWithIdMap& points_with_id = output->landmarks_with_id_map_;
-  const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map =
-      output->lmk_id_to_lmk_type_map_;
-
-  PointCloudXYZRGB::Ptr msg(new PointCloudXYZRGB);
-  msg->header.frame_id = world_frame_id_;
-  msg->is_dense = true;
-  msg->height = 1;
-  msg->width = points_with_id.size();
-  msg->points.resize(points_with_id.size());
-
-  bool color_the_cloud = false;
-  if (lmk_id_to_lmk_type_map.size() != 0) {
-    color_the_cloud = true;
-    CHECK_EQ(points_with_id.size(), lmk_id_to_lmk_type_map.size());
-  }
-
-  if (points_with_id.size() == 0) {
-    // No points to visualize.
-    return;
-  }
-
-  // Populate cloud structure with 3D points.
-  size_t i = 0;
-  for (const std::pair<LandmarkId, gtsam::Point3>& id_point : points_with_id) {
-    const gtsam::Point3 point_3d = id_point.second;
-    msg->points[i].x = static_cast<float>(point_3d.x());
-    msg->points[i].y = static_cast<float>(point_3d.y());
-    msg->points[i].z = static_cast<float>(point_3d.z());
-    if (color_the_cloud) {
-      DCHECK(lmk_id_to_lmk_type_map.find(id_point.first) !=
-             lmk_id_to_lmk_type_map.end());
-      switch (lmk_id_to_lmk_type_map.at(id_point.first)) {
-        case LandmarkType::SMART: {
-          // point_cloud_color.col(i) = cv::viz::Color::white();
-          msg->points[i].r = 0;
-          msg->points[i].g = 255;
-          msg->points[i].b = 0;
-          break;
-        }
-        case LandmarkType::PROJECTION: {
-          // point_cloud_color.col(i) = cv::viz::Color::green();
-          msg->points[i].r = 0;
-          msg->points[i].g = 0;
-          msg->points[i].b = 255;
-          break;
-        }
-        default: {
-          // point_cloud_color.col(i) = cv::viz::Color::white();
-          msg->points[i].r = 255;
-          msg->points[i].g = 0;
-          msg->points[i].b = 0;
-          break;
-        }
-      }
-    }
-    i++;
-  }
-
-  ros::Time ros_timestamp;
-  ros_timestamp.fromNSec(timestamp);
-  pcl_conversions::toPCL(ros_timestamp, msg->header.stamp);
-  pointcloud_pub_.publish(msg);
-}
+//void RosDataProviderInterface::publishTimeHorizonPointCloud(
+//    const BackendOutput::Ptr& output) const {
+//  CHECK_NOTNULL(output);
+//  const Timestamp& timestamp = output->timestamp_;
+//  const PointsWithIdMap& points_with_id = output->landmarks_with_id_map_;
+//  const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map =
+//      output->lmk_id_to_lmk_type_map_;
+//
+//  PointCloudXYZRGB::Ptr msg(new PointCloudXYZRGB);
+//  msg->header.frame_id = world_frame_id_;
+//  msg->is_dense = true;
+//  msg->height = 1;
+//  msg->width = points_with_id.size();
+//  msg->points.resize(points_with_id.size());
+//
+//  bool color_the_cloud = false;
+//  if (lmk_id_to_lmk_type_map.size() != 0) {
+//    color_the_cloud = true;
+//    CHECK_EQ(points_with_id.size(), lmk_id_to_lmk_type_map.size());
+//  }
+//
+//  if (points_with_id.size() == 0) {
+//    // No points to visualize.
+//    return;
+//  }
+//
+//  // Populate cloud structure with 3D points.
+//  size_t i = 0;
+//  for (const std::pair<LandmarkId, gtsam::Point3>& id_point : points_with_id) {
+//    const gtsam::Point3 point_3d = id_point.second;
+//    msg->points[i].x = static_cast<float>(point_3d.x());
+//    msg->points[i].y = static_cast<float>(point_3d.y());
+//    msg->points[i].z = static_cast<float>(point_3d.z());
+//    if (color_the_cloud) {
+//      DCHECK(lmk_id_to_lmk_type_map.find(id_point.first) !=
+//             lmk_id_to_lmk_type_map.end());
+//      switch (lmk_id_to_lmk_type_map.at(id_point.first)) {
+//        case LandmarkType::SMART: {
+//          // point_cloud_color.col(i) = cv::viz::Color::white();
+//          msg->points[i].r = 0;
+//          msg->points[i].g = 255;
+//          msg->points[i].b = 0;
+//          break;
+//        }
+//        case LandmarkType::PROJECTION: {
+//          // point_cloud_color.col(i) = cv::viz::Color::green();
+//          msg->points[i].r = 0;
+//          msg->points[i].g = 0;
+//          msg->points[i].b = 255;
+//          break;
+//        }
+//        default: {
+//          // point_cloud_color.col(i) = cv::viz::Color::white();
+//          msg->points[i].r = 255;
+//          msg->points[i].g = 0;
+//          msg->points[i].b = 0;
+//          break;
+//        }
+//      }
+//    }
+//    i++;
+//  }
+//
+//  rclcpp::Time ros_timestamp(timestamp);
+////  ros_timestamp.fromNSec(timestamp);
+//  pcl_conversions::toPCL(ros_timestamp, msg->header.stamp);
+//  pointcloud_pub_->publish(msg);
+//}
 
 void RosDataProviderInterface::publishDebugImage(
     const Timestamp& timestamp,
     const cv::Mat& debug_image) const {
   // CHECK(debug_image.type(), CV_8UC1);
-  std_msgs::Header h;
-  h.stamp.fromNSec(timestamp);
+  std_msgs::msg::Header h;
+  auto d = rclcpp::Duration(timestamp);
+  h.stamp.nanosec = d.nanoseconds();
+  h.stamp.sec = d.seconds();
   h.frame_id = base_link_frame_id_;
   // Copies...
   debug_img_pub_.publish(
@@ -330,14 +332,16 @@ void RosDataProviderInterface::publishPerFrameMesh3D(
   DCHECK_GT(cam_width, 0);
   DCHECK_GT(cam_height, 0);
 
-  pcl_msgs::PolygonMesh::Ptr msg(new pcl_msgs::PolygonMesh());
-  msg->header.stamp.fromNSec(output->timestamp_);
-  msg->header.frame_id = world_frame_id_;
+  auto msg = pcl_msgs::msg::PolygonMesh();
+  auto d = rclcpp::Duration(output->timestamp_);
+  msg.header.stamp.nanosec = d.nanoseconds();
+  msg.header.stamp.sec = d.seconds();
+  msg.header.frame_id = world_frame_id_;
 
   // Create point cloud to hold vertices.
   pcl::PointCloud<PointNormalUV> cloud;
   cloud.points.reserve(number_mesh_2d_polygons * mesh_2d_poly_dim);
-  msg->polygons.reserve(number_mesh_2d_polygons);
+  msg.polygons.reserve(number_mesh_2d_polygons);
 
   Mesh2D::Polygon polygon;
   for (size_t i = 0; i < number_mesh_2d_polygons; i++) {
@@ -389,14 +393,14 @@ void RosDataProviderInterface::publishPerFrameMesh3D(
       cloud.points.push_back(pn2);
 
       // Store polygon connectivity
-      pcl_msgs::Vertices vtx_ii;
+      pcl_msgs::msg::Vertices vtx_ii;
       vtx_ii.vertices.resize(3);
       size_t idx = i * mesh_2d_poly_dim;
       // Store connectivity CCW bcs of RVIZ
       vtx_ii.vertices[0] = idx + 2;
       vtx_ii.vertices[1] = idx + 1;
       vtx_ii.vertices[2] = idx;
-      msg->polygons.push_back(vtx_ii);
+      msg.polygons.push_back(vtx_ii);
     } else {
       // LOG_EVERY_N(ERROR, 1000) << "Polygon in 2d mesh did not have a
       // corresponding polygon in"
@@ -407,15 +411,15 @@ void RosDataProviderInterface::publishPerFrameMesh3D(
   cloud.is_dense = false;
   cloud.width = cloud.points.size();
   cloud.height = 1;
-  pcl::toROSMsg(cloud, msg->cloud);
+  pcl::toROSMsg(cloud, msg.cloud);
 
   // NOTE: Header fields need to be filled in after pcl::toROSMsg() call.
-  msg->cloud.header = std_msgs::Header();
-  msg->cloud.header.stamp = msg->header.stamp;
-  msg->cloud.header.frame_id = msg->header.frame_id;
+  msg.cloud.header = std_msgs::msg::Header();
+  msg.cloud.header.stamp = msg.header.stamp;
+  msg.cloud.header.frame_id = msg.header.frame_id;
 
-  if (msg->polygons.size() > 0) {
-    mesh_3d_frame_pub_.publish(msg);
+  if (msg.polygons.size() > 0) {
+    mesh_3d_frame_pub_->publish(msg);
   }
 
   return;
@@ -436,10 +440,12 @@ void RosDataProviderInterface::publishState(
       gtsam::sub(output->state_covariance_lkf_, 6, 9, 6, 9);
 
   // First publish odometry estimate
-  nav_msgs::Odometry odometry_msg;
+  nav_msgs::msg::Odometry odometry_msg;
 
   // Create header.
-  odometry_msg.header.stamp.fromNSec(ts);
+  auto d = rclcpp::Duration(ts);
+  odometry_msg.header.stamp.nanosec = d.nanoseconds();
+  odometry_msg.header.stamp.sec = d.seconds();
   odometry_msg.header.frame_id = world_frame_id_;
   odometry_msg.child_frame_id = base_link_frame_id_;
 
@@ -493,7 +499,7 @@ void RosDataProviderInterface::publishState(
     }
   }
   // Publish message
-  odometry_pub_.publish(odometry_msg);
+  odometry_pub_->publish(odometry_msg);
 }
 
 void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
@@ -503,8 +509,10 @@ void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
   const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
   const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
   // Publish base_link TF.
-  geometry_msgs::TransformStamped odom_tf;
-  odom_tf.header.stamp.fromNSec(timestamp);
+  geometry_msgs::msg::TransformStamped odom_tf;
+  auto d = rclcpp::Duration(timestamp);
+  odom_tf.header.stamp.nanosec = d.nanoseconds();
+  odom_tf.header.stamp.sec = d.seconds();
   odom_tf.header.frame_id = world_frame_id_;
   odom_tf.child_frame_id = base_link_frame_id_;
 
@@ -515,7 +523,7 @@ void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
   odom_tf.transform.rotation.x = quaternion.x();
   odom_tf.transform.rotation.y = quaternion.y();
   odom_tf.transform.rotation.z = quaternion.z();
-  tf_broadcaster_.sendTransform(odom_tf);
+  tf_broadcaster_->sendTransform(odom_tf);
 }
 
 void RosDataProviderInterface::publishFrontendStats(
@@ -526,7 +534,7 @@ void RosDataProviderInterface::publishFrontendStats(
   const DebugTrackerInfo& debug_tracker_info = output->getTrackerInfo();
 
   // Create message type
-  std_msgs::Float64MultiArray frontend_stats_msg;
+  std_msgs::msg::Float64MultiArray frontend_stats_msg;
 
   // Build Message Layout
   frontend_stats_msg.data.resize(13);
@@ -551,7 +559,7 @@ void RosDataProviderInterface::publishFrontendStats(
       "moRaIt, stRaIt, nrVaRKP, nrNoLRKP, nrNoRRKP, nrNoDRKP nrFaARKP";
 
   // Publish Message
-  frontend_stats_pub_.publish(frontend_stats_msg);
+  frontend_stats_pub_->publish(frontend_stats_msg);
 }
 
 void RosDataProviderInterface::publishResiliency(
@@ -569,7 +577,7 @@ void RosDataProviderInterface::publishResiliency(
       gtsam::sub(backend_output->state_covariance_lkf_, 6, 9, 6, 9);
 
   // Create message type for quality of SparkVIO
-  std_msgs::Float64MultiArray resiliency_msg;
+  std_msgs::msg::Float64MultiArray resiliency_msg;
 
   // Publishing extra information:
   // cov_v_det and nrStIn should be the most relevant!
@@ -605,11 +613,10 @@ void RosDataProviderInterface::publishResiliency(
   // Publish thresholds for statistics
   float pos_det_threshold, vel_det_threshold;
   int mono_ransac_theshold, stereo_ransac_threshold;
-  CHECK(nh_private_.getParam("velocity_det_threshold", vel_det_threshold));
-  CHECK(nh_private_.getParam("position_det_threshold", pos_det_threshold));
-  CHECK(
-      nh_private_.getParam("stereo_ransac_threshold", stereo_ransac_threshold));
-  CHECK(nh_private_.getParam("mono_ransac_threshold", mono_ransac_theshold));
+  CHECK(this->get_parameter("~/velocity_det_threshold", vel_det_threshold));
+  CHECK(this->get_parameter("~/position_det_threshold", pos_det_threshold));
+  CHECK(this->get_parameter("~/stereo_ransac_threshold", stereo_ransac_threshold));
+  CHECK(this->get_parameter("~/mono_ransac_threshold", mono_ransac_theshold));
   resiliency_msg.data[4] = pos_det_threshold;
   resiliency_msg.data[5] = vel_det_threshold;
   resiliency_msg.data[6] = stereo_ransac_threshold;
@@ -621,7 +628,7 @@ void RosDataProviderInterface::publishResiliency(
   resiliency_msg.layout.dim[0].stride = 1;
 
   // Publish Message
-  resiliency_pub_.publish(resiliency_msg);
+  resiliency_pub_->publish(resiliency_msg);
 }
 
 void RosDataProviderInterface::publishImuBias(
@@ -634,7 +641,7 @@ void RosDataProviderInterface::publishImuBias(
   const Vector3& gyro_bias = imu_bias.gyroscope();
 
   // Create message type
-  std_msgs::Float64MultiArray imu_bias_msg;
+  std_msgs::msg::Float64MultiArray imu_bias_msg;
 
   // Get Imu Bias to Publish
   imu_bias_msg.data.resize(6);
@@ -652,7 +659,7 @@ void RosDataProviderInterface::publishImuBias(
   imu_bias_msg.layout.dim[0].label = "Gyro Bias: x,y,z. Accel Bias: x,y,z";
 
   // Publish Message
-  imu_bias_pub_.publish(imu_bias_msg);
+  imu_bias_pub_->publish(imu_bias_msg);
 }
 
 void RosDataProviderInterface::publishOptimizedTrajectory(
@@ -663,7 +670,7 @@ void RosDataProviderInterface::publishOptimizedTrajectory(
   const Timestamp& ts = lcd_output->timestamp_kf_;
   const gtsam::Values& trajectory = lcd_output->states_;
   // Create message type
-  nav_msgs::Path path;
+  nav_msgs::msg::Path path;
 
   // Fill path poses
   path.poses.reserve(trajectory.size());
@@ -672,7 +679,7 @@ void RosDataProviderInterface::publishOptimizedTrajectory(
     gtsam::Point3 trans = pose.translation();
     gtsam::Quaternion quat = pose.rotation().toQuaternion();
 
-    geometry_msgs::PoseStamped ps_msg;
+    geometry_msgs::msg::PoseStamped ps_msg;
     ps_msg.header.frame_id = world_frame_id_;
     ps_msg.pose.position.x = trans.x();
     ps_msg.pose.position.y = trans.y();
@@ -686,17 +693,19 @@ void RosDataProviderInterface::publishOptimizedTrajectory(
   }
 
   // Publish path message
-  path.header.stamp.fromNSec(ts);
+  auto d = rclcpp::Duration(ts);
+  path.header.stamp.nanosec = d.nanoseconds();
+  path.header.stamp.sec = d.seconds();
   path.header.frame_id = world_frame_id_;
-  trajectory_pub_.publish(path);
+  trajectory_pub_->publish(path);
 }
 
 void RosDataProviderInterface::updateRejectedEdges() {
   // first update the rejected edges
-  for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
+  for (pose_graph_msgs::msg::PoseGraphEdge& loop_closure_edge :
        loop_closure_edges_) {
     bool is_inlier = false;
-    for (pose_graph_tools::PoseGraphEdge& inlier_edge : inlier_edges_) {
+    for (pose_graph_msgs::msg::PoseGraphEdge& inlier_edge : inlier_edges_) {
       if (loop_closure_edge.key_from == inlier_edge.key_from &&
           loop_closure_edge.key_to == inlier_edge.key_to) {
         is_inlier = true;
@@ -706,14 +715,14 @@ void RosDataProviderInterface::updateRejectedEdges() {
     if (!is_inlier) {
       // set as rejected loop closure
       loop_closure_edge.type =
-          pose_graph_tools::PoseGraphEdge::REJECTED_LOOPCLOSE;
+          pose_graph_msgs::msg::PoseGraphEdge::REJECTED_LOOPCLOSE;
     }
   }
 
   // Then update the loop edges
-  for (pose_graph_tools::PoseGraphEdge& inlier_edge : inlier_edges_) {
+  for (pose_graph_msgs::msg::PoseGraphEdge& inlier_edge : inlier_edges_) {
     bool previously_stored = false;
-    for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
+    for (pose_graph_msgs::msg::PoseGraphEdge& loop_closure_edge :
          loop_closure_edges_) {
       if (inlier_edge.key_from == loop_closure_edge.key_from &&
           inlier_edge.key_to == loop_closure_edge.key_to) {
@@ -743,14 +752,14 @@ void RosDataProviderInterface::updateNodesAndEdges(
           *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
               nfg[i]);
       // convert between factor to PoseGraphEdge type
-      pose_graph_tools::PoseGraphEdge edge;
+      pose_graph_msgs::msg::PoseGraphEdge edge;
       edge.header.frame_id = world_frame_id_;
       edge.key_from = factor.front();
       edge.key_to = factor.back();
       if (edge.key_to == edge.key_from + 1) {  // check if odom
-        edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
+        edge.type = pose_graph_msgs::msg::PoseGraphEdge::ODOM;
       } else {
-        edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
+        edge.type = pose_graph_msgs::msg::PoseGraphEdge::LOOPCLOSE;
       }
       // transforms - translation
       const gtsam::Point3& translation = factor.measured().translation();
@@ -766,7 +775,7 @@ void RosDataProviderInterface::updateNodesAndEdges(
       edge.pose.orientation.w = quaternion.w();
 
       // TODO: add covariance
-      if (edge.type == pose_graph_tools::PoseGraphEdge::ODOM) {
+      if (edge.type == pose_graph_msgs::msg::PoseGraphEdge::ODOM) {
         odometry_edges_.push_back(edge);
       } else {
         inlier_edges_.push_back(edge);
@@ -781,7 +790,7 @@ void RosDataProviderInterface::updateNodesAndEdges(
   // Then store the values as nodes
   gtsam::KeyVector key_list = values.keys();
   for (size_t i = 0; i < key_list.size(); i++) {
-    pose_graph_tools::PoseGraphNode node;
+    pose_graph_msgs::msg::PoseGraphNode node;
     node.key = key_list[i];
 
     const gtsam::Pose3& value = values.at<gtsam::Pose3>(i);
@@ -804,9 +813,9 @@ void RosDataProviderInterface::updateNodesAndEdges(
   return;
 }
 
-pose_graph_tools::PoseGraph RosDataProviderInterface::getPosegraphMsg() {
+pose_graph_msgs::msg::PoseGraph RosDataProviderInterface::getPosegraphMsg() {
   // pose graph getter
-  pose_graph_tools::PoseGraph pose_graph;
+  pose_graph_msgs::msg::PoseGraph pose_graph;
   pose_graph.edges = odometry_edges_;  // add odometry edges to pg
   // then add loop closure edges to pg
   pose_graph.edges.insert(pose_graph.edges.end(),
@@ -827,10 +836,12 @@ void RosDataProviderInterface::publishPoseGraph(
   const gtsam::NonlinearFactorGraph& nfg = lcd_output->nfg_;
   const gtsam::Values& values = lcd_output->states_;
   updateNodesAndEdges(nfg, values);
-  pose_graph_tools::PoseGraph graph = getPosegraphMsg();
-  graph.header.stamp.fromNSec(ts);
+  pose_graph_msgs::msg::PoseGraph graph = getPosegraphMsg();
+  auto d = rclcpp::Duration(ts);
+  graph.header.stamp.nanosec = d.nanoseconds();
+  graph.header.stamp.sec = d.seconds();
   graph.header.frame_id = world_frame_id_;
-  posegraph_pub_.publish(graph);
+  posegraph_pub_->publish(graph);
 }
 
 void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
@@ -840,8 +851,10 @@ void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
   const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
   const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
   // Publish map TF.
-  geometry_msgs::TransformStamped map_tf;
-  map_tf.header.stamp.fromNSec(ts);
+  geometry_msgs::msg::TransformStamped map_tf;
+  auto d = rclcpp::Duration(ts);
+  map_tf.header.stamp.nanosec = d.nanoseconds();
+  map_tf.header.stamp.sec = d.seconds();
   map_tf.header.frame_id = world_frame_id_;
   map_tf.child_frame_id = map_frame_id_;
 
@@ -852,28 +865,28 @@ void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
   map_tf.transform.rotation.x = w_Quat_map.x();
   map_tf.transform.rotation.y = w_Quat_map.y();
   map_tf.transform.rotation.z = w_Quat_map.z();
-  tf_broadcaster_.sendTransform(map_tf);
+  tf_broadcaster_->sendTransform(map_tf);
 }
 
 void RosDataProviderInterface::publishStaticTf(
     const gtsam::Pose3& pose,
     const std::string& parent_frame_id,
     const std::string& child_frame_id) {
-  static tf2_ros::StaticTransformBroadcaster static_broadcaster;
-  geometry_msgs::TransformStamped static_transform_stamped;
-  // TODO(Toni): Warning: using ros::Time::now(), will that bring issues?
-  static_transform_stamped.header.stamp = ros::Time::now();
-  static_transform_stamped.header.frame_id = parent_frame_id;
-  static_transform_stamped.child_frame_id = child_frame_id;
-  static_transform_stamped.transform.translation.x = pose.x();
-  static_transform_stamped.transform.translation.y = pose.y();
-  static_transform_stamped.transform.translation.z = pose.z();
-  const gtsam::Quaternion& quat = pose.rotation().toQuaternion();
-  static_transform_stamped.transform.rotation.x = quat.x();
-  static_transform_stamped.transform.rotation.y = quat.y();
-  static_transform_stamped.transform.rotation.z = quat.z();
-  static_transform_stamped.transform.rotation.w = quat.w();
-  static_broadcaster.sendTransform(static_transform_stamped);
+//  static tf2_ros::StaticTransformBroadcaster static_broadcaster(this);
+//  geometry_msgs::msg::TransformStamped static_transform_stamped;
+//  // TODO(Toni): Warning: using ros::Time::now(), will that bring issues?
+//  static_transform_stamped.header.stamp = this->now();
+//  static_transform_stamped.header.frame_id = parent_frame_id;
+//  static_transform_stamped.child_frame_id = child_frame_id;
+//  static_transform_stamped.transform.translation.x = pose.x();
+//  static_transform_stamped.transform.translation.y = pose.y();
+//  static_transform_stamped.transform.translation.z = pose.z();
+//  const gtsam::Quaternion& quat = pose.rotation().toQuaternion();
+//  static_transform_stamped.transform.rotation.x = quat.x();
+//  static_transform_stamped.transform.rotation.y = quat.y();
+//  static_transform_stamped.transform.rotation.z = quat.z();
+//  static_transform_stamped.transform.rotation.w = quat.w();
+//  static_broadcaster.sendTransform(static_transform_stamped);
 }
 
 void RosDataProviderInterface::printParsedParams() const {
