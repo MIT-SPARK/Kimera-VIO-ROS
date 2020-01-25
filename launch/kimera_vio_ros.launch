@@ -138,7 +138,6 @@
   <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
     <arg name="frame"         value="$(arg world_frame_id)" />
     <arg name="graph_topic"   value="pose_graph" />
-    <arg name="ns"            value="kimera_vio_ros"/>
   </include>
 
   <!-- Log ground-truth data only if requested-->
