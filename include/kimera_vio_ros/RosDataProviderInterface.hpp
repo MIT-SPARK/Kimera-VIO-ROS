@@ -65,12 +65,14 @@ struct PointNormalUV {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
 
-class RosDataProviderInterface : public DataProviderInterface, rclcpp::Node{
+class RosDataProviderInterface : public DataProviderInterface, public rclcpp::Node{
  public:
   KIMERA_DELETE_COPY_CONSTRUCTORS(RosDataProviderInterface);
   KIMERA_POINTER_TYPEDEFS(RosDataProviderInterface);
 
-  RosDataProviderInterface();
+  RosDataProviderInterface(
+      const std::string & node_name,
+      const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
   virtual ~RosDataProviderInterface();
 

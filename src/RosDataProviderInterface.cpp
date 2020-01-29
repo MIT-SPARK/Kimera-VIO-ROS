@@ -26,9 +26,11 @@
 
 namespace VIO {
 
-RosDataProviderInterface::RosDataProviderInterface()
+RosDataProviderInterface::RosDataProviderInterface(
+  const std::string & node_name,
+  const rclcpp::NodeOptions & options)
     : DataProviderInterface(),
-      Node("foo"),
+      Node(node_name, options),
       it_(nullptr),
       backend_output_queue_("Backend output"),
       frontend_output_queue_("Frontend output"),

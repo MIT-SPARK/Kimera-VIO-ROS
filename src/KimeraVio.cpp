@@ -9,7 +9,7 @@ int main(int argc, char * argv[])
 
   rclcpp::init(argc, argv);
   rclcpp::executors::MultiThreadedExecutor executor;
-  auto kimera_vio_node = std::make_shared<KimeraVioNode>();
+  auto kimera_vio_node = std::make_shared<KimeraVioNode>("kimera_node");
   executor.add_node(kimera_vio_node);
   executor.spin();
   rclcpp::shutdown();

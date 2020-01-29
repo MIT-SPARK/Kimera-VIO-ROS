@@ -19,29 +19,34 @@
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 
+#include "kimera_vio_ros/RosDataProviderInterface.hpp"
+
 
 using namespace message_filters::sync_policies;
 using namespace sensor_msgs::msg;
 
-class KimeraVioNode : public rclcpp::Node{
+ class KimeraVioNode : public VIO::RosDataProviderInterface{
 public:
-    KimeraVioNode();
+    KimeraVioNode(
+        const std::string & node_name,
+        const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
 private:
+   VIO::FrameId frame_count_;
 
-    void stereo_cb(
-        const Image::ConstSharedPtr& left,
-        const Image::ConstSharedPtr& right);
-    void imu_cb(const Imu::SharedPtr msg);
-    std::string timing_string();
+  void stereo_cb(
+      const Image::ConstSharedPtr& left_msg,
+      const Image::ConstSharedPtr& right_msg);
+  void imu_cb(const Imu::SharedPtr imu_msg);
+  std::string timing_string();
 
-    rclcpp::callback_group::CallbackGroup::SharedPtr callback_group_stereo_;
-    rclcpp::callback_group::CallbackGroup::SharedPtr callback_group_imu_;
-    rclcpp::Subscription<Imu>::SharedPtr imu_sub_;
-    
-    typedef ExactTime<Image, Image> ExactPolicy;
-    typedef message_filters::Synchronizer<ExactPolicy> ExactSync;
-    std::shared_ptr<ExactSync> exact_sync_;
-    image_transport::SubscriberFilter left_sub_, right_sub_;
+  rclcpp::callback_group::CallbackGroup::SharedPtr callback_group_stereo_;
+  rclcpp::callback_group::CallbackGroup::SharedPtr callback_group_imu_;
+  rclcpp::Subscription<Imu>::SharedPtr imu_sub_;
+
+  typedef ExactTime<Image, Image> ExactPolicy;
+  typedef message_filters::Synchronizer<ExactPolicy> ExactSync;
+  std::shared_ptr<ExactSync> exact_sync_;
+  image_transport::SubscriberFilter left_sub_, right_sub_;
 
 };

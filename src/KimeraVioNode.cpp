@@ -12,8 +12,11 @@ std::string KimeraVioNode::timing_string()
   return std::to_string(time.nanoseconds());
 }
 
-KimeraVioNode::KimeraVioNode()
-: Node("KimeraVioNode")
+KimeraVioNode::KimeraVioNode(
+    const std::string & node_name,
+    const rclcpp::NodeOptions & options)
+: VIO::RosDataProviderInterface(node_name, options),
+  frame_count_(VIO::FrameId(0))
 {
   callback_group_stereo_ = this->create_callback_group(
     rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
@@ -57,23 +60,55 @@ KimeraVioNode::KimeraVioNode()
 }
 
 void KimeraVioNode::stereo_cb(
-  const Image::ConstSharedPtr& left,
-  const Image::ConstSharedPtr& right)
+  const Image::ConstSharedPtr& left_msg,
+  const Image::ConstSharedPtr& right_msg)
 {
-  auto message_received_at = timing_string();
+  static const VIO::CameraParams& left_cam_info =
+      pipeline_params_.camera_params_.at(0);
+  static const VIO::CameraParams& right_cam_info =
+      pipeline_params_.camera_params_.at(1);
 
-  // Extract current thread
-  auto thread_string = "THREAD " + string_thread_id();
-  thread_string += " => Heard '%s' at " + message_received_at;
-  // RCLCPP_INFO(this->get_logger(), thread_string, msg->data.c_str());
+  const VIO::Timestamp& timestamp_left = left_msg->header.stamp.nanosec;
+  const VIO::Timestamp& timestamp_right = right_msg->header.stamp.nanosec;
+
+  CHECK(left_frame_callback_)
+  << "Did you forget to register the left frame callback?";
+  CHECK(right_frame_callback_)
+  << "Did you forget to register the right frame callback?";
+//  TODO: Use RCLCPP_INFO inplace of CHECK?
+  // RCLCPP_INFO(this->get_logger(), "Did you forget to register the right frame callback?");
+
+  left_frame_callback_(VIO::make_unique<VIO::Frame>(
+      frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
+  right_frame_callback_(VIO::make_unique<VIO::Frame>(
+      frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
+
+  frame_count_++;
 }
 
-void KimeraVioNode::imu_cb(const Imu::SharedPtr msg)
+void KimeraVioNode::imu_cb(const Imu::SharedPtr imu_msg)
 {
-  auto message_received_at = timing_string();
+  VIO::ImuAccGyr imu_accgyr;
 
-  // Extract current thread
-  auto thread_string = "THREAD " + string_thread_id();
-  thread_string += " => Heard '%s' at " + message_received_at;
-  // RCLCPP_INFO(this->get_logger(), thread_string, msg->data.c_str());
+  imu_accgyr(0) = imu_msg->linear_acceleration.x;
+  imu_accgyr(1) = imu_msg->linear_acceleration.y;
+  imu_accgyr(2) = imu_msg->linear_acceleration.z;
+  imu_accgyr(3) = imu_msg->angular_velocity.x;
+  imu_accgyr(4) = imu_msg->angular_velocity.y;
+  imu_accgyr(5) = imu_msg->angular_velocity.z;
+
+  // Adapt imu timestamp to account for time shift in IMU-cam
+  VIO::Timestamp timestamp = imu_msg->header.stamp.nanosec;
+
+//  static const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
+//  if (imu_shift != ros::Duration(0)) {
+//    LOG_EVERY_N(WARNING, 1000) << "imu_shift is not 0.";
+//    timestamp -= imu_shift.toNSec();
+//  }
+
+  CHECK(imu_single_callback_) << "Did you forget to register the IMU callback?";
+//  TODO: Use RCLCPP_INFO inplace of CHECK?
+  // RCLCPP_INFO(this->get_logger(), "Did you forget to register the IMU callback?");
+
+  imu_single_callback_(VIO::ImuMeasurement(timestamp, imu_accgyr));
 }
