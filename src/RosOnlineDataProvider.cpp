@@ -20,23 +20,14 @@ namespace VIO {
 
 RosOnlineDataProvider::RosOnlineDataProvider()
     : RosDataProviderInterface(),
-      frame_count_(FrameId(0)),
-      left_img_subscriber_(),
-      right_img_subscriber_(),
-      imu_subscriber_(),
-      gt_odom_subscriber_(),
-      reinit_flag_subscriber_(),
-      reinit_pose_subscriber_(),
-      imu_queue_(),
-      imu_async_spinner_(nullptr),
-      async_spinner_(nullptr) {
-  ROS_INFO("Starting KimeraVIO wrapper for online");
+      frame_count_(FrameId(0)) {
+  RCLCPP_INFO(this->get_logger(), "Starting KimeraVIO wrapper for online");
 
   static constexpr size_t kMaxImuQueueSize = 50u;
   // Create a dedicated queue for the Imu callback so that we can use an async
   // spinner on it to process the data lighting fast.
   ros::SubscribeOptions imu_subscriber_options =
-      ros::SubscribeOptions::create<sensor_msgs::Imu>(
+      ros::SubscribeOptions::create<sensor_msgs::msgs::Imu>(
           "imu",
           kMaxImuQueueSize,
           boost::bind(&RosOnlineDataProvider::callbackIMU, this, _1),
@@ -45,13 +36,6 @@ RosOnlineDataProvider::RosOnlineDataProvider()
 
   // Start IMU subscriber
   imu_subscriber_ = nh_.subscribe(imu_subscriber_options);
-
-  // Imu Async Spinner: will process the imu_queue_ only, instead of ROS' global
-  // queue.
-  static constexpr size_t kSpinnerThreads = 0;
-  imu_async_spinner_ =
-      VIO::make_unique<ros::AsyncSpinner>(kSpinnerThreads, &imu_queue_);
-  imu_async_spinner_->start();
 
   // Subscribe to stereo images. Approx time sync, should be exact though...
   static constexpr size_t kMaxImagesQueueSize = 1u;
@@ -92,15 +76,8 @@ RosOnlineDataProvider::RosOnlineDataProvider()
                     &RosOnlineDataProvider::callbackReinitPose,
                     this);
 
-  // This spinner will process the regular Global callback queue of ROS.
-  // Alternatively, we could make something like IMU async spinner with its
-  // own queue, but then we need a ros::SpinOnce somewhere, or another async
-  // spinner for the global queue (although I think we don't parse anything
-  // from the global queue...
-  async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kSpinnerThreads);
-  async_spinner_->start();
 
-  ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
+  RCLCPP_INFO(this->get_logger(), ">>>>>>> Started data subscribers <<<<<<<<");
 }
 
 RosOnlineDataProvider::~RosOnlineDataProvider() {
@@ -110,8 +87,8 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
 // TODO(marcus): with the readRosImage, this is a slow callback. Might be too
 // slow...
 void RosOnlineDataProvider::callbackStereoImages(
-    const sensor_msgs::ImageConstPtr& left_msg,
-    const sensor_msgs::ImageConstPtr& right_msg) {
+    const sensor_msgs::msgs::ImageConstPtr& left_msg,
+    const sensor_msgs::msgs::ImageConstPtr& right_msg) {
   static const CameraParams& left_cam_info =
       pipeline_params_.camera_params_.at(0);
   static const CameraParams& right_cam_info =
@@ -134,7 +111,7 @@ void RosOnlineDataProvider::callbackStereoImages(
 }
 
 void RosOnlineDataProvider::callbackIMU(
-    const sensor_msgs::ImuConstPtr& msgIMU) {
+    const sensor_msgs::msgs::ImuConstPtr& msgIMU) {
   VIO::ImuAccGyr imu_accgyr;
 
   imu_accgyr(0) = msgIMU->linear_acceleration.x;
@@ -158,7 +135,7 @@ void RosOnlineDataProvider::callbackIMU(
 }
 
 // Ground-truth odometry callback
-void RosOnlineDataProvider::callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& msgGtOdom) {
+void RosOnlineDataProvider::callbackGtOdomOnce(const nav_msgs::msgs::Odometry::ConstPtr& msgGtOdom) {
   LOG(WARNING) << "Using initial ground-truth state for initialization.";
   msgGtOdomToVioNavState(
       msgGtOdom,
@@ -170,22 +147,22 @@ void RosOnlineDataProvider::callbackGtOdomOnce(const nav_msgs::Odometry::ConstPt
 
 // Reinitialization callback
 void RosOnlineDataProvider::callbackReinit(
-    const std_msgs::Bool::ConstPtr& reinitFlag) {
+    const std_msgs::msgs::Bool::ConstPtr& reinitFlag) {
   // TODO(Sandro): Do we want to reinitialize at specific pose or just at
   // origin? void RosDataProvider::callbackReinit( const
-  // nav_msgs::Odometry::ConstPtr& msgReinit) {
+  // nav_msgs::msgs::Odometry::ConstPtr& msgReinit) {
 
   // Set reinitialization to "true"
   reinit_flag_ = true;
 
   if (getReinitFlag()) {
-    ROS_INFO("Reinitialization flag received!\n");
+    RCLCPP_INFO(this->get_logger(), "Reinitialization flag received!\n");
   }
 }
 
 // Getting re-initialization pose
 void RosOnlineDataProvider::callbackReinitPose(
-    const geometry_msgs::PoseStamped& reinitPose) {
+    const geometry_msgs::msgs::PoseStamped& reinitPose) {
   // Set reinitialization pose
   gtsam::Rot3 rotation(gtsam::Quaternion(reinitPose.pose.orientation.w,
                                          reinitPose.pose.orientation.x,
@@ -198,7 +175,7 @@ void RosOnlineDataProvider::callbackReinitPose(
 }
 
 void RosOnlineDataProvider::msgGtOdomToVioNavState(
-    const nav_msgs::Odometry::ConstPtr& gt_odom, VioNavState* vio_navstate) {
+    const nav_msgs::msgs::Odometry::ConstPtr& gt_odom, VioNavState* vio_navstate) {
   CHECK_NOTNULL(vio_navstate);
 
   // World to Body rotation
@@ -221,39 +198,39 @@ void RosOnlineDataProvider::msgGtOdomToVioNavState(
   vio_navstate->imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
 }
 
-bool RosOnlineDataProvider::spin() {
-  CHECK_EQ(pipeline_params_.camera_params_.size(), 2u);
-
-  while (ros::ok()) {
-    spinOnce();  // TODO(marcus): need a sequential mode?
-  }
-
-  ROS_INFO("Ros data source spin done. Shutting down queues.");
-  backend_output_queue_.shutdown();
-  frontend_output_queue_.shutdown();
-  mesher_output_queue_.shutdown();
-  lcd_output_queue_.shutdown();
-
-  ROS_INFO("Shutting down queues ROS Async Spinner.");
-  CHECK(async_spinner_);
-  async_spinner_->stop();
-
-  return false;
-}
-
-bool RosOnlineDataProvider::spinOnce() {
-  // Publish VIO output if any.
-  publishSyncedOutputs();
-
-  // Publish LCD output if any.
-  LcdOutput::Ptr lcd_output = nullptr;
-  if (lcd_output_queue_.pop(lcd_output)) {
-    publishLcdOutput(lcd_output);
-  }
-
-  // ros::spinOnce();
-
-  return true;
-}
+//bool RosOnlineDataProvider::spin() {
+//  CHECK_EQ(pipeline_params_.camera_params_.size(), 2u);
+//
+//  while (ros::ok()) {
+//    spinOnce();  // TODO(marcus): need a sequential mode?
+//  }
+//
+//  RCLCPP_INFO(this->get_logger(), "Ros data source spin done. Shutting down queues.");
+//  backend_output_queue_.shutdown();
+//  frontend_output_queue_.shutdown();
+//  mesher_output_queue_.shutdown();
+//  lcd_output_queue_.shutdown();
+//
+//  RCLCPP_INFO(this->get_logger(), "Shutting down queues ROS Async Spinner.");
+//  CHECK(async_spinner_);
+//  async_spinner_->stop();
+//
+//  return false;
+//}
+//
+//bool RosOnlineDataProvider::spinOnce() {
+//  // Publish VIO output if any.
+//  publishSyncedOutputs();
+//
+//  // Publish LCD output if any.
+//  LcdOutput::Ptr lcd_output = nullptr;
+//  if (lcd_output_queue_.pop(lcd_output)) {
+//    publishLcdOutput(lcd_output);
+//  }
+//
+//  // ros::spinOnce();
+//
+//  return true;
+//}
 
 }  // namespace VIO

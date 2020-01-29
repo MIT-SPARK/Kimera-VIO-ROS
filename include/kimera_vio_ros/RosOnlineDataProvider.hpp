@@ -11,13 +11,14 @@
 #include "message_filters/subscriber.h"
 #include "message_filters/sync_policies/approximate_time.h"
 #include "message_filters/time_synchronizer.h"
-#include "sensor_msgs/msg/imu.h"
-#include "nav_msgs/msg/odometry.h"
-#include "<std_msgs/msg/bool.h"
+
+#include "nav_msgs/msg/odometry.hpp"
+#include "sensor_msgs/msg/image.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "std_msgs/msg/bool.hpp"
+
 
 #include "kimera_vio_ros/RosDataProviderInterface.hpp"
-
-// using namespace StereoImageBuffer;
 
 namespace VIO {
 
@@ -30,21 +31,12 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
 
   virtual ~RosOnlineDataProvider();
 
-  bool spin() override;
-
-  bool spinOnce();
-
   // Checks the current status of reinitialization flag
   inline bool getReinitFlag() const { return reinit_flag_; }
   // Resets the current status of reinitialization flag
   inline void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
 
  private:
-  // TODO (Toni): only use one node handle...
-  ros::CallbackQueue imu_queue_;
-  std::unique_ptr<ros::AsyncSpinner> imu_async_spinner_;
-  std::unique_ptr<ros::AsyncSpinner> async_spinner_;
-
   FrameId frame_count_;
 
   // Reinitialization flag and packet (pose, vel, bias)
@@ -86,7 +78,7 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   std::unique_ptr<message_filters::Synchronizer<sync_pol>> sync_;
 
   // Define subscriber for IMU data
-  ros::Subscriber imu_subscriber_;
+  rclcpp::Subscription<Imu>::SharedPtr imu_subscriber_;
 
   // Define subscriber for gt data
   ros::Subscriber gt_odom_subscriber_;
