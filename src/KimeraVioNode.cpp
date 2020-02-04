@@ -44,21 +44,23 @@ KimeraVioNode::KimeraVioNode(
   std::string left_topic = "left_cam";
   std::string right_topic = "right_cam";
   image_transport::TransportHints hints(this, transport);
-
-  left_sub_.subscribe(this, left_topic, hints.getTransport(), qos.get_rmw_qos_profile());
-  right_sub_.subscribe(this, right_topic, hints.getTransport(), qos.get_rmw_qos_profile());
-
   int queue_size_ = 10;
-  exact_sync_.reset( new ExactSync(
-    ExactPolicy(queue_size_),
-    left_sub_,
-    right_sub_) );
-   exact_sync_->registerCallback(
-     std::bind(
-       &KimeraVioNode::stereo_cb,
-       this,
-       std::placeholders::_1,
-       std::placeholders::_2));
+
+//  left_sub_.subscribe(this, left_topic, hints.getTransport(), qos.get_rmw_qos_profile());
+//  right_sub_.subscribe(this, right_topic, hints.getTransport(), qos.get_rmw_qos_profile());
+//  exact_sync_ = std::make_shared<ExactSync>(
+//      ExactPolicy(queue_size_), left_sub_, right_sub_);
+
+  l_sub_ = std::make_shared<message_filters::Subscriber<Image> >(
+            std::shared_ptr<rclcpp::Node>(this),
+            left_topic, qos.get_rmw_qos_profile());
+  r_sub_ = std::make_shared<message_filters::Subscriber<Image> >(
+            std::shared_ptr<rclcpp::Node>(this),
+            right_topic, qos.get_rmw_qos_profile());
+  exact_sync_ = std::make_shared<ExactSync>(
+      ExactPolicy(queue_size_), *l_sub_, *r_sub_);
+
+  exact_sync_->registerCallback(&KimeraVioNode::stereo_cb, this);
 
     // Register callback for inputs.
     this->registerImuSingleCallback(
@@ -117,8 +119,8 @@ KimeraVioNode::~KimeraVioNode()
 }
 
 void KimeraVioNode::stereo_cb(
-  const Image::ConstSharedPtr& left_msg,
-  const Image::ConstSharedPtr& right_msg)
+    const Image::SharedPtr left_msg,
+    const Image::SharedPtr right_msg)
 {
   static const VIO::CameraParams& left_cam_info =
       pipeline_params_.camera_params_.at(0);
@@ -142,7 +144,7 @@ void KimeraVioNode::stereo_cb(
       frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
   right_frame_callback_(VIO::make_unique<VIO::Frame>(
       frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
-
+  LOG_EVERY_N(INFO, 30) << "Done: KimeraVioNode::stereo_cb";
   frame_count_++;
 }
 
@@ -172,4 +174,5 @@ void KimeraVioNode::imu_cb(const Imu::SharedPtr imu_msg)
   // RCLCPP_INFO(this->get_logger(), "Did you forget to register the IMU callback?");
 
   imu_single_callback_(VIO::ImuMeasurement(timestamp, imu_accgyr));
+  LOG_EVERY_N(INFO, 200) << "Done: KimeraVioNode::imu_cb";
 }

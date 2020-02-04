@@ -39,8 +39,8 @@ private:
    VIO::FrameId frame_count_;
 
   void stereo_cb(
-      const Image::ConstSharedPtr& left_msg,
-      const Image::ConstSharedPtr& right_msg);
+      const Image::SharedPtr left_msg,
+      const Image::SharedPtr right_msg);
   void imu_cb(const Imu::SharedPtr imu_msg);
   std::string timing_string();
 
@@ -52,6 +52,9 @@ private:
   typedef message_filters::Synchronizer<ExactPolicy> ExactSync;
   std::shared_ptr<ExactSync> exact_sync_;
   image_transport::SubscriberFilter left_sub_, right_sub_;
+
+  std::shared_ptr<message_filters::Subscriber<Image> > l_sub_;
+  std::shared_ptr<message_filters::Subscriber<Image> > r_sub_;
 
   VIO::Pipeline vio_pipeline_;
   std::future<bool> handle_pipeline_;
