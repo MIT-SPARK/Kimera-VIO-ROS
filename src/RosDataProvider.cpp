@@ -72,6 +72,7 @@ RosDataProviderInterface::RosDataProviderInterface()
       nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10, true);
   mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5, true);
   debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
+  feature_tracks_pub_ = it_->advertise("feature_tracks", 10, true);
 
   publishStaticTf(pipeline_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
@@ -107,6 +108,9 @@ const cv::Mat RosDataProviderInterface::readRosImage(
   if (img_msg->encoding == sensor_msgs::image_encodings::BGR8) {
     LOG(WARNING) << "Converting image...";
     cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_BGR2GRAY);
+  } else if (img_msg->encoding == sensor_msgs::image_encodings::RGB8) {
+    LOG(WARNING) << "Converting image...";
+    cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_RGB2GRAY);
   } else {
     CHECK_EQ(cv_ptr->encoding, sensor_msgs::image_encodings::MONO8)
         << "Expected image with MONO8 or BGR8 encoding.";
@@ -153,6 +157,14 @@ void RosDataProviderInterface::publishFrontendOutput(
   CHECK(output);
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
+  }
+  if (feature_tracks_pub_.getNumSubscribers() > 0) {
+    std_msgs::Header h;
+    h.stamp.fromNSec(output->timestamp_);
+    h.frame_id = base_link_frame_id_;
+    // Copies...
+    debug_img_pub_.publish(
+        cv_bridge::CvImage(h, "bgr8", output->feature_tracks_).toImageMsg());
   }
 }
 
