@@ -1,0 +1,32 @@
+<launch>
+     <group>
+          <!-- <arg name="dataset_name" value="RealSense_IR"/> -->
+          <arg name="parallel" default="True" />
+          <arg name="online" default="True" />
+
+          <arg name="log_output" default="false"/>
+          <!-- <arg name="log_output_path"
+               default="$(find kimera_vio_ros)/output_logs/"
+               if="$(var log_output)"/> -->
+          <arg name="log_gt_data" default="false"/>
+          <arg name="gt_topic" default=""
+               if="$(var log_gt_data)"/>
+          <!-- Set use_sim_time to true if you use rosbag with clock argument -->
+          <let name="use_sim_time" value="false" if="$(var online)"/>
+
+          <!-- Only used when parsing a rosbag -->
+          <arg name="rosbag_path" default="/home/yunchang/data/kitti_2011_09_26_drive_0005_unsynced.bag"
+               unless="$(var online)"/>
+
+          <!-- Subscribed Topics -->
+          <let name="left_cam_topic"  value="/camera/infra1/image_rect_raw"/>
+          <let name="right_cam_topic" value="/camera/infra2/image_rect_raw"/>
+          <let name="imu_topic"       value="/camera/imu/sample"/>
+
+          <!-- Frame IDs for Odometry -->
+          <let name="frame_ids.base_link" value="camera_link" />
+
+          <!-- Launch actual pipeline -->
+          <include file="$(find-pkg-share kimera_vio_ros)/launch/kimera_vio_ros.launch.xml"/>
+     </group>
+</launch>
