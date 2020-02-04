@@ -68,8 +68,11 @@ void KimeraVioNode::stereo_cb(
   static const VIO::CameraParams& right_cam_info =
       pipeline_params_.camera_params_.at(1);
 
-  const VIO::Timestamp& timestamp_left = left_msg->header.stamp.nanosec;
-  const VIO::Timestamp& timestamp_right = right_msg->header.stamp.nanosec;
+    rclcpp::Time left_stamp(left_msg->header.stamp);
+    rclcpp::Time right_stamp(right_msg->header.stamp);
+
+  const VIO::Timestamp& timestamp_left = left_stamp.nanoseconds();
+  const VIO::Timestamp& timestamp_right = right_stamp.nanoseconds();
 
   CHECK(left_frame_callback_)
   << "Did you forget to register the left frame callback?";
@@ -98,7 +101,8 @@ void KimeraVioNode::imu_cb(const Imu::SharedPtr imu_msg)
   imu_accgyr(5) = imu_msg->angular_velocity.z;
 
   // Adapt imu timestamp to account for time shift in IMU-cam
-  VIO::Timestamp timestamp = imu_msg->header.stamp.nanosec;
+  rclcpp::Time stamp(imu_msg->header.stamp);
+  VIO::Timestamp timestamp = stamp.nanoseconds();
 
 //  static const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
 //  if (imu_shift != ros::Duration(0)) {
