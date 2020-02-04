@@ -32,6 +32,23 @@ RosOnlineDataProvider::RosOnlineDataProvider()
       async_spinner_(nullptr) {
   ROS_INFO("Starting KimeraVIO wrapper for online");
 
+  // Define ground truth odometry Subsrciber
+  static constexpr size_t kMaxGtOdomQueueSize = 1u;
+  if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
+    LOG(INFO) << "Requested initialization from ground truth. "
+              << "Initializing ground-truth odometry one-shot subscriber.";
+    gt_odom_subscriber_ =
+        nh_.subscribe("gt_odom",
+                      kMaxGtOdomQueueSize,
+                      &RosOnlineDataProvider::callbackGtOdomOnce,
+                      this);
+
+    LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO...";
+    while (!gt_init_pose_receided_) {
+      ros::spinOnce();
+    }
+  }
+
   static constexpr size_t kMaxImuQueueSize = 50u;
   // Create a dedicated queue for the Imu callback so that we can use an async
   // spinner on it to process the data lighting fast.
@@ -66,18 +83,6 @@ RosOnlineDataProvider::RosOnlineDataProvider()
   DCHECK(sync_);
   sync_->registerCallback(
       boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
-
-  // Define ground truth odometry Subsrciber
-  static constexpr size_t kMaxGtOdomQueueSize = 1u;
-  if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
-    LOG(INFO) << "Requested initialization from ground truth. "
-              << "Initializing ground-truth odometry one-shot subscriber.";
-    gt_odom_subscriber_ = 
-        nh_.subscribe("gt_odom",
-                      kMaxGtOdomQueueSize,
-                      &RosOnlineDataProvider::callbackGtOdomOnce,
-                      this);
-  }
 
   // Define Reinitializer Subscriber
   static constexpr size_t kMaxReinitQueueSize = 50u;
@@ -163,6 +168,9 @@ void RosOnlineDataProvider::callbackGtOdomOnce(const nav_msgs::Odometry::ConstPt
   msgGtOdomToVioNavState(
       msgGtOdom,
       &pipeline_params_.backend_params_->initial_ground_truth_state_);
+
+  // Signal receptance of ground-truth pose.
+  gt_init_pose_receided_ = true;
 
   // Shutdown subscriber to prevent new gt poses from interfering
   gt_odom_subscriber_.shutdown();

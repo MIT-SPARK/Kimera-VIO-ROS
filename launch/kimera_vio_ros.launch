@@ -98,7 +98,7 @@
     <remap from="left_cam"  to="$(arg left_cam_topic)"              if="$(arg online)"/>
     <remap from="right_cam" to="$(arg right_cam_topic)"             if="$(arg online)"/>
     <remap from="imu"       to="$(arg imu_topic)"                   if="$(arg online)"/>
-    <remap from="gt_topic"  to="$(arg odometry_ground_truth_topic)"
+    <remap from="gt_odom"  to="$(arg odometry_ground_truth_topic)"
            if="$(eval arg('online') and arg('odometry_ground_truth_topic') != '')"/>
 
     <!-- if we run offline, use params -->
