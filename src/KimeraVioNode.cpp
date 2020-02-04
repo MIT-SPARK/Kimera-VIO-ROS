@@ -29,9 +29,10 @@ KimeraVioNode::KimeraVioNode(
   imu_opt.callback_group = callback_group_imu_;
 
   std::string imu_topic = "imu";
+  auto qos = rclcpp::SensorDataQoS();
   imu_sub_ = this->create_subscription<Imu>(
     imu_topic,
-    rclcpp::QoS(10),
+    qos,
     std::bind(
       &KimeraVioNode::imu_cb,
       this,
@@ -43,8 +44,8 @@ KimeraVioNode::KimeraVioNode(
   std::string right_topic = "right_cam";
   image_transport::TransportHints hints(this, transport);
 
-  left_sub_.subscribe(this, left_topic, hints.getTransport());
-  right_sub_.subscribe(this, right_topic, hints.getTransport());
+  left_sub_.subscribe(this, left_topic, hints.getTransport(), qos.get_rmw_qos_profile());
+  right_sub_.subscribe(this, right_topic, hints.getTransport(), qos.get_rmw_qos_profile());
 
   int queue_size_ = 10;
   exact_sync_.reset( new ExactSync(
