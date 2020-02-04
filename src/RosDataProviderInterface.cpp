@@ -39,24 +39,38 @@ RosDataProviderInterface::RosDataProviderInterface(
       {
   RCLCPP_INFO(this->get_logger(), ">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<");
 
-  tf_broadcaster_ =  std::make_unique<tf2_ros::TransformBroadcaster>(this->shared_from_this());
+  // tf_broadcaster_ =  std::make_unique<tf2_ros::TransformBroadcaster>(this->shared_from_this());
 
   // Print parameters to check.
   printParsedParams();
 
-  it_ = VIO::make_unique<image_transport::ImageTransport>(this->shared_from_this());
+  // it_ = VIO::make_unique<image_transport::ImageTransport>(this->shared_from_this());
+
+  auto values = this->declare_parameters<std::string>(
+    "frame_ids", {
+      {"base_link", "base_link"},
+      {"world", "world"},
+      {"map", "map"},
+      // {"left_cam", "left_cam"},
+      // {"right_cam", "right_cam"},
+  });
+
+  this->declare_parameter("thresholds.velocity_det");
+  this->declare_parameter("thresholds.position_det");
+  this->declare_parameter("thresholds.stereo_ransac");
+  this->declare_parameter("thresholds.mono_ransac");
 
   // Get ROS params
-  CHECK(this->get_parameter("~/base_link_frame_id", base_link_frame_id_));
-  CHECK(!base_link_frame_id_.empty());
-  CHECK(this->get_parameter("~/world_frame_id", world_frame_id_));
-  CHECK(!world_frame_id_.empty());
-  CHECK(this->get_parameter("~/map_frame_id", map_frame_id_));
-  CHECK(!map_frame_id_.empty());
-  CHECK(this->get_parameter("~/left_cam_frame_id", left_cam_frame_id_));
-  CHECK(!left_cam_frame_id_.empty());
-  CHECK(this->get_parameter("~/right_cam_frame_id", right_cam_frame_id_));
-  CHECK(!right_cam_frame_id_.empty());
+  CHECK(this->get_parameter("frame_ids.base_link", frame_id_base_link_));
+  CHECK(!frame_id_base_link_.empty());
+  CHECK(this->get_parameter("frame_ids.world", frame_id_world_));
+  CHECK(!frame_id_world_.empty());
+  CHECK(this->get_parameter("frame_ids.map", frame_id_map_));
+  CHECK(!frame_id_map_.empty());
+  // CHECK(this->get_parameter("frame_ids.left_cam", frame_id_left_cam_));
+  // CHECK(!frame_id_left_cam_.empty());
+  // CHECK(this->get_parameter("frame_ids.right_cam", frame_id_right_cam_));
+  // CHECK(!frame_id_right_cam_.empty());
 
   // Publishers
   odometry_pub_ =
@@ -73,15 +87,15 @@ RosDataProviderInterface::RosDataProviderInterface(
       this->create_publisher<pose_graph_msgs::msg::PoseGraph>("pose_graph", 10);
 //  pointcloud_pub_ =
 //      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10, true);
-  mesh_3d_frame_pub_ = this->create_publisher<pcl_msgs::msg::PolygonMesh>("mesh", 5);
-  debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
+  // mesh_3d_frame_pub_ = this->create_publisher<pcl_msgs::msg::PolygonMesh>("mesh", 5);
+  // debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
 
-  publishStaticTf(pipeline_params_.camera_params_.at(0).body_Pose_cam_,
-                  base_link_frame_id_,
-                  left_cam_frame_id_);
-  publishStaticTf(pipeline_params_.camera_params_.at(1).body_Pose_cam_,
-                  base_link_frame_id_,
-                  right_cam_frame_id_);
+  // publishStaticTf(pipeline_params_.camera_params_.at(0).body_Pose_cam_,
+  //                 frame_id_base_link_,
+  //                 frame_id_left_cam_);
+  // publishStaticTf(pipeline_params_.camera_params_.at(1).body_Pose_cam_,
+  //                 frame_id_base_link_,
+  //                 frame_id_right_cam_);
 }
 
 RosDataProviderInterface::~RosDataProviderInterface() {
@@ -238,7 +252,7 @@ void RosDataProviderInterface::publishLcdOutput(
 //      output->lmk_id_to_lmk_type_map_;
 //
 //  PointCloudXYZRGB::Ptr msg(new PointCloudXYZRGB);
-//  msg->header.frame_id = world_frame_id_;
+//  msg->header.frame_id = frame_id_world_;
 //  msg->is_dense = true;
 //  msg->height = 1;
 //  msg->width = points_with_id.size();
@@ -306,7 +320,7 @@ void RosDataProviderInterface::publishDebugImage(
   auto d = rclcpp::Duration(timestamp);
   h.stamp.nanosec = d.nanoseconds();
   h.stamp.sec = d.seconds();
-  h.frame_id = base_link_frame_id_;
+  h.frame_id = frame_id_base_link_;
   // Copies...
   debug_img_pub_.publish(
       cv_bridge::CvImage(h, "bgr8", debug_image).toImageMsg());
@@ -338,7 +352,7 @@ void RosDataProviderInterface::publishPerFrameMesh3D(
   auto d = rclcpp::Duration(output->timestamp_);
   msg.header.stamp.nanosec = d.nanoseconds();
   msg.header.stamp.sec = d.seconds();
-  msg.header.frame_id = world_frame_id_;
+  msg.header.frame_id = frame_id_world_;
 
   // Create point cloud to hold vertices.
   pcl::PointCloud<PointNormalUV> cloud;
@@ -448,8 +462,8 @@ void RosDataProviderInterface::publishState(
   auto d = rclcpp::Duration(ts);
   odometry_msg.header.stamp.nanosec = d.nanoseconds();
   odometry_msg.header.stamp.sec = d.seconds();
-  odometry_msg.header.frame_id = world_frame_id_;
-  odometry_msg.child_frame_id = base_link_frame_id_;
+  odometry_msg.header.frame_id = frame_id_world_;
+  odometry_msg.child_frame_id = frame_id_base_link_;
 
   // Position
   odometry_msg.pose.pose.position.x = pose.x();
@@ -515,8 +529,8 @@ void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
   auto d = rclcpp::Duration(timestamp);
   odom_tf.header.stamp.nanosec = d.nanoseconds();
   odom_tf.header.stamp.sec = d.seconds();
-  odom_tf.header.frame_id = world_frame_id_;
-  odom_tf.child_frame_id = base_link_frame_id_;
+  odom_tf.header.frame_id = frame_id_world_;
+  odom_tf.child_frame_id = frame_id_base_link_;
 
   odom_tf.transform.translation.x = pose.x();
   odom_tf.transform.translation.y = pose.y();
@@ -615,10 +629,10 @@ void RosDataProviderInterface::publishResiliency(
   // Publish thresholds for statistics
   float pos_det_threshold, vel_det_threshold;
   int mono_ransac_theshold, stereo_ransac_threshold;
-  CHECK(this->get_parameter("~/velocity_det_threshold", vel_det_threshold));
-  CHECK(this->get_parameter("~/position_det_threshold", pos_det_threshold));
-  CHECK(this->get_parameter("~/stereo_ransac_threshold", stereo_ransac_threshold));
-  CHECK(this->get_parameter("~/mono_ransac_threshold", mono_ransac_theshold));
+  CHECK(this->get_parameter("thresholds.velocity_det", vel_det_threshold));
+  CHECK(this->get_parameter("thresholds.position_det", pos_det_threshold));
+  CHECK(this->get_parameter("thresholds.stereo_ransac", stereo_ransac_threshold));
+  CHECK(this->get_parameter("thresholds.mono_ransac", mono_ransac_theshold));
   resiliency_msg.data[4] = pos_det_threshold;
   resiliency_msg.data[5] = vel_det_threshold;
   resiliency_msg.data[6] = stereo_ransac_threshold;
@@ -682,7 +696,7 @@ void RosDataProviderInterface::publishOptimizedTrajectory(
     gtsam::Quaternion quat = pose.rotation().toQuaternion();
 
     geometry_msgs::msg::PoseStamped ps_msg;
-    ps_msg.header.frame_id = world_frame_id_;
+    ps_msg.header.frame_id = frame_id_world_;
     ps_msg.pose.position.x = trans.x();
     ps_msg.pose.position.y = trans.y();
     ps_msg.pose.position.z = trans.z();
@@ -698,7 +712,7 @@ void RosDataProviderInterface::publishOptimizedTrajectory(
   auto d = rclcpp::Duration(ts);
   path.header.stamp.nanosec = d.nanoseconds();
   path.header.stamp.sec = d.seconds();
-  path.header.frame_id = world_frame_id_;
+  path.header.frame_id = frame_id_world_;
   trajectory_pub_->publish(path);
 }
 
@@ -755,7 +769,7 @@ void RosDataProviderInterface::updateNodesAndEdges(
               nfg[i]);
       // convert between factor to PoseGraphEdge type
       pose_graph_msgs::msg::PoseGraphEdge edge;
-      edge.header.frame_id = world_frame_id_;
+      edge.header.frame_id = frame_id_world_;
       edge.key_from = factor.front();
       edge.key_to = factor.back();
       if (edge.key_to == edge.key_from + 1) {  // check if odom
@@ -842,7 +856,7 @@ void RosDataProviderInterface::publishPoseGraph(
   auto d = rclcpp::Duration(ts);
   graph.header.stamp.nanosec = d.nanoseconds();
   graph.header.stamp.sec = d.seconds();
-  graph.header.frame_id = world_frame_id_;
+  graph.header.frame_id = frame_id_world_;
   posegraph_pub_->publish(graph);
 }
 
@@ -857,8 +871,8 @@ void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
   auto d = rclcpp::Duration(ts);
   map_tf.header.stamp.nanosec = d.nanoseconds();
   map_tf.header.stamp.sec = d.seconds();
-  map_tf.header.frame_id = world_frame_id_;
-  map_tf.child_frame_id = map_frame_id_;
+  map_tf.header.frame_id = frame_id_world_;
+  map_tf.child_frame_id = frame_id_map_;
 
   map_tf.transform.translation.x = w_Pose_map.x();
   map_tf.transform.translation.y = w_Pose_map.y();

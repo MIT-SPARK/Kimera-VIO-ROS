@@ -122,11 +122,11 @@ class RosDataProviderInterface : public DataProviderInterface, public rclcpp::No
   std::unique_ptr<image_transport::ImageTransport> it_;
 
   // Define frame ids for odometry message
-  std::string world_frame_id_;
-  std::string base_link_frame_id_;
-  std::string map_frame_id_;
-  std::string left_cam_frame_id_;
-  std::string right_cam_frame_id_;
+  std::string frame_id_world_;
+  std::string frame_id_base_link_;
+  std::string frame_id_map_;
+  // std::string frame_id_left_cam_;
+  // std::string frame_id_right_cam_;
 
   // Queues to store and retrieve VIO output in a thread-safe way.
   ThreadsafeQueue<BackendOutput::Ptr> backend_output_queue_;
