@@ -17,7 +17,9 @@ KimeraVioNode::KimeraVioNode(
     const rclcpp::NodeOptions & options)
 : VIO::RosDataProviderInterface(node_name, options),
   frame_count_(VIO::FrameId(0)),
-  vio_pipeline_(this->pipeline_params_)
+  vio_pipeline_(this->pipeline_params_),
+  last_imu_timestamp_(0),
+  last_stereo_timestamp_(0)
 {
   callback_group_stereo_ = this->create_callback_group(
     rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
@@ -122,13 +124,14 @@ void KimeraVioNode::stereo_cb(
     const Image::SharedPtr left_msg,
     const Image::SharedPtr right_msg)
 {
+  rclcpp::Time left_stamp(left_msg->header.stamp);
+  rclcpp::Time right_stamp(right_msg->header.stamp);
+  if(left_stamp.nanoseconds() > last_stereo_timestamp_.nanoseconds())
+  {
   static const VIO::CameraParams& left_cam_info =
       pipeline_params_.camera_params_.at(0);
   static const VIO::CameraParams& right_cam_info =
       pipeline_params_.camera_params_.at(1);
-
-    rclcpp::Time left_stamp(left_msg->header.stamp);
-    rclcpp::Time right_stamp(right_msg->header.stamp);
 
   const VIO::Timestamp& timestamp_left = left_stamp.nanoseconds();
   const VIO::Timestamp& timestamp_right = right_stamp.nanoseconds();
@@ -147,9 +150,14 @@ void KimeraVioNode::stereo_cb(
   LOG_EVERY_N(INFO, 30) << "Done: KimeraVioNode::stereo_cb";
   frame_count_++;
 }
+  last_stereo_timestamp_ = left_stamp;
+}
 
 void KimeraVioNode::imu_cb(const Imu::SharedPtr imu_msg)
 {
+  rclcpp::Time stamp(imu_msg->header.stamp);
+  if(stamp.nanoseconds() > last_imu_timestamp_.nanoseconds())
+  {
   VIO::ImuAccGyr imu_accgyr;
 
   imu_accgyr(0) = imu_msg->linear_acceleration.x;
@@ -160,7 +168,6 @@ void KimeraVioNode::imu_cb(const Imu::SharedPtr imu_msg)
   imu_accgyr(5) = imu_msg->angular_velocity.z;
 
   // Adapt imu timestamp to account for time shift in IMU-cam
-  rclcpp::Time stamp(imu_msg->header.stamp);
   VIO::Timestamp timestamp = stamp.nanoseconds();
 
 //  static const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
@@ -175,4 +182,6 @@ void KimeraVioNode::imu_cb(const Imu::SharedPtr imu_msg)
 
   imu_single_callback_(VIO::ImuMeasurement(timestamp, imu_accgyr));
   LOG_EVERY_N(INFO, 200) << "Done: KimeraVioNode::imu_cb";
+}
+  last_imu_timestamp_ = stamp;
 }

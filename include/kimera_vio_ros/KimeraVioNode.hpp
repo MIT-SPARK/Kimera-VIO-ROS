@@ -58,4 +58,7 @@ private:
 
   VIO::Pipeline vio_pipeline_;
   std::future<bool> handle_pipeline_;
+
+  rclcpp::Time last_imu_timestamp_;
+  rclcpp::Time last_stereo_timestamp_;
 };
