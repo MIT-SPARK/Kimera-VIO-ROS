@@ -1,5 +1,6 @@
 // #include <chrono>
 #include <functional>
+#include <future>
 #include <memory>
 #include <string>
 #include <thread>
@@ -19,6 +20,7 @@
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 
+#include <kimera-vio/pipeline/Pipeline.h>
 #include "kimera_vio_ros/RosDataProviderInterface.hpp"
 
 
@@ -30,6 +32,8 @@ public:
     KimeraVioNode(
         const std::string & node_name,
         const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
+
+    ~KimeraVioNode();
 
 private:
    VIO::FrameId frame_count_;
@@ -49,4 +53,6 @@ private:
   std::shared_ptr<ExactSync> exact_sync_;
   image_transport::SubscriberFilter left_sub_, right_sub_;
 
+  VIO::Pipeline vio_pipeline_;
+  std::future<bool> handle_pipeline_;
 };

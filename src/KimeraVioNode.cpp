@@ -16,7 +16,8 @@ KimeraVioNode::KimeraVioNode(
     const std::string & node_name,
     const rclcpp::NodeOptions & options)
 : VIO::RosDataProviderInterface(node_name, options),
-  frame_count_(VIO::FrameId(0))
+  frame_count_(VIO::FrameId(0)),
+  vio_pipeline_(this->pipeline_params_)
 {
   callback_group_stereo_ = this->create_callback_group(
     rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
@@ -58,6 +59,61 @@ KimeraVioNode::KimeraVioNode(
        this,
        std::placeholders::_1,
        std::placeholders::_2));
+
+    // Register callback for inputs.
+    this->registerImuSingleCallback(
+            std::bind(&VIO::Pipeline::fillSingleImuQueue,
+                      &vio_pipeline_,
+                      std::placeholders::_1));
+
+    this->registerImuMultiCallback(
+            std::bind(&VIO::Pipeline::fillMultiImuQueue,
+                      &vio_pipeline_,
+                      std::placeholders::_1));
+
+    this->registerLeftFrameCallback(
+            std::bind(&VIO::Pipeline::fillLeftFrameQueue,
+                      &vio_pipeline_,
+                      std::placeholders::_1));
+
+    this->registerRightFrameCallback(
+            std::bind(&VIO::Pipeline::fillRightFrameQueue,
+                      &vio_pipeline_,
+                      std::placeholders::_1));
+
+    vio_pipeline_.registerBackendOutputCallback(
+            std::bind(&VIO::RosDataProviderInterface::callbackBackendOutput,
+                    this,
+                      std::placeholders::_1));
+
+    vio_pipeline_.registerFrontendOutputCallback(
+            std::bind(&VIO::RosDataProviderInterface::callbackFrontendOutput,
+                      this,
+                      std::placeholders::_1));
+
+    vio_pipeline_.registerMesherOutputCallback(
+            std::bind(&VIO::RosDataProviderInterface::callbackMesherOutput,
+                      this,
+                      std::placeholders::_1));
+
+    bool use_lcd;
+    this->declare_parameter("use_lcd", false);
+    this->get_parameter("use_lcd", use_lcd);
+    if (use_lcd) {
+        vio_pipeline_.registerLcdOutputCallback(
+                std::bind(&VIO::RosDataProviderInterface::callbackLcdOutput,
+                          this,
+                          std::placeholders::_1));
+    }
+    handle_pipeline_ = std::async(std::launch::async,
+                                      &VIO::Pipeline::spin,
+                                      &vio_pipeline_);
+}
+
+KimeraVioNode::~KimeraVioNode()
+{
+    vio_pipeline_.shutdown();
+    handle_pipeline_.get();
 }
 
 void KimeraVioNode::stereo_cb(
