@@ -58,6 +58,7 @@ include_directories(
 set(executable_name kimera_vio_node)
 add_executable(${executable_name}
   src/KimeraVio.cpp
+#  src/stereo.cpp
   # src/KimeraVioRos.cpp
   # src/RosDataProviderInterface.cpp
   # src/RosBagDataProvider.cpp
