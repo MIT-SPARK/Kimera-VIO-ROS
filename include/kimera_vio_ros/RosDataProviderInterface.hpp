@@ -112,11 +112,6 @@ class RosDataProviderInterface : public DataProviderInterface, public rclcpp::No
   // TODO(marcus): make like other outputs
   virtual void publishLcdOutput(const LcdOutput::Ptr& lcd_output);
 
-  // Publish static transforms (for camera frames) to the tf tree
-  void publishStaticTf(const gtsam::Pose3& pose,
-                       const std::string& parent_frame_id,
-                       const std::string& child_frame_id);
-
  protected:
   // Define image transport for this and derived classes.
   std::unique_ptr<image_transport::ImageTransport> it_;
@@ -125,8 +120,6 @@ class RosDataProviderInterface : public DataProviderInterface, public rclcpp::No
   std::string frame_id_world_;
   std::string frame_id_base_link_;
   std::string frame_id_map_;
-  // std::string frame_id_left_cam_;
-  // std::string frame_id_right_cam_;
 
   // Queues to store and retrieve VIO output in a thread-safe way.
   ThreadsafeQueue<BackendOutput::Ptr> backend_output_queue_;

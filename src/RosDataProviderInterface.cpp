@@ -67,10 +67,6 @@ RosDataProviderInterface::RosDataProviderInterface(
   CHECK(!frame_id_world_.empty());
   CHECK(this->get_parameter("frame_ids.map", frame_id_map_));
   CHECK(!frame_id_map_.empty());
-  // CHECK(this->get_parameter("frame_ids.left_cam", frame_id_left_cam_));
-  // CHECK(!frame_id_left_cam_.empty());
-  // CHECK(this->get_parameter("frame_ids.right_cam", frame_id_right_cam_));
-  // CHECK(!frame_id_right_cam_.empty());
 
   // Publishers
   odometry_pub_ =
@@ -90,12 +86,6 @@ RosDataProviderInterface::RosDataProviderInterface(
   // mesh_3d_frame_pub_ = this->create_publisher<pcl_msgs::msg::PolygonMesh>("mesh", 5);
   // debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
 
-  // publishStaticTf(pipeline_params_.camera_params_.at(0).body_Pose_cam_,
-  //                 frame_id_base_link_,
-  //                 frame_id_left_cam_);
-  // publishStaticTf(pipeline_params_.camera_params_.at(1).body_Pose_cam_,
-  //                 frame_id_base_link_,
-  //                 frame_id_right_cam_);
 }
 
 RosDataProviderInterface::~RosDataProviderInterface() {
@@ -882,27 +872,6 @@ void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
   map_tf.transform.rotation.y = w_Quat_map.y();
   map_tf.transform.rotation.z = w_Quat_map.z();
   tf_broadcaster_->sendTransform(map_tf);
-}
-
-void RosDataProviderInterface::publishStaticTf(
-    const gtsam::Pose3& pose,
-    const std::string& parent_frame_id,
-    const std::string& child_frame_id) {
-//  static tf2_ros::StaticTransformBroadcaster static_broadcaster(this);
-//  geometry_msgs::msg::TransformStamped static_transform_stamped;
-//  // TODO(Toni): Warning: using ros::Time::now(), will that bring issues?
-//  static_transform_stamped.header.stamp = this->now();
-//  static_transform_stamped.header.frame_id = parent_frame_id;
-//  static_transform_stamped.child_frame_id = child_frame_id;
-//  static_transform_stamped.transform.translation.x = pose.x();
-//  static_transform_stamped.transform.translation.y = pose.y();
-//  static_transform_stamped.transform.translation.z = pose.z();
-//  const gtsam::Quaternion& quat = pose.rotation().toQuaternion();
-//  static_transform_stamped.transform.rotation.x = quat.x();
-//  static_transform_stamped.transform.rotation.y = quat.y();
-//  static_transform_stamped.transform.rotation.z = quat.z();
-//  static_transform_stamped.transform.rotation.w = quat.w();
-//  static_broadcaster.sendTransform(static_transform_stamped);
 }
 
 void RosDataProviderInterface::printParsedParams() const {
