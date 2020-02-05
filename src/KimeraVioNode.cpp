@@ -1,5 +1,7 @@
 #include "kimera_vio_ros/KimeraVioNode.hpp"
 
+ using namespace std::chrono_literals;
+
 KimeraVioNode::KimeraVioNode(
     const std::string & node_name,
     const rclcpp::NodeOptions & options)
@@ -7,7 +9,8 @@ KimeraVioNode::KimeraVioNode(
   frame_count_(VIO::FrameId(0)),
   vio_pipeline_(this->pipeline_params_),
   last_imu_timestamp_(0),
-  last_stereo_timestamp_(0)
+  last_stereo_timestamp_(0),
+  outputs_loop_rate_(100ms)
 {
   callback_group_stereo_ = this->create_callback_group(
     rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
@@ -75,7 +78,7 @@ KimeraVioNode::KimeraVioNode(
 
     vio_pipeline_.registerBackendOutputCallback(
             std::bind(&VIO::RosDataProviderInterface::callbackBackendOutput,
-                    this,
+                      this,
                       std::placeholders::_1));
 
     vio_pipeline_.registerFrontendOutputCallback(
@@ -98,14 +101,39 @@ KimeraVioNode::KimeraVioNode(
                           std::placeholders::_1));
     }
     handle_pipeline_ = std::async(std::launch::async,
-                                      &VIO::Pipeline::spin,
-                                      &vio_pipeline_);
+                                  &VIO::Pipeline::spin,
+                                  &vio_pipeline_);
+    handle_outputs_ = std::async(std::launch::async,
+                                  &KimeraVioNode::spin_outputs,
+                                  this);
+}
+
+bool KimeraVioNode::spin_outputs()
+{
+    while (rclcpp::ok()){
+        publishSyncedOutputs();
+        LOG_EVERY_N(INFO, 100) << "Done: publishSyncedOutputs()";
+        outputs_loop_rate_.sleep();
+
+        // Publish LCD output if any.
+        VIO::LcdOutput::Ptr lcd_output = nullptr;
+        if (lcd_output_queue_.pop(lcd_output)) {
+            publishLcdOutput(lcd_output);
+        }
+    }
+    return true;
 }
 
 KimeraVioNode::~KimeraVioNode()
 {
+    backend_output_queue_.shutdown();
+    frontend_output_queue_.shutdown();
+    mesher_output_queue_.shutdown();
+    lcd_output_queue_.shutdown();
+
     vio_pipeline_.shutdown();
     handle_pipeline_.get();
+    handle_outputs_.get();
 }
 
 void KimeraVioNode::stereo_cb(

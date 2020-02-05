@@ -38,6 +38,7 @@ public:
 private:
    VIO::FrameId frame_count_;
 
+  bool spin_outputs();
   void stereo_cb(
       const Image::SharedPtr left_msg,
       const Image::SharedPtr right_msg);
@@ -58,6 +59,8 @@ private:
 
   VIO::Pipeline vio_pipeline_;
   std::future<bool> handle_pipeline_;
+  std::future<bool> handle_outputs_;
+  rclcpp::WallRate outputs_loop_rate_;
 
   rclcpp::Time last_imu_timestamp_;
   rclcpp::Time last_stereo_timestamp_;
