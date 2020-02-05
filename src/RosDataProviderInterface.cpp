@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file   base-data-source.cpp
  * @brief  Base class for ROS wrappers for KimeraVIO.
  * @author Yun Chang
@@ -89,7 +89,7 @@ RosDataProviderInterface::RosDataProviderInterface(
 }
 
 RosDataProviderInterface::~RosDataProviderInterface() {
-  LOG(INFO) << "RosBaseDataProvider destructor called.";
+  LOG(INFO) << "RosDataProviderInterface destructor called.";
 }
 
 // TODO(marcus): From this documentation
