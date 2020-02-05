@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file   base-data-source.cpp
  * @brief  Base class for ROS wrappers for KimeraVIO.
  * @author Yun Chang
@@ -84,6 +84,8 @@ RosDataProviderInterface::RosDataProviderInterface(
 //      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10, true);
   // mesh_3d_frame_pub_ = this->create_publisher<pcl_msgs::msg::PolygonMesh>("mesh", 5);
   // debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
+  debug_img_pub_ =
+      this->create_publisher<sensor_msgs::msg::Image>("debug_mesh_img", 10);
 
 }
 
@@ -198,7 +200,7 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
 
     if (frontend_output && mesher_output) {
       // Publish 2d mesh debug image
-      if (debug_img_pub_.getNumSubscribers() > 0) {
+      if (debug_img_pub_->get_subscription_count() > 0) {
         cv::Mat mesh_2d_img = Visualizer3D::visualizeMesh2D(
             mesher_output->mesh_2d_for_viz_,
             frontend_output->stereo_frame_lkf_.getLeftFrame().img_);
@@ -310,9 +312,10 @@ void RosDataProviderInterface::publishDebugImage(
   h.stamp.nanosec = d.nanoseconds();
   h.stamp.sec = d.seconds();
   h.frame_id = frame_id_base_link_;
+  sensor_msgs::msg::Image msg;
+  cv_bridge::CvImage(h, "bgr8", debug_image).toImageMsg(msg);
   // Copies...
-  debug_img_pub_.publish(
-      cv_bridge::CvImage(h, "bgr8", debug_image).toImageMsg());
+  debug_img_pub_->publish(std::move(msg));
 }
 
 // void RosBaseDataProvider::publishTimeHorizonMesh3D(

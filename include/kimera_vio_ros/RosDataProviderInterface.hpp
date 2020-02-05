@@ -167,7 +167,7 @@ class RosDataProviderInterface : public DataProviderInterface, public rclcpp::No
 
  private:
   // Define publisher for debug images.
-  image_transport::Publisher debug_img_pub_;
+  // image_transport::Publisher debug_img_pub_;
 
   // Typedefs
 //  typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
@@ -182,6 +182,7 @@ class RosDataProviderInterface : public DataProviderInterface, public rclcpp::No
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr imu_bias_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr trajectory_pub_;
   rclcpp::Publisher<pose_graph_msgs::msg::PoseGraph>::SharedPtr posegraph_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr debug_img_pub_;
 
   // Define tf broadcaster for world to base_link (IMU) and to map (PGO).
   tf2_ros::TransformBroadcaster tf_broadcaster_;
