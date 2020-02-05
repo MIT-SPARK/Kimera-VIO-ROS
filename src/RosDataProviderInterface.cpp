@@ -35,11 +35,10 @@ RosDataProviderInterface::RosDataProviderInterface(
       backend_output_queue_("Backend output"),
       frontend_output_queue_("Frontend output"),
       mesher_output_queue_("Mesher output"),
-      lcd_output_queue_("LCD output")
+      lcd_output_queue_("LCD output"),
+      tf_broadcaster_{*this}
       {
   RCLCPP_INFO(this->get_logger(), ">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<");
-
-  // tf_broadcaster_ =  std::make_unique<tf2_ros::TransformBroadcaster>(this->shared_from_this());
 
   // Print parameters to check.
   printParsedParams();
@@ -529,7 +528,7 @@ void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
   odom_tf.transform.rotation.x = quaternion.x();
   odom_tf.transform.rotation.y = quaternion.y();
   odom_tf.transform.rotation.z = quaternion.z();
-  tf_broadcaster_->sendTransform(odom_tf);
+  tf_broadcaster_.sendTransform(odom_tf);
 }
 
 void RosDataProviderInterface::publishFrontendStats(
@@ -871,7 +870,7 @@ void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
   map_tf.transform.rotation.x = w_Quat_map.x();
   map_tf.transform.rotation.y = w_Quat_map.y();
   map_tf.transform.rotation.z = w_Quat_map.z();
-  tf_broadcaster_->sendTransform(map_tf);
+  tf_broadcaster_.sendTransform(map_tf);
 }
 
 void RosDataProviderInterface::printParsedParams() const {

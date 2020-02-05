@@ -184,7 +184,7 @@ class RosDataProviderInterface : public DataProviderInterface, public rclcpp::No
   rclcpp::Publisher<pose_graph_msgs::msg::PoseGraph>::SharedPtr posegraph_pub_;
 
   // Define tf broadcaster for world to base_link (IMU) and to map (PGO).
-  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  tf2_ros::TransformBroadcaster tf_broadcaster_;
 
   // Stored pose graph related objects
   std::vector<pose_graph_msgs::msg::PoseGraphEdge> loop_closure_edges_;
