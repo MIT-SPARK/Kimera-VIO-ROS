@@ -3,9 +3,7 @@
     file and include this one to launch KimeraVIO on the dataset of your choice -->
     <arg name="dataset_name" default="EuRoC"/>
     <!-- If you want to run the pipeline in parallel vs sequential mode -->
-    <arg name="parallel" default="true" />
-    <!-- If False, parses the given rosbag, otw it plays the rosbage -->
-    <arg name="online" default="true" />
+    <arg name="parallel" default="flase" />
     <!-- !!!! VIT !!!! This should be true when running online with a rosbag publishing clock,
     but false when parsing rosbag? Needs rosbag to be publishing clock -->
     <arg name="use_sim_time" default="true"/>
@@ -81,7 +79,6 @@
             --visualize=$(var visualize) \
             --parallel_run=$(var parallel)">
 
-        <param name="online_run"        value="$(var online)"/>
         <param name="use_sim_time"      value="$(var use_sim_time)"/>
         <param name="use_lcd"           value="$(var use_lcd)"/>
 

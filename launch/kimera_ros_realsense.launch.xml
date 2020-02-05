@@ -1,7 +1,7 @@
 <launch>
      <group>
           <!-- <arg name="dataset_name" value="RealSense_IR"/> -->
-          <arg name="parallel" default="True" />
+          <arg name="parallel" default="false" />
           <arg name="online" default="True" />
 
           <arg name="log_output" default="false"/>
