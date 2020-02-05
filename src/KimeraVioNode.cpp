@@ -1,17 +1,5 @@
 #include "kimera_vio_ros/KimeraVioNode.hpp"
 
-std::string string_thread_id()
-{
-  auto hashed = std::hash<std::thread::id>()(std::this_thread::get_id());
-  return std::to_string(hashed);
-}
-
-std::string KimeraVioNode::timing_string()
-{
-  rclcpp::Time time = this->now();
-  return std::to_string(time.nanoseconds());
-}
-
 KimeraVioNode::KimeraVioNode(
     const std::string & node_name,
     const rclcpp::NodeOptions & options)
