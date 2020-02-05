@@ -1,6 +1,6 @@
 <launch>
      <group>
-          <!-- <arg name="dataset_name" value="RealSense_IR"/> -->
+          <arg name="dataset_name" value="RealSense_IR"/>
           <arg name="parallel" default="false" />
           <arg name="online" default="True" />
 
