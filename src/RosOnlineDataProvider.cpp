@@ -49,7 +49,7 @@ RosOnlineDataProvider::RosOnlineDataProvider()
     }
   }
 
-  static constexpr size_t kMaxImuQueueSize = 50u;
+  static constexpr size_t kMaxImuQueueSize = 1000u;
   // Create a dedicated queue for the Imu callback so that we can use an async
   // spinner on it to process the data lighting fast.
   ros::SubscribeOptions imu_subscriber_options =
@@ -59,23 +59,26 @@ RosOnlineDataProvider::RosOnlineDataProvider()
           boost::bind(&RosOnlineDataProvider::callbackIMU, this, _1),
           ros::VoidPtr(),
           &imu_queue_);
+  imu_subscriber_options.transport_hints.tcpNoDelay(true);
 
   // Start IMU subscriber
   imu_subscriber_ = nh_.subscribe(imu_subscriber_options);
 
-  // Imu Async Spinner: will process the imu_queue_ only, instead of ROS' global
-  // queue.
-  static constexpr size_t kSpinnerThreads = 0;
+  // Imu Async Spinner: will process the imu queue only, instead of ROS' global
+  // queue. A value of 0 means to use the number of processor cores.
+  static constexpr size_t kImuSpinnerThreads = 2u;
   imu_async_spinner_ =
-      VIO::make_unique<ros::AsyncSpinner>(kSpinnerThreads, &imu_queue_);
+      VIO::make_unique<ros::AsyncSpinner>(kImuSpinnerThreads, &imu_queue_);
   imu_async_spinner_->start();
 
   // Subscribe to stereo images. Approx time sync, should be exact though...
+  // We set the queue to only 1, since we prefer to drop messages to reach
+  // real-time than to be delayed...
   static constexpr size_t kMaxImagesQueueSize = 1u;
   CHECK(it_);
   left_img_subscriber_.subscribe(*it_, "left_cam", kMaxImagesQueueSize);
   right_img_subscriber_.subscribe(*it_, "right_cam", kMaxImagesQueueSize);
-  static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
+  static constexpr size_t kMaxImageSynchronizerQueueSize = 1u;
   sync_ = VIO::make_unique<message_filters::Synchronizer<sync_pol>>(
       sync_pol(kMaxImageSynchronizerQueueSize),
       left_img_subscriber_,
@@ -85,7 +88,7 @@ RosOnlineDataProvider::RosOnlineDataProvider()
       boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
 
   // Define Reinitializer Subscriber
-  static constexpr size_t kMaxReinitQueueSize = 50u;
+  static constexpr size_t kMaxReinitQueueSize = 1u;
   reinit_flag_subscriber_ =
       nh_.subscribe("reinit_flag",
                     kMaxReinitQueueSize,
@@ -97,12 +100,9 @@ RosOnlineDataProvider::RosOnlineDataProvider()
                     &RosOnlineDataProvider::callbackReinitPose,
                     this);
 
-  // This spinner will process the regular Global callback queue of ROS.
-  // Alternatively, we could make something like IMU async spinner with its
-  // own queue, but then we need a ros::SpinOnce somewhere, or another async
-  // spinner for the global queue (although I think we don't parse anything
-  // from the global queue...
-  async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kSpinnerThreads);
+  // This async spinner will process the regular Global callback queue of ROS.
+  static constexpr size_t kGlobalSpinnerThreads = 2u;
+  async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
   async_spinner_->start();
 
   ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
@@ -163,7 +163,8 @@ void RosOnlineDataProvider::callbackIMU(
 }
 
 // Ground-truth odometry callback
-void RosOnlineDataProvider::callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& msgGtOdom) {
+void RosOnlineDataProvider::callbackGtOdomOnce(
+    const nav_msgs::Odometry::ConstPtr& msgGtOdom) {
   LOG(WARNING) << "Using initial ground-truth state for initialization.";
   msgGtOdomToVioNavState(
       msgGtOdom,
@@ -206,7 +207,8 @@ void RosOnlineDataProvider::callbackReinitPose(
 }
 
 void RosOnlineDataProvider::msgGtOdomToVioNavState(
-    const nav_msgs::Odometry::ConstPtr& gt_odom, VioNavState* vio_navstate) {
+    const nav_msgs::Odometry::ConstPtr& gt_odom,
+    VioNavState* vio_navstate) {
   CHECK_NOTNULL(vio_navstate);
 
   // World to Body rotation

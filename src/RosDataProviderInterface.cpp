@@ -131,7 +131,7 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
   }
   cv::Mat img_depth = cv_ptr->image;
   if (img_depth.type() != CV_16UC1) {
-    LOG(WARNING) << "Converting img_depth.";
+    LOG_EVERY_N(WARNING, 10) << "Converting depth image...";
     img_depth.convertTo(img_depth, CV_16UC1);
   }
   return img_depth;
