@@ -160,6 +160,7 @@ class RosDataProviderInterface : public DataProviderInterface {
  private:
   // Define publisher for debug images.
   image_transport::Publisher debug_img_pub_;
+  image_transport::Publisher feature_tracks_pub_;
 
   // Publishers
   ros::Publisher pointcloud_pub_;
@@ -171,7 +172,6 @@ class RosDataProviderInterface : public DataProviderInterface {
   ros::Publisher imu_bias_pub_;
   ros::Publisher trajectory_pub_;
   ros::Publisher posegraph_pub_;
-  image_transport::Publisher feature_tracks_pub_;
 
   // Define tf broadcaster for world to base_link (IMU) and to map (PGO).
   tf::TransformBroadcaster tf_broadcaster_;
