@@ -17,7 +17,7 @@ catkin_simple()
 
 cs_add_executable(${PROJECT_NAME}
   src/KimeraVioRos.cpp
-  src/RosDataProvider.cpp
+  src/RosDataProviderInterface.cpp
   src/RosBagDataProvider.cpp
   src/RosOnlineDataProvider.cpp)
 target_link_libraries(${PROJECT_NAME} kimera_vio)

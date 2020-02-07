@@ -60,19 +60,18 @@ RosDataProviderInterface::RosDataProviderInterface()
   CHECK(!right_cam_frame_id_.empty());
 
   // Publishers
-  odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10, true);
+  odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 1, true);
   frontend_stats_pub_ =
-      nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 10);
-  resiliency_pub_ =
-      nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 10);
-  imu_bias_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 10);
-  trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 10);
-  posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 10);
+      nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 1);
+  resiliency_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 1);
+  imu_bias_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 1);
+  trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
+  posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1);
   pointcloud_pub_ =
-      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10, true);
-  mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5, true);
-  debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
-  feature_tracks_pub_ = it_->advertise("feature_tracks", 10, true);
+      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 1, true);
+  mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 1, true);
+  debug_img_pub_ = it_->advertise("debug_mesh_img", 1, true);
+  feature_tracks_pub_ = it_->advertise("feature_tracks", 1, true);
 
   publishStaticTf(pipeline_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
@@ -163,7 +162,7 @@ void RosDataProviderInterface::publishFrontendOutput(
     h.stamp.fromNSec(output->timestamp_);
     h.frame_id = base_link_frame_id_;
     // Copies...
-    debug_img_pub_.publish(
+    feature_tracks_pub_.publish(
         cv_bridge::CvImage(h, "bgr8", output->feature_tracks_).toImageMsg());
   }
 }
@@ -186,19 +185,15 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
 
     FrontendOutput::Ptr frontend_output = nullptr;
     bool get_frontend =
-        SimpleQueueSynchronizer<FrontendOutput::Ptr>::getInstance()
-            .syncQueue(ts,
-                       &frontend_output_queue_,
-                       &frontend_output,
-                       "RosDataProvider");
+        SimpleQueueSynchronizer<FrontendOutput::Ptr>::getInstance().syncQueue(
+            ts, &frontend_output_queue_, &frontend_output, "RosDataProvider");
     CHECK(frontend_output);
     publishFrontendOutput(frontend_output);
 
     MesherOutput::Ptr mesher_output = nullptr;
     bool get_mesher =
-        SimpleQueueSynchronizer<MesherOutput::Ptr>::getInstance()
-            .syncQueue(
-                ts, &mesher_output_queue_, &mesher_output, "RosDataProvider");
+        SimpleQueueSynchronizer<MesherOutput::Ptr>::getInstance().syncQueue(
+            ts, &mesher_output_queue_, &mesher_output, "RosDataProvider");
     CHECK(mesher_output);
     publishMesherOutput(mesher_output);
 
