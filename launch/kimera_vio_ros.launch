@@ -122,6 +122,7 @@
     <remap from="mesh"                    to="mesh"/>
     <remap from="frontend_stats"          to="frontend_stats"/>
     <remap from="debug_mesh_img"          to="debug_mesh_img"/>
+    <remap from="feature_tracks"          to="feature_tracks"/>
     <remap from="time_horizon_pointcloud" to="time_horizon_pointcloud"/>
 
     <!-- Resiliency Thresholds: TODO(Sandro) document -->
