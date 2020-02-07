@@ -238,7 +238,8 @@ bool RosOnlineDataProvider::spin() {
 
   ROS_INFO("Ros data source spin done. Shutting down queues.");
   backend_output_queue_.shutdown();
-  frontend_output_queue_.shutdown();
+  frame_rate_frontend_output_queue_.shutdown();
+  keyframe_rate_frontend_output_queue_.shutdown();
   mesher_output_queue_.shutdown();
   lcd_output_queue_.shutdown();
 
@@ -250,16 +251,22 @@ bool RosOnlineDataProvider::spin() {
 }
 
 bool RosOnlineDataProvider::spinOnce() {
-  // Publish VIO output if any.
+  // Publish frontend output at frame rate
+  FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
+  if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
+    publishFrontendOutput(frame_rate_frontend_output);
+  }
+
+  // Publish all output at keyframe rate (backend, mesher, etc)
   publishSyncedOutputs();
 
-  // Publish LCD output if any.
+  // Publish lcd output at whatever frame rate it might go
   LcdOutput::Ptr lcd_output = nullptr;
   if (lcd_output_queue_.pop(lcd_output)) {
     publishLcdOutput(lcd_output);
   }
 
-  // ros::spinOnce();
+  // ros::spinOnce(); // No need because we use an async spinner, see ctor.
 
   return true;
 }

@@ -63,7 +63,12 @@ class RosDataProviderInterface : public DataProviderInterface {
   }
 
   inline void callbackFrontendOutput(const VIO::FrontendOutput::Ptr& output) {
-    frontend_output_queue_.push(output);
+    // TODO(Toni): pushing twice to two different queues bcs we are missing
+    // the functionality to ".front()" a queue, now we can just pop()...
+    // Perhaps we should make all our threadsafe queues temporally aware
+    // (meaning you can query the time of the message directly)...
+    frame_rate_frontend_output_queue_.push(output);
+    keyframe_rate_frontend_output_queue_.push(output);
   }
 
   inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
@@ -115,7 +120,8 @@ class RosDataProviderInterface : public DataProviderInterface {
 
   // Queues to store and retrieve VIO output in a thread-safe way.
   ThreadsafeQueue<BackendOutput::Ptr> backend_output_queue_;
-  ThreadsafeQueue<FrontendOutput::Ptr> frontend_output_queue_;
+  ThreadsafeQueue<FrontendOutput::Ptr> frame_rate_frontend_output_queue_;
+  ThreadsafeQueue<FrontendOutput::Ptr> keyframe_rate_frontend_output_queue_;
   ThreadsafeQueue<MesherOutput::Ptr> mesher_output_queue_;
   ThreadsafeQueue<LcdOutput::Ptr> lcd_output_queue_;
 

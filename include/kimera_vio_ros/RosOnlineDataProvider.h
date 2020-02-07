@@ -40,7 +40,6 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   inline void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
 
  private:
-  // TODO (Toni): only use one node handle...
   ros::CallbackQueue imu_queue_;
   std::unique_ptr<ros::AsyncSpinner> imu_async_spinner_;
   std::unique_ptr<ros::AsyncSpinner> async_spinner_;

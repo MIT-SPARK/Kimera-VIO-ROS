@@ -36,10 +36,11 @@ RosDataProviderInterface::RosDataProviderInterface()
       it_(nullptr),
       nh_(),
       nh_private_("~"),
-      backend_output_queue_("Backend output"),
-      frontend_output_queue_("Frontend output"),
-      mesher_output_queue_("Mesher output"),
-      lcd_output_queue_("LCD output") {
+      backend_output_queue_("Backend output ROS"),
+      frame_rate_frontend_output_queue_("Frame Rate Frontend output ROS"),
+      keyframe_rate_frontend_output_queue_("Keyframe Rate Frontend output ROS"),
+      mesher_output_queue_("Mesher output ROS"),
+      lcd_output_queue_("LCD output ROS") {
   ROS_INFO(">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<");
 
   // Print parameters to check.
@@ -186,9 +187,8 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
     FrontendOutput::Ptr frontend_output = nullptr;
     bool get_frontend =
         SimpleQueueSynchronizer<FrontendOutput::Ptr>::getInstance().syncQueue(
-            ts, &frontend_output_queue_, &frontend_output, "RosDataProvider");
+            ts, &keyframe_rate_frontend_output_queue_, &frontend_output, "RosDataProvider");
     CHECK(frontend_output);
-    publishFrontendOutput(frontend_output);
 
     MesherOutput::Ptr mesher_output = nullptr;
     bool get_mesher =
