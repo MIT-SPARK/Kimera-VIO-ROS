@@ -96,7 +96,7 @@ RosDataProviderInterface::~RosDataProviderInterface() {
 //  faster.
 const cv::Mat RosDataProviderInterface::readRosImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
-  cv_bridge::CvImagePtr cv_ptr;
+  cv_bridge::CvImageConstPtr cv_ptr;
   try {
     // TODO(Toni): here we should consider using toCvShare...
     cv_ptr = cv_bridge::toCvCopy(img_msg);
@@ -105,24 +105,29 @@ const cv::Mat RosDataProviderInterface::readRosImage(
     ros::shutdown();
   }
 
+  const cv::Mat img_const = cv_ptr->image; // Don't modify shared image in ROS.
+  cv::Mat converted_img (img_const.size(), CV_8U);
   if (img_msg->encoding == sensor_msgs::image_encodings::BGR8) {
-    LOG(WARNING) << "Converting image...";
-    cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_BGR2GRAY);
+    LOG_EVERY_N(WARNING, 10) << "Converting image...";
+    cv::cvtColor(img_const, converted_img, cv::COLOR_BGR2GRAY);
+    return converted_img;
   } else if (img_msg->encoding == sensor_msgs::image_encodings::RGB8) {
-    LOG(WARNING) << "Converting image...";
-    cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_RGB2GRAY);
+    LOG_EVERY_N(WARNING, 10) << "Converting image...";
+    cv::cvtColor(img_const, converted_img, cv::COLOR_RGB2GRAY);
+    return converted_img;
   } else {
     CHECK_EQ(cv_ptr->encoding, sensor_msgs::image_encodings::MONO8)
-        << "Expected image with MONO8 or BGR8 encoding.";
+        << "Expected image with MONO8, BGR8, or RGB8 encoding."
+           "Add in here more conversions if you wish.";
+    return img_const;
   }
-
-  return cv_ptr->image;
 }
 
 const cv::Mat RosDataProviderInterface::readRosDepthImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
+    // TODO(Toni): here we should consider using toCvShare...
     cv_ptr =
         cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::TYPE_16UC1);
   } catch (cv_bridge::Exception& exception) {
