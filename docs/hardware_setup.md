@@ -15,7 +15,7 @@ The infrared cameras offer the option to run the [Kimera-VIO](https://github.com
 
 3. Adapt the RealSense ROS wrapper to publish a single interpolated IMU message [(see nodelet xml)](https://github.com/IntelRealSense/realsense-ros/blob/c2448916218ccfe49b0d642563493cb4e9bdcc3b/realsense2_camera/launch/includes/nodelet.launch.xml#L82)
 
-4. Make sure to properly cover the infrared projector on the RealSense (this otherwise affects the quality of the infrared image with dots)
+4. The RealSense has an IR projector on it to improve the RGBD stream. This creates undesirable dots on the infrared images. You can either a) physically cover the infrared projector on the RealSense or b) disable the emitter after the RealSense node is up using ```rosrun dynamic_reconfigure dynparam set /camera/stereo_module emitter_enabled 0```
 
 5. Collect calibration bagfiles for camera intrinsics and extrinsics [(see instructions)](https://www.youtube.com/watch?v=puNXsnrYWTY&app=desktop)
 
