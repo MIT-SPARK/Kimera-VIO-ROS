@@ -105,8 +105,8 @@ const cv::Mat RosDataProviderInterface::readRosImage(
     ros::shutdown();
   }
 
-  const cv::Mat img_const = cv_ptr->image; // Don't modify shared image in ROS.
-  cv::Mat converted_img (img_const.size(), CV_8U);
+  const cv::Mat img_const = cv_ptr->image;  // Don't modify shared image in ROS.
+  cv::Mat converted_img(img_const.size(), CV_8U);
   if (img_msg->encoding == sensor_msgs::image_encodings::BGR8) {
     LOG_EVERY_N(WARNING, 10) << "Converting image...";
     cv::cvtColor(img_const, converted_img, cv::COLOR_BGR2GRAY);
@@ -192,7 +192,10 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
     FrontendOutput::Ptr frontend_output = nullptr;
     bool get_frontend =
         SimpleQueueSynchronizer<FrontendOutput::Ptr>::getInstance().syncQueue(
-            ts, &keyframe_rate_frontend_output_queue_, &frontend_output, "RosDataProvider");
+            ts,
+            &keyframe_rate_frontend_output_queue_,
+            &frontend_output,
+            "RosDataProvider");
     CHECK(frontend_output);
 
     MesherOutput::Ptr mesher_output = nullptr;
@@ -888,19 +891,23 @@ void RosDataProviderInterface::publishStaticTf(
 }
 
 void RosDataProviderInterface::printParsedParams() const {
-  LOG(INFO) << std::string(80, '=') << '\n' << " - Left camera info:";
+  static constexpr int kSeparatorWidth = 40;
+  LOG(INFO) << std::string(kSeparatorWidth, '=')
+            << " - Left camera info:";
   pipeline_params_.camera_params_.at(0).print();
-  LOG(INFO) << std::string(80, '=') << '\n' << " - Right camera info:";
+  LOG(INFO) << std::string(kSeparatorWidth, '=')
+            << " - Right camera info:";
   pipeline_params_.camera_params_.at(1).print();
-  LOG(INFO) << std::string(80, '=') << '\n' << " - IMU info:";
+  LOG(INFO) << std::string(kSeparatorWidth, '=')
+            << " - Frontend params:";
+  pipeline_params_.frontend_params_.print();
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - IMU params:";
   pipeline_params_.imu_params_.print();
-  LOG(INFO) << std::string(80, '=') << '\n' << " - IMU params:";
-  pipeline_params_.imu_params_.print();
-  LOG(INFO) << std::string(80, '=') << '\n' << " - Backend params";
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Backend params";
   pipeline_params_.backend_params_->print();
-  LOG(INFO) << std::string(80, '=');
+  LOG(INFO) << std::string(kSeparatorWidth, '=');
   pipeline_params_.lcd_params_.print();
-  LOG(INFO) << std::string(80, '=');
+  LOG(INFO) << std::string(kSeparatorWidth, '=');
 }
 
 }  // namespace VIO
