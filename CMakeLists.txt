@@ -15,17 +15,22 @@ endif()
 
 catkin_simple()
 
-cs_add_executable(${PROJECT_NAME}
-  src/KimeraVioRos.cpp
+cs_add_library(${PROJECT_NAME}
   src/RosDataProvider.cpp
   src/RosBagDataProvider.cpp
-  src/RosOnlineDataProvider.cpp)
+  src/RosOnlineDataProvider.cpp
+)
 target_link_libraries(${PROJECT_NAME} kimera_vio)
 
-catkin_add_gtest(test_base_data_source
-  test/test_base_data_source.cpp
+cs_add_executable(${PROJECT_NAME}_node
+  src/KimeraVioRos.cpp
 )
-target_link_libraries(test_base_data_source ${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME})
+
+catkin_add_gtest(testKimeraVioRos
+  test/testKimeraVioRos.cpp
+)
+target_link_libraries(testKimeraVioRos ${PROJECT_NAME})
 
 cs_install()
 
