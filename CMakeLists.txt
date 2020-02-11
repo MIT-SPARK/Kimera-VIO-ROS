@@ -22,6 +22,11 @@ cs_add_executable(${PROJECT_NAME}
   src/RosOnlineDataProvider.cpp)
 target_link_libraries(${PROJECT_NAME} kimera_vio)
 
+catkin_add_gtest(test_base_data_source
+  test/test_base_data_source.cpp
+)
+target_link_libraries(test_base_data_source ${PROJECT_NAME})
+
 cs_install()
 
 cs_export()
