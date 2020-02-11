@@ -3,7 +3,7 @@
 
 namespace VIO {
 
-TEST(KimeraVioTest, KimeraVioTest) {
+TEST(KimeraVioRosTest, KimeraVioRosTest) {
   // Works?
   EXPECT_TRUE(false);
 }
