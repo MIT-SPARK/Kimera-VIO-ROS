@@ -16,7 +16,7 @@ endif()
 catkin_simple()
 
 cs_add_library(${PROJECT_NAME}
-  src/RosDataProvider.cpp
+  src/RosDataProviderInterface.cpp
   src/RosBagDataProvider.cpp
   src/RosOnlineDataProvider.cpp
 )

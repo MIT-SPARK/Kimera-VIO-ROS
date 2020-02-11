@@ -98,7 +98,7 @@
     <remap from="left_cam"  to="$(arg left_cam_topic)"              if="$(arg online)"/>
     <remap from="right_cam" to="$(arg right_cam_topic)"             if="$(arg online)"/>
     <remap from="imu"       to="$(arg imu_topic)"                   if="$(arg online)"/>
-    <remap from="gt_topic"  to="$(arg odometry_ground_truth_topic)"
+    <remap from="gt_odom"  to="$(arg odometry_ground_truth_topic)"
            if="$(eval arg('online') and arg('odometry_ground_truth_topic') != '')"/>
 
     <!-- if we run offline, use params -->
@@ -122,6 +122,7 @@
     <remap from="mesh"                    to="mesh"/>
     <remap from="frontend_stats"          to="frontend_stats"/>
     <remap from="debug_mesh_img"          to="debug_mesh_img"/>
+    <remap from="feature_tracks"          to="feature_tracks"/>
     <remap from="time_horizon_pointcloud" to="time_horizon_pointcloud"/>
 
     <!-- Resiliency Thresholds: TODO(Sandro) document -->
@@ -136,7 +137,7 @@
 
   <!-- Launch visualizer -->
   <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
-    <arg name="frame"         value="$(arg world_frame_id)" />
+    <arg name="frame_id"      value="$(arg world_frame_id)" />
     <arg name="graph_topic"   value="pose_graph" />
     <arg name="ns"            value="kimera_vio_ros"/>
   </include>

@@ -3,15 +3,24 @@
 
 namespace VIO {
 
-TEST(BaseDataSourceTest, BaseDataSource) {
+TEST(KimeraVioTest, KimeraVioTest) {
   // Works?
+  EXPECT_TRUE(false);
 }
 
 }  // namespace VIO
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
+
+  FLAGS_logtostderr = true;
+  FLAGS_alsologtostderr = true;
+  FLAGS_v = 1;
+
   google::InitGoogleLogging(argv[0]);
+
+  ros::init(argc, argv, "test_talker");
+  ros::NodeHandle nh;
 
   int result = RUN_ALL_TESTS();
 
