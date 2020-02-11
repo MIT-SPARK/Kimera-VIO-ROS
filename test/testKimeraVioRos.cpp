@@ -19,9 +19,6 @@ int main(int argc, char** argv) {
 
   google::InitGoogleLogging(argv[0]);
 
-  ros::init(argc, argv, "test_talker");
-  ros::NodeHandle nh;
-
   int result = RUN_ALL_TESTS();
 
   return result;

@@ -143,6 +143,14 @@ rosbag play --clock /PATH/TO/KITTI_ROSBAG
   rviz -d $(rospack find kimera_vio_ros)/rviz/kimera_vio_ros_kitti.rviz
   ```
 
+## Running Unit tests
+
+To run unit tests using catkin for this specific package, call (after building the package and sourcing the workspace):
+
+```bash
+catkin run_tests --no-deps --this
+```
+
 # Hardware use
 
 See the [documentation on hardware setup](docs/hardware_setup.md) for instructions on running KimeraROS on supported hardware platforms, as well as guides on how to develop for other platforms.
