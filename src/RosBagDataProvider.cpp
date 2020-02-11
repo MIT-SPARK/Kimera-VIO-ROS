@@ -94,7 +94,7 @@ bool RosbagDataProvider::spin() {
             timestamp_frame_k,
             left_cam_info,
             readRosImage(rosbag_data_.left_imgs_.at(k))));
-        
+
         // Send right frame data to Kimera:
         CHECK(right_frame_callback_)
             << "Did you forget to register the right frame callback?";
@@ -139,6 +139,12 @@ bool RosbagDataProvider::spin() {
 
   // Endless loop until ros dies to publish left-over outputs.
   while (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
+    FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
+    if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
+      publishFrontendOutput(frame_rate_frontend_output);
+    }
+
+    // Publish backend, mesher, etc output
     publishSyncedOutputs();
 
     LcdOutput::Ptr lcd_output = nullptr;
@@ -321,7 +327,7 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
            k_last_imu_ < rosbag_data_.imu_msgs_.size()) {
       imu_pub_.publish(rosbag_data_.imu_msgs_.at(k_last_imu_));
       k_last_imu_++;
-      timestamp_last_imu_ = 
+      timestamp_last_imu_ =
           rosbag_data_.imu_msgs_.at(k_last_imu_)->header.stamp.toNSec();
     }
   }
@@ -332,7 +338,7 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
             k_last_gt_ < rosbag_data_.gt_odometry_.size()) {
       gt_odometry_pub_.publish(rosbag_data_.gt_odometry_.at(k_last_gt_));
       k_last_gt_++;
-      timestamp_last_gt_ = 
+      timestamp_last_gt_ =
           rosbag_data_.gt_odometry_.at(k_last_gt_)->header.stamp.toNSec();
     }
   }
