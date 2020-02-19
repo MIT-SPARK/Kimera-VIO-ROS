@@ -1,7 +1,7 @@
 <launch>
   <!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
   file and include this one to launch KimeraVIO on the dataset of your choice -->
-  <arg name="dataset_name" default="EuRoC"/>
+  <arg name="dataset_name" default="Euroc"/>
   <!-- If you want to run the pipeline in parallel vs sequential mode -->
   <arg name="parallel" default="true" />
   <!-- If False, parses the given rosbag, otw it plays the rosbage -->
@@ -29,7 +29,7 @@
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
   <arg name="params_folder"
-                       value="$(find kimera_vio_ros)/param/$(arg dataset_name)"/>
+                       value="$(find kimera_vio)/params/$(arg dataset_name)"/>
 
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
