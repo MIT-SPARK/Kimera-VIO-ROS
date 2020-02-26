@@ -45,7 +45,11 @@ RosOnlineDataProvider::RosOnlineDataProvider()
 
     LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO...";
     while (!gt_init_pose_receided_) {
-      ros::spinOnce();
+      if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
+        ros::spinOnce();
+      } else {
+        LOG(FATAL) << "Ros is not ok... Shutting down.";
+      }
     }
   }
 

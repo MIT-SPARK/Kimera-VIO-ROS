@@ -67,13 +67,13 @@ bool RosbagDataProvider::spin() {
   if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
     LOG(WARNING) << "Using initial ground-truth state for initialization.";
     pipeline_params_.backend_params_->initial_ground_truth_state_ =
-        getGroundTruthVioNavState(0);  // Send first gt state.
+        getGroundTruthVioNavState(0u);  // Send first gt state.
   }
 
   // Send image data to VIO:
   Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
 
-  for (size_t k = 0; k < rosbag_data_.left_imgs_.size(); k++) {
+  for (size_t k = 0u; k < rosbag_data_.left_imgs_.size(); k++) {
     if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
       // Main spin of the data provider: Interpolates IMU data
       // and builds StereoImuSyncPacket
