@@ -1,6 +1,6 @@
 <launch>
   <arg name="gt_topic" default="/tesse/odom"/>
-  <arg name="output_dir" default="$(find kimera_vio_ros)/output_logs/TESSE/"/>
+  <arg name="output_dir" default="$(find kimera_vio_ros)/output_logs/tesse/"/>
 
   <node name="gt_logger_node" pkg="kimera_vio_ros" type="gt_logger_node.py"
         output="screen">

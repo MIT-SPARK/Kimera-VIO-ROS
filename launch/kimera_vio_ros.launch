@@ -1,7 +1,7 @@
 <launch>
   <!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
   file and include this one to launch KimeraVIO on the dataset of your choice -->
-  <arg name="dataset_name" default="EuRoC"/>
+  <arg name="dataset_name" default="Euroc"/>
   <!-- If you want to run the pipeline in parallel vs sequential mode -->
   <arg name="parallel" default="true" />
   <!-- If False, parses the given rosbag, otw it plays the rosbage -->
@@ -29,7 +29,7 @@
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
   <arg name="params_folder"
-                       value="$(find kimera_vio_ros)/param/$(arg dataset_name)"/>
+                       value="$(find kimera_vio)/params/$(arg dataset_name)"/>
 
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
@@ -98,7 +98,7 @@
     <remap from="left_cam"  to="$(arg left_cam_topic)"              if="$(arg online)"/>
     <remap from="right_cam" to="$(arg right_cam_topic)"             if="$(arg online)"/>
     <remap from="imu"       to="$(arg imu_topic)"                   if="$(arg online)"/>
-    <remap from="gt_topic"  to="$(arg odometry_ground_truth_topic)"
+    <remap from="gt_odom"  to="$(arg odometry_ground_truth_topic)"
            if="$(eval arg('online') and arg('odometry_ground_truth_topic') != '')"/>
 
     <!-- if we run offline, use params -->
@@ -122,6 +122,7 @@
     <remap from="mesh"                    to="mesh"/>
     <remap from="frontend_stats"          to="frontend_stats"/>
     <remap from="debug_mesh_img"          to="debug_mesh_img"/>
+    <remap from="feature_tracks"          to="feature_tracks"/>
     <remap from="time_horizon_pointcloud" to="time_horizon_pointcloud"/>
 
     <!-- Resiliency Thresholds: TODO(Sandro) document -->
@@ -136,7 +137,7 @@
 
   <!-- Launch visualizer -->
   <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
-    <arg name="frame"         value="$(arg world_frame_id)" />
+    <arg name="frame_id"      value="$(arg world_frame_id)" />
     <arg name="graph_topic"   value="pose_graph" />
     <arg name="ns"            value="kimera_vio_ros"/>
   </include>

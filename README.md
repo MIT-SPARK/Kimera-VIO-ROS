@@ -10,15 +10,14 @@ ROS Wrapper for [Kimera](https://github.com/MIT-SPARK/Kimera).
 
 We kindly ask to cite our paper if you find this library useful:
 
- - A. Rosinol, M. Abate, Y. Chang, L. Carlone. [**Kimera: an Open-Source Library for Real-Time Metric-Semantic Localization and Mapping**](https://arxiv.org/abs/1910.02490). arXiv preprint [arXiv:1910.02490](https://arxiv.org/abs/1910.02490).
+ - A. Rosinol, M. Abate, Y. Chang, L. Carlone. [**Kimera: an Open-Source Library for Real-Time Metric-Semantic Localization and Mapping**](https://arxiv.org/abs/1910.02490). IEEE Intl. Conf. on Robotics and Automation (ICRA), 2019.
+ 
  ```bibtex
- @misc{Rosinol19arxiv-Kimera,
+ @InProceedings{Rosinol19icra-Kimera,
    title = {Kimera: an Open-Source Library for Real-Time Metric-Semantic Localization and Mapping},
    author = {Rosinol, Antoni and Abate, Marcus and Chang, Yun and Carlone, Luca},
    year = {2019},
-   eprint = {1910.02490},
-   archiveprefix = {arXiv},
-   primaryclass = {cs.RO},
+   booktitle = {IEEE Intl. Conf. on Robotics and Automation (ICRA)},
    url = {https://github.com/MIT-SPARK/Kimera},
    pdf = {https://arxiv.org/pdf/1910.02490.pdf}
  }
@@ -30,6 +29,10 @@ We kindly ask to cite our paper if you find this library useful:
 
 - Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
 
+- ROS non-default dependencies for [mesh_rviz_plugins](https://github.com/ToniRV/mesh_rviz_plugins) (change `melodic` for your ROS distribution):
+```bash
+sudo apt-get install ros-melodic-image-geometry ros-melodic-pcl-ros ros-melodic-cv-bridge
+```
 
 - System dependencies:
 First, update package list: `sudo apt-get update`
@@ -139,6 +142,14 @@ rosbag play --clock /PATH/TO/KITTI_ROSBAG
   ```bash
   rviz -d $(rospack find kimera_vio_ros)/rviz/kimera_vio_ros_kitti.rviz
   ```
+
+## Running Unit tests
+
+To run unit tests using catkin for this specific package, call (after building the package and sourcing the workspace):
+
+```bash
+catkin run_tests --no-deps --this
+```
 
 # Hardware use
 
