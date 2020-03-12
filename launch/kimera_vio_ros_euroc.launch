@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" value="EuRoC"/>
+  <arg name="dataset_name" value="Euroc"/>
   <arg name="verbosity"    default="0" />
 
   <!-- Set online to true if you use rosbag play or sensor stream -->
