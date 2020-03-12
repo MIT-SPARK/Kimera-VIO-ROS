@@ -95,7 +95,7 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   ros::Subscriber reinit_pose_subscriber_;
 
   // Ground-truth initialization pose received flag
-  bool gt_init_pose_receided_ = false;
+  bool gt_init_pose_received_ = false;
 };
 
 }  // namespace VIO
