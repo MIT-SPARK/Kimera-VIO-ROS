@@ -163,14 +163,15 @@ void RosDataProviderInterface::publishFrontendOutput(
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
   }
-  if (feature_tracks_pub_.getNumSubscribers() > 0) {
-    std_msgs::Header h;
-    h.stamp.fromNSec(output->timestamp_);
-    h.frame_id = base_link_frame_id_;
-    // Copies...
-    feature_tracks_pub_.publish(
-        cv_bridge::CvImage(h, "bgr8", output->feature_tracks_).toImageMsg());
-  }
+  // TODO(Toni): re-implement
+  // if (feature_tracks_pub_.getNumSubscribers() > 0) {
+  //   std_msgs::Header h;
+  //   h.stamp.fromNSec(output->timestamp_);
+  //   h.frame_id = base_link_frame_id_;
+  //   // Copies...
+  //   feature_tracks_pub_.publish(
+  //       cv_bridge::CvImage(h, "bgr8", output->feature_tracks_).toImageMsg());
+  // }
 }
 
 void RosDataProviderInterface::publishMesherOutput(

@@ -35,7 +35,7 @@ RosOnlineDataProvider::RosOnlineDataProvider()
   // Define ground truth odometry Subsrciber
   static constexpr size_t kMaxGtOdomQueueSize = 1u;
   if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
-    LOG(INFO) << "Requested initialization from ground truth. "
+    LOG(INFO) << "Requested initialization from ground-truth. "
               << "Initializing ground-truth odometry one-shot subscriber.";
     gt_odom_subscriber_ =
         nh_.subscribe("gt_odom",
@@ -43,14 +43,27 @@ RosOnlineDataProvider::RosOnlineDataProvider()
                       &RosOnlineDataProvider::callbackGtOdomOnce,
                       this);
 
-    LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO...";
-    while (!gt_init_pose_receided_) {
+    LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO "
+                 << "on ros topic: " << gt_odom_subscriber_.getTopic().c_str();
+    static const ros::Duration kMaxTimeSecs (3.0);
+    ros::Time start = ros::Time::now();
+    ros::Time current = ros::Time::now();
+    while (!gt_init_pose_received_ &&
+           (current - start).toSec() < kMaxTimeSecs.toSec()) {
       if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
+        current = ros::Time::now();
         ros::spinOnce();
       } else {
         LOG(FATAL) << "Ros is not ok... Shutting down.";
       }
     }
+
+    LOG_IF(WARNING, !gt_init_pose_received_)
+        << "Missing ground-truth pose while waiting for "
+        << kMaxTimeSecs.toSec() << "s."
+        << "Enabling autoInitialize and continuing without ground-truth "
+           "pose.";
+    pipeline_params_.backend_params_->autoInitialize_ = true;
   }
 
   static constexpr size_t kMaxImuQueueSize = 1000u;
@@ -175,7 +188,7 @@ void RosOnlineDataProvider::callbackGtOdomOnce(
       &pipeline_params_.backend_params_->initial_ground_truth_state_);
 
   // Signal receptance of ground-truth pose.
-  gt_init_pose_receided_ = true;
+  gt_init_pose_received_ = true;
 
   // Shutdown subscriber to prevent new gt poses from interfering
   gt_odom_subscriber_.shutdown();
