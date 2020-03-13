@@ -168,7 +168,7 @@ void RosOnlineDataProvider::callbackIMU(
   // Adapt imu timestamp to account for time shift in IMU-cam
   Timestamp timestamp = msgIMU->header.stamp.toNSec();
 
-  static const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
+  const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
   if (imu_shift != ros::Duration(0)) {
     LOG_EVERY_N(WARNING, 1000) << "imu_shift is not 0.";
     timestamp -= imu_shift.toNSec();
