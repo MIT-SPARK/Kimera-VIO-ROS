@@ -1,18 +1,15 @@
 ﻿/**
- * @file   base-data-source.cpp
- * @brief  Base class for ROS wrappers for KimeraVIO.
- * @author Yun Chang
+ * @file   RosDataProviderInterface.cpp
+ * @brief  Base class for ROS wrappers for Kimera-VIO.
  * @author Antoni Rosinol
  */
+
+#include "kimera_vio_ros/RosDataProviderInterface.h"
 
 #include <string>
 #include <vector>
 
-#include "kimera_vio_ros/RosOnlineDataProvider.h"
-
-#include <kimera-vio/pipeline/PipelineModule.h>
-#include <kimera-vio/pipeline/QueueSynchronizer.h>
-#include <kimera-vio/visualizer/Visualizer3D.h>
+#include <glog/logging.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -29,6 +26,11 @@
 #include <pcl_msgs/PolygonMesh.h>
 #include <pcl_ros/point_cloud.h>
 
+#include <kimera-vio/dataprovider/DataProviderInterface.h>
+#include <kimera-vio/pipeline/PipelineModule.h>
+#include <kimera-vio/pipeline/QueueSynchronizer.h>
+#include <kimera-vio/visualizer/Visualizer3D.h>
+
 namespace VIO {
 
 RosDataProviderInterface::RosDataProviderInterface()
@@ -41,10 +43,10 @@ RosDataProviderInterface::RosDataProviderInterface()
       keyframe_rate_frontend_output_queue_("Keyframe Rate Frontend output ROS"),
       mesher_output_queue_("Mesher output ROS"),
       lcd_output_queue_("LCD output ROS") {
-  ROS_INFO(">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<");
+  LOG(INFO) << ">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<";
 
   // Print parameters to check.
-  printParsedParams();
+  if (VLOG_IS_ON(1)) printParsedParams();
 
   it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
 
@@ -83,7 +85,7 @@ RosDataProviderInterface::RosDataProviderInterface()
 }
 
 RosDataProviderInterface::~RosDataProviderInterface() {
-  LOG(INFO) << "RosBaseDataProvider destructor called.";
+  VLOG(1) << "RosBaseDataProvider destructor called.";
 }
 
 // TODO(marcus): From this documentation
@@ -96,6 +98,7 @@ RosDataProviderInterface::~RosDataProviderInterface() {
 //  faster.
 const cv::Mat RosDataProviderInterface::readRosImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
+  CHECK(img_msg);
   cv_bridge::CvImageConstPtr cv_ptr;
   try {
     // TODO(Toni): here we should consider using toCvShare...
@@ -105,6 +108,7 @@ const cv::Mat RosDataProviderInterface::readRosImage(
     ros::shutdown();
   }
 
+  CHECK(cv_ptr);
   const cv::Mat img_const = cv_ptr->image;  // Don't modify shared image in ROS.
   cv::Mat converted_img(img_const.size(), CV_8U);
   if (img_msg->encoding == sensor_msgs::image_encodings::BGR8) {

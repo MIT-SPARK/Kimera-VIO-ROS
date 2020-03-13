@@ -1,7 +1,6 @@
 /**
- * @file   rosbag-data-source.cpp
- * @brief  Parse rosbad and run KimeraVIO
- * @author Yun Chang
+ * @file   RosBagDataProvider.cpp
+ * @brief  Parse rosbag and run Kimera-VIO.
  * @author Antoni Rosinol
  */
 
@@ -32,7 +31,7 @@ RosbagDataProvider::RosbagDataProvider()
       k_last_kf_(0),
       k_last_imu_(0),
       k_last_gt_(0) {
-  ROS_INFO("Starting KimeraVIO wrapper for offline");
+  LOG(INFO) << "Starting Kimera-VIO wrapper offline mode.";
 
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
   CHECK(nh_private_.getParam("left_cam_rosbag_topic", left_imgs_topic_));
@@ -74,7 +73,7 @@ bool RosbagDataProvider::spin() {
   Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
 
   for (size_t k = 0u; k < rosbag_data_.left_imgs_.size(); k++) {
-    if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
+    if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
       // Main spin of the data provider: Interpolates IMU data
       // and builds StereoImuSyncPacket
       // (Think of this as the spin of the other parser/data-providers)
@@ -138,7 +137,7 @@ bool RosbagDataProvider::spin() {
   LOG(INFO) << "Rosbag processing finished.";
 
   // Endless loop until ros dies to publish left-over outputs.
-  while (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
+  while (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
     FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
     if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
       publishFrontendOutput(frame_rate_frontend_output);

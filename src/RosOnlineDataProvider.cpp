@@ -1,7 +1,6 @@
 /**
- * @file   ros-data-source.cpp
+ * @file   RosOnlineDataProvider.cpp
  * @brief  ROS wrapper for online processing.
- * @author Yun Chang
  * @author Antoni Rosinol
  */
 
@@ -30,8 +29,6 @@ RosOnlineDataProvider::RosOnlineDataProvider()
       imu_queue_(),
       imu_async_spinner_(nullptr),
       async_spinner_(nullptr) {
-  ROS_INFO("Starting KimeraVIO wrapper for online");
-
   // Define ground truth odometry Subsrciber
   static constexpr size_t kMaxGtOdomQueueSize = 1u;
   if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
@@ -50,7 +47,7 @@ RosOnlineDataProvider::RosOnlineDataProvider()
     ros::Time current = ros::Time::now();
     while (!gt_init_pose_received_ &&
            (current - start).toSec() < kMaxTimeSecs.toSec()) {
-      if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
+      if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
         current = ros::Time::now();
         ros::spinOnce();
       } else {
@@ -86,7 +83,6 @@ RosOnlineDataProvider::RosOnlineDataProvider()
   static constexpr size_t kImuSpinnerThreads = 2u;
   imu_async_spinner_ =
       VIO::make_unique<ros::AsyncSpinner>(kImuSpinnerThreads, &imu_queue_);
-  imu_async_spinner_->start();
 
   // Subscribe to stereo images. Approx time sync, should be exact though...
   // We set the queue to only 1, since we prefer to drop messages to reach
@@ -120,13 +116,10 @@ RosOnlineDataProvider::RosOnlineDataProvider()
   // This async spinner will process the regular Global callback queue of ROS.
   static constexpr size_t kGlobalSpinnerThreads = 2u;
   async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
-  async_spinner_->start();
-
-  ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
 }
 
 RosOnlineDataProvider::~RosOnlineDataProvider() {
-  LOG(INFO) << "RosDataProvider destructor called.";
+  VLOG(1) << "RosDataProvider destructor called.";
 }
 
 // TODO(marcus): with the readRosImage, this is a slow callback. Might be too
@@ -134,11 +127,14 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
 void RosOnlineDataProvider::callbackStereoImages(
     const sensor_msgs::ImageConstPtr& left_msg,
     const sensor_msgs::ImageConstPtr& right_msg) {
+  CHECK_GE(pipeline_params_.camera_params_.size(), 2u);
   static const CameraParams& left_cam_info =
       pipeline_params_.camera_params_.at(0);
   static const CameraParams& right_cam_info =
       pipeline_params_.camera_params_.at(1);
 
+  CHECK(left_msg);
+  CHECK(right_msg);
   const Timestamp& timestamp_left = left_msg->header.stamp.toNSec();
   const Timestamp& timestamp_right = right_msg->header.stamp.toNSec();
 
@@ -251,18 +247,27 @@ void RosOnlineDataProvider::msgGtOdomToVioNavState(
 bool RosOnlineDataProvider::spin() {
   CHECK_EQ(pipeline_params_.camera_params_.size(), 2u);
 
-  while (ros::ok()) {
+  // Start async spinners to get input data.
+  CHECK(imu_async_spinner_);
+  imu_async_spinner_->start();
+  CHECK(async_spinner_);
+  async_spinner_->start();
+
+  // Start our own spin to publish output data to ROS
+  while (ros::ok() && !shutdown_) {
     spinOnce();  // TODO(marcus): need a sequential mode?
   }
 
-  ROS_INFO("Ros data source spin done. Shutting down queues.");
+  LOG(INFO) << "Ros data source spin done. Shutting down queues.";
   backend_output_queue_.shutdown();
   frame_rate_frontend_output_queue_.shutdown();
   keyframe_rate_frontend_output_queue_.shutdown();
   mesher_output_queue_.shutdown();
   lcd_output_queue_.shutdown();
 
-  ROS_INFO("Shutting down queues ROS Async Spinner.");
+  LOG(INFO) << "Shutting down queues ROS Async Spinner.";
+  CHECK(imu_async_spinner_);
+  imu_async_spinner_->stop();
   CHECK(async_spinner_);
   async_spinner_->stop();
 

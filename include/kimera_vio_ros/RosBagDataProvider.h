@@ -1,7 +1,6 @@
 /**
- * @file   rosbag-data-source.h
- * @brief  ROS wrapper
- * @author Yun Chang
+ * @file   RosBagDataProvider.h
+ * @brief  Parse rosbag and run Kimera-VIO.
  * @author Antoni Rosinol
  */
 

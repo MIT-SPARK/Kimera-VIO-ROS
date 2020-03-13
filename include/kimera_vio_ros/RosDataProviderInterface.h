@@ -1,7 +1,6 @@
 /**
- * @file   base-data-source.h
- * @brief  Base class for ROS wrappers for KimeraVIO.
- * @author Yun Chang
+ * @file   RosDataProviderInterface.h
+ * @brief  Base class for ROS wrappers for Kimera-VIO.
  * @author Antoni Rosinol
  */
 
