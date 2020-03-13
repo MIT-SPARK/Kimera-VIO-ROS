@@ -131,9 +131,9 @@ void RosOnlineDataProvider::callbackStereoImages(
     const sensor_msgs::ImageConstPtr& left_msg,
     const sensor_msgs::ImageConstPtr& right_msg) {
   CHECK_GE(pipeline_params_.camera_params_.size(), 2u);
-  static const CameraParams& left_cam_info =
+  const CameraParams& left_cam_info =
       pipeline_params_.camera_params_.at(0);
-  static const CameraParams& right_cam_info =
+  const CameraParams& right_cam_info =
       pipeline_params_.camera_params_.at(1);
 
   CHECK(left_msg);
