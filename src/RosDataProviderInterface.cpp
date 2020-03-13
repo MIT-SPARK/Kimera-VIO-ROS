@@ -43,7 +43,7 @@ RosDataProviderInterface::RosDataProviderInterface()
       keyframe_rate_frontend_output_queue_("Keyframe Rate Frontend output ROS"),
       mesher_output_queue_("Mesher output ROS"),
       lcd_output_queue_("LCD output ROS") {
-  LOG(INFO) << ">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<";
+  VLOG(1) << "Initializing RosDataProviderInterface.";
 
   // Print parameters to check.
   if (VLOG_IS_ON(1)) printParsedParams();

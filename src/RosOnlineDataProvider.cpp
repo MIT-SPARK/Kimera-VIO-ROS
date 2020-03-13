@@ -42,6 +42,9 @@ RosOnlineDataProvider::RosOnlineDataProvider()
 
     LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO "
                  << "on ros topic: " << gt_odom_subscriber_.getTopic().c_str();
+    // TODO(TONI): this won't work if the user starts first the pipeline and
+    // then the rosbag play! Because at start ros::Time::now() will be 0, and once
+    // the rosbag starts it will be whatever the rosbag's first msg.
     static const ros::Duration kMaxTimeSecs (3.0);
     ros::Time start = ros::Time::now();
     ros::Time current = ros::Time::now();
@@ -247,6 +250,8 @@ void RosOnlineDataProvider::msgGtOdomToVioNavState(
 bool RosOnlineDataProvider::spin() {
   CHECK_EQ(pipeline_params_.camera_params_.size(), 2u);
 
+  LOG(INFO) << "Spinning RosOnlineDataProvider.";
+
   // Start async spinners to get input data.
   CHECK(imu_async_spinner_);
   imu_async_spinner_->start();
@@ -270,6 +275,8 @@ bool RosOnlineDataProvider::spin() {
   imu_async_spinner_->stop();
   CHECK(async_spinner_);
   async_spinner_->stop();
+
+  LOG(INFO) << "RosOnlineDataProvider successfully shutdown.";
 
   return false;
 }

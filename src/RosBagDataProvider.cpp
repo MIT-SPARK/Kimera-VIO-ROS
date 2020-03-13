@@ -121,10 +121,10 @@ bool RosbagDataProvider::spin() {
 
         timestamp_last_frame = timestamp_frame_k;
       } else {
-        ROS_WARN(
+        LOG(WARNING) <<
             "Skipping frame %d. Frame timestamps out of order:"
-            " less than or equal to last frame.",
-            static_cast<int>(k));
+            " less than or equal to last frame." <<
+            static_cast<int>(k);
       }
 
       ros::spinOnce();
