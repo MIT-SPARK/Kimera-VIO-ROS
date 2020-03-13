@@ -11,10 +11,9 @@
 
 // Dependencies from ROS
 #include <ros/ros.h>
-#include <std_srvs/Empty.h>
-#include <std_srvs/EmptyRequest.h>
-#include <std_srvs/EmptyResponse.h>
-#include <std_srvs/SetBool.h>
+#include <std_srvs/Trigger.h>
+#include <std_srvs/TriggerRequest.h>
+#include <std_srvs/TriggerResponse.h>
 
 // Dependencies from VIO
 #include <kimera-vio/pipeline/Pipeline.h>
@@ -35,20 +34,23 @@ class KimeraVioRos {
     // Add rosservice to restart VIO pipeline if requested.
     ros::NodeHandle nh_("~");
     restart_vio_pipeline_srv_ = nh_.advertiseService(
-        "reconstruct_scene_graph", &KimeraVioRos::restartKimeraVio, this);
-  };
+        "restart_kimera_vio", &KimeraVioRos::restartKimeraVio, this);
+  }
   virtual ~KimeraVioRos() = default;
 
   bool runKimeraVio() {
     // Create dataset parser.
-    VLOG(1) << "Creating Data Provider.";
+    VLOG(1) << "Destroy Data Provider.";
     data_provider_.reset();
+    VLOG(1) << "Creating Data Provider.";
     data_provider_ = createDataProvider();
     CHECK(data_provider_) << "Data provider construction failed.";
 
     // Create VIO pipeline.
-    VLOG(1) << "Creating Kimera-VIO.";
+    VLOG(1) << "Destroy Vio Pipeline.";
     vio_pipeline_.reset();
+    VLOG(1) << "Creating Kimera-VIO.";
+    if (vio_pipeline_) vio_pipeline_->shutdown();
     vio_pipeline_ =
         VIO::make_unique<VIO::Pipeline>(data_provider_->pipeline_params_);
     CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
@@ -61,13 +63,15 @@ class KimeraVioRos {
     return spin();
   }
 
-  bool restartKimeraVio(std_srvs::SetBool::Request& request,
-                        std_srvs::SetBool::Response& response) {
-    LOG(INFO) << "Requested Kimera-VIO restart.";
-    if (request.data && !restart_vio_pipeline_) {
+  bool restartKimeraVio(std_srvs::Trigger::Request& request,
+                        std_srvs::Trigger::Response& response) {
+    if (!restart_vio_pipeline_) {
       restart_vio_pipeline_ = true;
+      response.message = "Kimera-VIO restart requested.";
+      response.success = true;
     } else {
-      LOG(WARNING) << "Kimera-VIO should already be restarting...";
+      response.message = "Kimera-VIO should already be restarting...";
+      response.success = false;
     }
     return true;
   }
