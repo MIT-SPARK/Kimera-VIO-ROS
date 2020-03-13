@@ -151,6 +151,21 @@ To run unit tests using catkin for this specific package, call (after building t
 catkin run_tests --no-deps --this
 ```
 
+## Other functionalities
+
+### Restart Kimera-VIO
+
+The typical use case is that you have multiple rosbags and you don't want to be killing Kimera-VIO(-ROS) each time.
+If this is your case, then we provide a rosservice to restart Kimera-VIO (it will do a hard restart, meaning the whole pipeline and data provider will be destructed and constructed again).
+```bash
+rosservice call /kimera_vio_ros/kimera_vio_ros_node/restart_kimera_vio
+```
+> Note that Kimera-VIO will complain if timestamps are not strictly increasing. Therefore, one must follow these steps:
+> 1. Start Kimera-VIO and rosbag
+> 2. Stop rosbag
+> 3. Call rosservice to restart VIO
+> 4. Start another rosbag
+
 # Hardware use
 
 See the [documentation on hardware setup](docs/hardware_setup.md) for instructions on running KimeraROS on supported hardware platforms, as well as guides on how to develop for other platforms.

@@ -156,6 +156,9 @@ void RosOnlineDataProvider::callbackStereoImages(
 
 void RosOnlineDataProvider::callbackIMU(
     const sensor_msgs::ImuConstPtr& msgIMU) {
+
+  // TODO(TONI): detect jump backwards in time?
+
   VIO::ImuAccGyr imu_accgyr;
 
   imu_accgyr(0) = msgIMU->linear_acceleration.x;
