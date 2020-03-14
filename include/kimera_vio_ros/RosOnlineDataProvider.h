@@ -1,7 +1,6 @@
 /**
- * @file   ros-data-source.h
+ * @file   RosOnlineDataProvider.h
  * @brief  ROS wrapper for online processing.
- * @author Yun Chang
  * @author Antoni Rosinol
  */
 
@@ -16,8 +15,6 @@
 #include <std_msgs/Bool.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
-
-// using namespace StereoImageBuffer;
 
 namespace VIO {
 
