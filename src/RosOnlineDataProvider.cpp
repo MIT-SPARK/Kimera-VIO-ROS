@@ -145,12 +145,13 @@ void RosOnlineDataProvider::callbackStereoImages(
   CHECK(right_frame_callback_)
       << "Did you forget to register the right frame callback?";
 
-  left_frame_callback_(VIO::make_unique<Frame>(
-      frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
-  right_frame_callback_(VIO::make_unique<Frame>(
-      frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
-
-  frame_count_++;
+  if (!shutdown_) {
+    left_frame_callback_(VIO::make_unique<Frame>(
+        frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
+    right_frame_callback_(VIO::make_unique<Frame>(
+        frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
+    frame_count_++;
+  }
 }
 
 void RosOnlineDataProvider::callbackIMU(
@@ -176,8 +177,10 @@ void RosOnlineDataProvider::callbackIMU(
     timestamp -= imu_shift.toNSec();
   }
 
-  CHECK(imu_single_callback_) << "Did you forget to register the IMU callback?";
-  imu_single_callback_(ImuMeasurement(timestamp, imu_accgyr));
+  if (!shutdown_) {
+    CHECK(imu_single_callback_) << "Did you forget to register the IMU callback?";
+    imu_single_callback_(ImuMeasurement(timestamp, imu_accgyr));
+  }
 }
 
 // Ground-truth odometry callback
@@ -255,22 +258,20 @@ bool RosOnlineDataProvider::spin() {
   LOG(INFO) << "Spinning RosOnlineDataProvider.";
 
   // Start async spinners to get input data.
-  CHECK(imu_async_spinner_);
-  imu_async_spinner_->start();
-  CHECK(async_spinner_);
-  async_spinner_->start();
+  if (!shutdown_) {
+    CHECK(imu_async_spinner_);
+    imu_async_spinner_->start();
+    CHECK(async_spinner_);
+    async_spinner_->start();
+  }
 
   // Start our own spin to publish output data to ROS
   while (ros::ok() && !shutdown_) {
     spinOnce();  // TODO(marcus): need a sequential mode?
   }
 
-  LOG(INFO) << "Ros data source spin done. Shutting down queues.";
-  backend_output_queue_.shutdown();
-  frame_rate_frontend_output_queue_.shutdown();
-  keyframe_rate_frontend_output_queue_.shutdown();
-  mesher_output_queue_.shutdown();
-  lcd_output_queue_.shutdown();
+
+  imu_queue_.disable();
 
   LOG(INFO) << "Shutting down queues ROS Async Spinner.";
   CHECK(imu_async_spinner_);
