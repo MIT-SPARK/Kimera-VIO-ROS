@@ -76,7 +76,6 @@ bool KimeraVioRos::spin() {
                    data_provider_.get());
     std::future<bool> vio_pipeline_handle = std::async(
         std::launch::async, &VIO::Pipeline::spin, vio_pipeline_.get());
-    ros::start();
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.
     while (ros::ok() &&
