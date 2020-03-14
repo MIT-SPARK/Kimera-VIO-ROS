@@ -42,25 +42,24 @@ RosOnlineDataProvider::RosOnlineDataProvider()
 
     LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO "
                  << "on ros topic: " << gt_odom_subscriber_.getTopic().c_str();
-    // TODO(TONI): this won't work if the user starts first the pipeline and
-    // then the rosbag play! Because at start ros::Time::now() will be 0, and once
-    // the rosbag starts it will be whatever the rosbag's first msg.
-    static const ros::Duration kMaxTimeSecs (3.0);
-    ros::Time start = ros::Time::now();
-    ros::Time current = ros::Time::now();
+    // We wait for the gt pose for kMaxIterations, if ros is running (aka
+    // if time is non-zero (as would happen if running with sim_time).
+    static constexpr size_t kMaxIterations = 100u;
+    size_t iterations = 0u;
     while (!gt_init_pose_received_ &&
-           (current - start).toSec() < kMaxTimeSecs.toSec()) {
+           ros::Time::now().isValid() && // Wait until time is non-zero
+           iterations < kMaxIterations) {
       if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
-        current = ros::Time::now();
         ros::spinOnce();
       } else {
         LOG(FATAL) << "Ros is not ok... Shutting down.";
       }
+      ++iterations;
     }
 
     LOG_IF(WARNING, !gt_init_pose_received_)
-        << "Missing ground-truth pose while waiting for "
-        << kMaxTimeSecs.toSec() << "s."
+        << "Missing ground-truth pose while trying for "
+        << kMaxIterations << " times."
         << "Enabling autoInitialize and continuing without ground-truth "
            "pose.";
     pipeline_params_.backend_params_->autoInitialize_ = true;
