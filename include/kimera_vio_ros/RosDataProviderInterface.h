@@ -78,6 +78,11 @@ class RosDataProviderInterface : public DataProviderInterface {
     lcd_output_queue_.push(output);
   }
 
+  void shutdown() override {
+    DataProviderInterface::shutdown();
+    shutdownQueues();
+  }
+
  protected:
   const cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;
 
@@ -101,6 +106,14 @@ class RosDataProviderInterface : public DataProviderInterface {
   void publishStaticTf(const gtsam::Pose3& pose,
                        const std::string& parent_frame_id,
                        const std::string& child_frame_id);
+
+  virtual void shutdownQueues() {
+    backend_output_queue_.shutdown();
+    frame_rate_frontend_output_queue_.shutdown();
+    keyframe_rate_frontend_output_queue_.shutdown();
+    mesher_output_queue_.shutdown();
+    lcd_output_queue_.shutdown();
+  }
 
  protected:
   // Define Node Handler for general use (Parameter server)
