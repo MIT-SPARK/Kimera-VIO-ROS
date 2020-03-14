@@ -10,15 +10,14 @@ ROS Wrapper for [Kimera](https://github.com/MIT-SPARK/Kimera).
 
 We kindly ask to cite our paper if you find this library useful:
 
- - A. Rosinol, M. Abate, Y. Chang, L. Carlone. [**Kimera: an Open-Source Library for Real-Time Metric-Semantic Localization and Mapping**](https://arxiv.org/abs/1910.02490). arXiv preprint [arXiv:1910.02490](https://arxiv.org/abs/1910.02490).
+ - A. Rosinol, M. Abate, Y. Chang, L. Carlone. [**Kimera: an Open-Source Library for Real-Time Metric-Semantic Localization and Mapping**](https://arxiv.org/abs/1910.02490). IEEE Intl. Conf. on Robotics and Automation (ICRA), 2019.
+ 
  ```bibtex
- @misc{Rosinol19arxiv-Kimera,
+ @InProceedings{Rosinol19icra-Kimera,
    title = {Kimera: an Open-Source Library for Real-Time Metric-Semantic Localization and Mapping},
    author = {Rosinol, Antoni and Abate, Marcus and Chang, Yun and Carlone, Luca},
    year = {2019},
-   eprint = {1910.02490},
-   archiveprefix = {arXiv},
-   primaryclass = {cs.RO},
+   booktitle = {IEEE Intl. Conf. on Robotics and Automation (ICRA)},
    url = {https://github.com/MIT-SPARK/Kimera},
    pdf = {https://arxiv.org/pdf/1910.02490.pdf}
  }
@@ -30,6 +29,10 @@ We kindly ask to cite our paper if you find this library useful:
 
 - Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
 
+- ROS non-default dependencies for [mesh_rviz_plugins](https://github.com/ToniRV/mesh_rviz_plugins) (change `melodic` for your ROS distribution):
+```bash
+sudo apt-get install ros-melodic-image-geometry ros-melodic-pcl-ros ros-melodic-cv-bridge
+```
 
 - System dependencies:
 First, update package list: `sudo apt-get update`
@@ -57,6 +60,8 @@ mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/
 catkin init
 catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+# On Ubuntu 16.04:
+# catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release -DGTSAM_USE_SYSTEM_EIGEN=ON
 catkin config --merge-devel
 
 # Add workspace to bashrc for automatic sourcing of workspace.
@@ -137,6 +142,29 @@ rosbag play --clock /PATH/TO/KITTI_ROSBAG
   ```bash
   rviz -d $(rospack find kimera_vio_ros)/rviz/kimera_vio_ros_kitti.rviz
   ```
+
+## Running Unit tests
+
+To run unit tests using catkin for this specific package, call (after building the package and sourcing the workspace):
+
+```bash
+catkin run_tests --no-deps --this
+```
+
+## Other functionalities
+
+### Restart Kimera-VIO
+
+The typical use case is that you have multiple rosbags and you don't want to be killing Kimera-VIO(-ROS) each time.
+If this is your case, then we provide a rosservice to restart Kimera-VIO (it will do a hard restart, meaning the whole pipeline and data provider will be destructed and constructed again).
+```bash
+rosservice call /kimera_vio_ros/kimera_vio_ros_node/restart_kimera_vio
+```
+> Note that Kimera-VIO will complain if timestamps are not strictly increasing. Therefore, one must follow these steps:
+> 1. Start Kimera-VIO and rosbag
+> 2. Stop rosbag
+> 3. Call rosservice to restart VIO
+> 4. Start another rosbag
 
 # Hardware use
 

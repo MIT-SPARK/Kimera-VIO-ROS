@@ -1,7 +1,6 @@
 /**
- * @file   rosbag-data-source.cpp
- * @brief  Parse rosbag and run KimeraVIO
- * @author Yun Chang
+ * @file   RosBagDataProvider.cpp
+ * @brief  Parse rosbag and run Kimera-VIO.
  * @author Antoni Rosinol
  * @author Marcus Abate
  */
@@ -33,7 +32,7 @@ RosbagDataProvider::RosbagDataProvider()
       k_last_kf_(0),
       k_last_imu_(0),
       k_last_gt_(0) {
-  ROS_INFO("Starting KimeraVIO wrapper for offline");
+  LOG(INFO) << "Starting Kimera-VIO wrapper offline mode.";
 
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
   CHECK(nh_private_.getParam("left_cam_rosbag_topic", left_imgs_topic_));
@@ -68,14 +67,14 @@ bool RosbagDataProvider::spin() {
   if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
     LOG(WARNING) << "Using initial ground-truth state for initialization.";
     pipeline_params_.backend_params_->initial_ground_truth_state_ =
-        getGroundTruthVioNavState(0);  // Send first gt state.
+        getGroundTruthVioNavState(0u);  // Send first gt state.
   }
 
   // Send image data to VIO:
   Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
 
-  for (size_t k = 0; k < rosbag_data_.left_imgs_.size(); k++) {
-    if (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
+  for (size_t k = 0u; k < rosbag_data_.left_imgs_.size(); k++) {
+    if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
       // Main spin of the data provider: Interpolates IMU data
       // and builds StereoImuSyncPacket
       // (Think of this as the spin of the other parser/data-providers)
@@ -95,7 +94,7 @@ bool RosbagDataProvider::spin() {
             timestamp_frame_k,
             left_cam_info,
             readRosImage(rosbag_data_.left_imgs_.at(k))));
-        
+
         // Send right frame data to Kimera:
         CHECK(right_frame_callback_)
             << "Did you forget to register the right frame callback?";
@@ -123,10 +122,10 @@ bool RosbagDataProvider::spin() {
 
         timestamp_last_frame = timestamp_frame_k;
       } else {
-        ROS_WARN(
+        LOG(WARNING) <<
             "Skipping frame %d. Frame timestamps out of order:"
-            " less than or equal to last frame.",
-            static_cast<int>(k));
+            " less than or equal to last frame." <<
+            static_cast<int>(k);
       }
 
       ros::spinOnce();
@@ -139,7 +138,13 @@ bool RosbagDataProvider::spin() {
   LOG(INFO) << "Rosbag processing finished.";
 
   // Endless loop until ros dies to publish left-over outputs.
-  while (nh_.ok() && ros::ok() && !ros::isShuttingDown()) {
+  while (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
+    FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
+    if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
+      publishFrontendOutput(frame_rate_frontend_output);
+    }
+
+    // Publish backend, mesher, etc output
     publishSyncedOutputs();
 
     LcdOutput::Ptr lcd_output = nullptr;
@@ -322,7 +327,7 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
            k_last_imu_ < rosbag_data_.imu_msgs_.size()) {
       imu_pub_.publish(rosbag_data_.imu_msgs_.at(k_last_imu_));
       k_last_imu_++;
-      timestamp_last_imu_ = 
+      timestamp_last_imu_ =
           rosbag_data_.imu_msgs_.at(k_last_imu_)->header.stamp.toNSec();
     }
   }
@@ -333,7 +338,7 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
             k_last_gt_ < rosbag_data_.gt_odometry_.size()) {
       gt_odometry_pub_.publish(rosbag_data_.gt_odometry_.at(k_last_gt_));
       k_last_gt_++;
-      timestamp_last_gt_ = 
+      timestamp_last_gt_ =
           rosbag_data_.gt_odometry_.at(k_last_gt_)->header.stamp.toNSec();
     }
   }

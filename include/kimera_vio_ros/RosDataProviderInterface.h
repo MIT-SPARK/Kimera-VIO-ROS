@@ -1,7 +1,6 @@
 /**
- * @file   base-data-source.h
- * @brief  Base class for ROS wrappers for KimeraVIO.
- * @author Yun Chang
+ * @file   RosDataProviderInterface.h
+ * @brief  Base class for ROS wrappers for Kimera-VIO.
  * @author Antoni Rosinol
  * @author Marcus Abate
  */
@@ -64,7 +63,12 @@ class RosDataProviderInterface : public DataProviderInterface {
   }
 
   inline void callbackFrontendOutput(const VIO::FrontendOutput::Ptr& output) {
-    frontend_output_queue_.push(output);
+    // TODO(Toni): pushing twice to two different queues bcs we are missing
+    // the functionality to ".front()" a queue, now we can just pop()...
+    // Perhaps we should make all our threadsafe queues temporally aware
+    // (meaning you can query the time of the message directly)...
+    frame_rate_frontend_output_queue_.push(output);
+    keyframe_rate_frontend_output_queue_.push(output);
   }
 
   inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
@@ -73,6 +77,11 @@ class RosDataProviderInterface : public DataProviderInterface {
 
   inline void callbackLcdOutput(const VIO::LcdOutput::Ptr& output) {
     lcd_output_queue_.push(output);
+  }
+
+  void shutdown() override {
+    DataProviderInterface::shutdown();
+    shutdownQueues();
   }
 
  protected:
@@ -98,6 +107,14 @@ class RosDataProviderInterface : public DataProviderInterface {
   void publishStaticTf(const gtsam::Pose3& pose,
                        const std::string& parent_frame_id,
                        const std::string& child_frame_id);
+
+  virtual void shutdownQueues() {
+    backend_output_queue_.shutdown();
+    frame_rate_frontend_output_queue_.shutdown();
+    keyframe_rate_frontend_output_queue_.shutdown();
+    mesher_output_queue_.shutdown();
+    lcd_output_queue_.shutdown();
+  }
 
  protected:
   void msgTFtoPose(const geometry_msgs::Transform& tf, gtsam::Pose3* pose);
@@ -125,7 +142,8 @@ class RosDataProviderInterface : public DataProviderInterface {
 
   // Queues to store and retrieve VIO output in a thread-safe way.
   ThreadsafeQueue<BackendOutput::Ptr> backend_output_queue_;
-  ThreadsafeQueue<FrontendOutput::Ptr> frontend_output_queue_;
+  ThreadsafeQueue<FrontendOutput::Ptr> frame_rate_frontend_output_queue_;
+  ThreadsafeQueue<FrontendOutput::Ptr> keyframe_rate_frontend_output_queue_;
   ThreadsafeQueue<MesherOutput::Ptr> mesher_output_queue_;
   ThreadsafeQueue<LcdOutput::Ptr> lcd_output_queue_;
 
@@ -170,6 +188,7 @@ class RosDataProviderInterface : public DataProviderInterface {
  private:
   // Define publisher for debug images.
   image_transport::Publisher debug_img_pub_;
+  image_transport::Publisher feature_tracks_pub_;
 
   // Publishers
   ros::Publisher pointcloud_pub_;

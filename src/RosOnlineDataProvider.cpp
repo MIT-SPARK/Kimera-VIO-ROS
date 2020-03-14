@@ -1,7 +1,6 @@
 /**
- * @file   ros-data-source.cpp
+ * @file   RosOnlineDataProvider.cpp
  * @brief  ROS wrapper for online processing.
- * @author Yun Chang
  * @author Antoni Rosinol
  * @author Marcus Abate
  */
@@ -35,9 +34,43 @@ RosOnlineDataProvider::RosOnlineDataProvider()
       imu_queue_(),
       imu_async_spinner_(nullptr),
       async_spinner_(nullptr) {
-  ROS_INFO("Starting KimeraVIO wrapper for online");
+  // Define ground truth odometry Subsrciber
+  static constexpr size_t kMaxGtOdomQueueSize = 1u;
+  if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
+    LOG(INFO) << "Requested initialization from ground-truth. "
+              << "Initializing ground-truth odometry one-shot subscriber.";
+    gt_odom_subscriber_ =
+        nh_.subscribe("gt_odom",
+                      kMaxGtOdomQueueSize,
+                      &RosOnlineDataProvider::callbackGtOdomOnce,
+                      this);
 
-  static constexpr size_t kMaxImuQueueSize = 50u;
+    LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO "
+                 << "on ros topic: " << gt_odom_subscriber_.getTopic().c_str();
+    // We wait for the gt pose for kMaxIterations, if ros is running (aka
+    // if time is non-zero (as would happen if running with sim_time).
+    static constexpr size_t kMaxIterations = 100u;
+    size_t iterations = 0u;
+    while (!gt_init_pose_received_ &&
+           ros::Time::now().isValid() && // Wait until time is non-zero
+           iterations < kMaxIterations) {
+      if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
+        ros::spinOnce();
+      } else {
+        LOG(FATAL) << "Ros is not ok... Shutting down.";
+      }
+      ++iterations;
+    }
+
+    LOG_IF(WARNING, !gt_init_pose_received_)
+        << "Missing ground-truth pose while trying for "
+        << kMaxIterations << " times."
+        << "Enabling autoInitialize and continuing without ground-truth "
+           "pose.";
+    pipeline_params_.backend_params_->autoInitialize_ = true;
+  }
+
+  static constexpr size_t kMaxImuQueueSize = 1000u;
   // Create a dedicated queue for the Imu callback so that we can use an async
   // spinner on it to process the data lighting fast.
   ros::SubscribeOptions imu_subscriber_options =
@@ -47,18 +80,20 @@ RosOnlineDataProvider::RosOnlineDataProvider()
           boost::bind(&RosOnlineDataProvider::callbackIMU, this, _1),
           ros::VoidPtr(),
           &imu_queue_);
+  imu_subscriber_options.transport_hints.tcpNoDelay(true);
 
   // Start IMU subscriber
   imu_subscriber_ = nh_.subscribe(imu_subscriber_options);
 
-  // Imu Async Spinner: will process the imu_queue_ only, instead of ROS' global
-  // queue.
-  static constexpr size_t kSpinnerThreads = 0;
+  // Imu Async Spinner: will process the imu queue only, instead of ROS' global
+  // queue. A value of 0 means to use the number of processor cores.
+  static constexpr size_t kImuSpinnerThreads = 2u;
   imu_async_spinner_ =
-      VIO::make_unique<ros::AsyncSpinner>(kSpinnerThreads, &imu_queue_);
-  imu_async_spinner_->start();
+      VIO::make_unique<ros::AsyncSpinner>(kImuSpinnerThreads, &imu_queue_);
 
   // Subscribe to stereo images. Approx time sync, should be exact though...
+  // We set the queue to only 1, since we prefer to drop messages to reach
+  // real-time than to be delayed...
   static constexpr size_t kMaxImagesQueueSize = 1u;
   CHECK(it_);
   left_img_subscriber_.subscribe(*it_, "left_cam", kMaxImagesQueueSize);
@@ -109,7 +144,7 @@ RosOnlineDataProvider::RosOnlineDataProvider()
   }
 
   // Define Reinitializer Subscriber
-  static constexpr size_t kMaxReinitQueueSize = 50u;
+  static constexpr size_t kMaxReinitQueueSize = 1u;
   reinit_flag_subscriber_ =
       nh_.subscribe("reinit_flag",
                     kMaxReinitQueueSize,
@@ -121,19 +156,13 @@ RosOnlineDataProvider::RosOnlineDataProvider()
                     &RosOnlineDataProvider::callbackReinitPose,
                     this);
 
-  // This spinner will process the regular Global callback queue of ROS.
-  // Alternatively, we could make something like IMU async spinner with its
-  // own queue, but then we need a ros::SpinOnce somewhere, or another async
-  // spinner for the global queue (although I think we don't parse anything
-  // from the global queue...
-  async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kSpinnerThreads);
-  async_spinner_->start();
-
-  ROS_INFO(">>>>>>> Started data subscribers <<<<<<<<");
+  // This async spinner will process the regular Global callback queue of ROS.
+  static constexpr size_t kGlobalSpinnerThreads = 2u;
+  async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
 }
 
 RosOnlineDataProvider::~RosOnlineDataProvider() {
-  LOG(INFO) << "RosDataProvider destructor called.";
+  VLOG(1) << "RosDataProvider destructor called.";
 }
 
 // TODO(marcus): with the readRosImage, this is a slow callback. Might be too
@@ -141,11 +170,14 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
 void RosOnlineDataProvider::callbackStereoImages(
     const sensor_msgs::ImageConstPtr& left_msg,
     const sensor_msgs::ImageConstPtr& right_msg) {
-  static const VIO::CameraParams& left_cam_info =
+  CHECK_GE(pipeline_params_.camera_params_.size(), 2u);
+  const CameraParams& left_cam_info =
       pipeline_params_.camera_params_.at(0);
-  static const VIO::CameraParams& right_cam_info =
+  const CameraParams& right_cam_info =
       pipeline_params_.camera_params_.at(1);
 
+  CHECK(left_msg);
+  CHECK(right_msg);
   const Timestamp& timestamp_left = left_msg->header.stamp.toNSec();
   const Timestamp& timestamp_right = right_msg->header.stamp.toNSec();
 
@@ -154,12 +186,13 @@ void RosOnlineDataProvider::callbackStereoImages(
   CHECK(right_frame_callback_)
       << "Did you forget to register the right frame callback?";
 
-  left_frame_callback_(VIO::make_unique<Frame>(
-      frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
-  right_frame_callback_(VIO::make_unique<Frame>(
-      frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
-
-  frame_count_++;
+  if (!shutdown_) {
+    left_frame_callback_(VIO::make_unique<Frame>(
+        frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
+    right_frame_callback_(VIO::make_unique<Frame>(
+        frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
+    frame_count_++;
+  }
 }
 
 void RosOnlineDataProvider::callbackCameraInfo(
@@ -188,6 +221,9 @@ void RosOnlineDataProvider::callbackCameraInfo(
 
 void RosOnlineDataProvider::callbackIMU(
     const sensor_msgs::ImuConstPtr& msgIMU) {
+
+  // TODO(TONI): detect jump backwards in time?
+
   VIO::ImuAccGyr imu_accgyr;
 
   imu_accgyr(0) = msgIMU->linear_acceleration.x;
@@ -200,14 +236,16 @@ void RosOnlineDataProvider::callbackIMU(
   // Adapt imu timestamp to account for time shift in IMU-cam
   Timestamp timestamp = msgIMU->header.stamp.toNSec();
 
-  static const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
+  const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
   if (imu_shift != ros::Duration(0)) {
     LOG_EVERY_N(WARNING, 1000) << "imu_shift is not 0.";
     timestamp -= imu_shift.toNSec();
   }
 
-  CHECK(imu_single_callback_) << "Did you forget to register the IMU callback?";
-  imu_single_callback_(ImuMeasurement(timestamp, imu_accgyr));
+  if (!shutdown_) {
+    CHECK(imu_single_callback_) << "Did you forget to register the IMU callback?";
+    imu_single_callback_(ImuMeasurement(timestamp, imu_accgyr));
+  }
 }
 
 // Ground-truth odometry callback
@@ -217,6 +255,9 @@ void RosOnlineDataProvider::callbackGtOdomOnce(
   msgGtOdomToVioNavState(
       msgGtOdom,
       &pipeline_params_.backend_params_->initial_ground_truth_state_);
+
+  // Signal receptance of ground-truth pose.
+  gt_init_pose_received_ = true;
 
   // Shutdown subscriber to prevent new gt poses from interfering
   gt_odom_subscriber_.shutdown();
@@ -279,34 +320,52 @@ void RosOnlineDataProvider::msgGtOdomToVioNavState(
 bool RosOnlineDataProvider::spin() {
   CHECK_EQ(pipeline_params_.camera_params_.size(), 2u);
 
-  while (ros::ok()) {
+  LOG(INFO) << "Spinning RosOnlineDataProvider.";
+
+  // Start async spinners to get input data.
+  if (!shutdown_) {
+    CHECK(imu_async_spinner_);
+    imu_async_spinner_->start();
+    CHECK(async_spinner_);
+    async_spinner_->start();
+  }
+
+  // Start our own spin to publish output data to ROS
+  while (ros::ok() && !shutdown_) {
     spinOnce();  // TODO(marcus): need a sequential mode?
   }
 
-  ROS_INFO("Ros data source spin done. Shutting down queues.");
-  backend_output_queue_.shutdown();
-  frontend_output_queue_.shutdown();
-  mesher_output_queue_.shutdown();
-  lcd_output_queue_.shutdown();
 
-  ROS_INFO("Shutting down queues ROS Async Spinner.");
+  imu_queue_.disable();
+
+  LOG(INFO) << "Shutting down queues ROS Async Spinner.";
+  CHECK(imu_async_spinner_);
+  imu_async_spinner_->stop();
   CHECK(async_spinner_);
   async_spinner_->stop();
+
+  LOG(INFO) << "RosOnlineDataProvider successfully shutdown.";
 
   return false;
 }
 
 bool RosOnlineDataProvider::spinOnce() {
-  // Publish VIO output if any.
+  // Publish frontend output at frame rate
+  FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
+  if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
+    publishFrontendOutput(frame_rate_frontend_output);
+  }
+
+  // Publish all output at keyframe rate (backend, mesher, etc)
   publishSyncedOutputs();
 
-  // Publish LCD output if any.
+  // Publish lcd output at whatever frame rate it might go
   LcdOutput::Ptr lcd_output = nullptr;
   if (lcd_output_queue_.pop(lcd_output)) {
     publishLcdOutput(lcd_output);
   }
 
-  // ros::spinOnce();
+  // ros::spinOnce(); // No need because we use an async spinner, see ctor.
 
   return true;
 }

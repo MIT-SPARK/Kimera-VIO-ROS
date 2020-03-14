@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" value="EuRoC"/>
+  <arg name="dataset_name" value="Euroc"/>
   <arg name="verbosity"    default="0" />
 
   <!-- Set online to true if you use rosbag play or sensor stream -->
@@ -8,7 +8,7 @@
   <param name="use_sim_time" value="true"/>
   <!-- Set log_output to true and SparkVio will log output of all modules to
        the log_output_path location. -->
-  <arg name="log_output" default="true"/>
+  <arg name="log_output" default="false"/>
   <arg name="log_output_path"
     default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
        if="$(arg log_output)"/>
@@ -28,16 +28,6 @@
 
   <!-- Frame IDs -->
   <arg name="base_link_frame_id" value="base_link"/>
-
-  <!-- Launch static TF node from IMU to Cam0 for Euroc -->
-  <!-- TODO(Toni): this can be done programatically now, using the parsed
-  calibration files -->
-  <!--
-  <node pkg="tf" type="static_transform_publisher" name="left_cam_broadcaster"
-    args="-0.0216401454975 -0.064676986768 0.00981073058949
-    -0.0077071797555374275 0.010499323370587278 0.7017528002919717 0.7123014606689537
-    $(arg base_link_frame_id) cam0 100"/>
-    -->
   <arg name="left_cam_frame_id"  value="cam0"/>
   <arg name="right_cam_frame_id" value="cam1"/>
 
