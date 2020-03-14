@@ -51,7 +51,6 @@ bool KimeraVioRos::runKimeraVio() {
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
   VLOG(1) << "Creating Kimera-VIO.";
-  if (vio_pipeline_) vio_pipeline_->shutdown();
   vio_pipeline_ =
       VIO::make_unique<VIO::Pipeline>(data_provider_->pipeline_params_);
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
