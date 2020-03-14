@@ -207,8 +207,9 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
     bool get_mesher =
         SimpleQueueSynchronizer<MesherOutput::Ptr>::getInstance().syncQueue(
             ts, &mesher_output_queue_, &mesher_output, "RosDataProvider");
-    CHECK(mesher_output);
-    publishMesherOutput(mesher_output);
+    if (mesher_output) {
+      publishMesherOutput(mesher_output);
+    }
 
     if (frontend_output && mesher_output) {
       // Publish 2d mesh debug image
@@ -220,7 +221,7 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
       }
     }
 
-    if (frontend_output) {
+    if (frontend_output && backend_output) {
       // Publish Resiliency
       if (resiliency_pub_.getNumSubscribers() > 0) {
         publishResiliency(frontend_output, backend_output);
