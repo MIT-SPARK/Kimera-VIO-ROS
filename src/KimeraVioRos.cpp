@@ -205,6 +205,7 @@ bool KimeraVioRos::restartKimeraVio(std_srvs::Trigger::Request& request,
     response.message = "Kimera-VIO should already be restarting...";
     response.success = false;
   }
+  LOG(WARNING) << response.message;
   return true;
 }
 
