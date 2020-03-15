@@ -166,6 +166,23 @@ rosservice call /kimera_vio_ros/kimera_vio_ros_node/restart_kimera_vio
 > 3. Call rosservice to restart VIO
 > 4. Start another rosbag
 
+### Enable Dense Depth Stereo estimation
+
+This will run OpenCV's StereoBM algorithm, more info can be found [here](http://wiki.ros.org/stereo_image_proc) (also checkout this to [choose good parameters](http://wiki.ros.org/stereo_image_proc/Tutorials/ChoosingGoodStereoParameters)):
+
+```bash
+roslaunch kimera_vio_ros kimera_vio_ros_euroc run_stereo_dense:=1
+```
+
+This will publish a `/stereo_gray/points2` topic, which you can visualize in Rviz as a 3D pointcloud.
+Alternatively, if you want to visualize the depth image, since Rviz does not provide a plugin to
+visualize a [disparity image](http://docs.ros.org/api/stereo_msgs/html/msg/DisparityImage.html), you will have to run instead:
+
+```bash
+rosrun image_view disparity_view image:=/stereo_gray/disparity
+```
+
+
 # Hardware use
 
 See the [documentation on hardware setup](docs/hardware_setup.md) for instructions on running KimeraROS on supported hardware platforms, as well as guides on how to develop for other platforms.
