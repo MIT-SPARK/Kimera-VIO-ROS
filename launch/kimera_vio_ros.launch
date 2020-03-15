@@ -145,13 +145,13 @@
     <!-- Input -->
     <remap from="left/image_rect"   to="/dev/null/left_cam"/>
     <remap from="right/image_rect"  to="/dev/null/right_cam"/>
-    <remap from="left/image_raw"         to="$(arg left_cam_topic)"/>
+    <remap from="left/image_raw"          to="$(arg left_cam_topic)"/>
     <remap from="left/camera_info"        to="$(arg left_cam_info_topic)"/>
-    <remap from="right/image_raw"        to="$(arg right_cam_topic)"/>
+    <remap from="right/image_raw"         to="$(arg right_cam_topic)"/>
     <remap from="right/camera_info"       to="$(arg right_cam_info_topic)"/>
     <!-- Output -->
-    <remap from="points2"    to="/stereo_gray/points2"/>
-    <remap from="disparity"  to="/stereo_gray/disparity"/>
+    <remap from="/stereo_gray/points2"    to="/stereo_gray/points2"/>
+    <remap from="/stereo_gray/disparity"  to="/stereo_gray/disparity"/>
     <!-- Params -->
     <param name="approximate_sync" value="true" />
   </node>
