@@ -100,8 +100,8 @@
 
     <!-- Subscriber topics -->
     <!-- if we run online, use remap -->
-    <remap from="left_cam"  to="$(arg left_cam_topic)"              if="$(arg online)"/>
-    <remap from="right_cam" to="$(arg right_cam_topic)"             if="$(arg online)"/>
+    <remap from="left_cam/image_raw"  to="$(arg left_cam_topic)"    if="$(arg online)"/>
+    <remap from="right_cam/image_raw" to="$(arg right_cam_topic)"   if="$(arg online)"/>
     <remap from="imu"       to="$(arg imu_topic)"                   if="$(arg online)"/>
     <remap from="gt_odom"   to="$(arg odometry_ground_truth_topic)"
            if="$(eval arg('online') and arg('odometry_ground_truth_topic') != '')"/>
