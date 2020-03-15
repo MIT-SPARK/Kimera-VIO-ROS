@@ -110,15 +110,15 @@ bool KimeraVioRos::spin() {
     while (ros::ok() && data_provider_->spin() && vio_pipeline_->spin()) {
       continue;
     }
-    ROS_INFO("Shutting down ROS and VIO pipeline.");
+    LOG(INFO) << "Shutting down ROS and VIO pipeline.";
     ros::shutdown();
     vio_pipeline_->shutdown();
     is_pipeline_successful = true;
   }
   auto spin_duration = VIO::utils::Timer::toc(tic);
-  ROS_WARN_STREAM("Spin took: " << spin_duration.count() << " ms.");
-  ROS_INFO_STREAM("Pipeline successful? "
-                  << (is_pipeline_successful ? "Yes!" : "No!"));
+  LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
+  LOG(INFO) << "Pipeline successful? "
+            << (is_pipeline_successful ? "Yes!" : "No!");
   return is_pipeline_successful;
 }
 
