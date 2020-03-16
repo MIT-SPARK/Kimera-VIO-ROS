@@ -1,7 +1,6 @@
 /**
- * @file   rosbag-data-source.h
- * @brief  ROS wrapper
- * @author Yun Chang
+ * @file   RosBagDataProvider.h
+ * @brief  Parse rosbag and run Kimera-VIO.
  * @author Antoni Rosinol
  */
 
@@ -18,20 +17,22 @@
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/Imu.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
 
 namespace VIO {
 
 struct RosbagData {
-  inline size_t getNumberOfImages() const { return left_imgs_.size(); }
+  // IMU messages
+  std::vector<sensor_msgs::ImuConstPtr> imu_msgs_;
   // The names of the images from left camera
   std::vector<sensor_msgs::ImageConstPtr> left_imgs_;
   // The names of the images from right camera
   std::vector<sensor_msgs::ImageConstPtr> right_imgs_;
   // Vector of timestamps see issue in .cpp file
   std::vector<Timestamp> timestamps_;
-  // Ground-truth Odometry (only if available).
+  // Ground-truth Odometry (only if available)
   std::vector<nav_msgs::OdometryConstPtr> gt_odometry_;
 };
 
@@ -65,9 +66,8 @@ class RosbagDataProvider : public RosDataProviderInterface {
   // Publish clock
   void publishClock(const Timestamp& timestamp) const;
 
-  // Publish ground-truth odometry
-  void publishGroundTruthOdometry(
-      const nav_msgs::OdometryConstPtr& gt_odom) const;
+  // Publish raw input data to ROS at keyframe rate
+  void publishInputs(const Timestamp& timestamp_kf);
 
  private:
   RosbagData rosbag_data_;
@@ -79,7 +79,17 @@ class RosbagDataProvider : public RosDataProviderInterface {
   std::string gt_odom_topic_;
 
   ros::Publisher clock_pub_;
+  ros::Publisher imu_pub_;
+  ros::Publisher left_img_pub_;
+  ros::Publisher right_img_pub_;
   ros::Publisher gt_odometry_pub_;
+
+  Timestamp timestamp_last_kf_;
+  Timestamp timestamp_last_imu_;
+  Timestamp timestamp_last_gt_;
+  size_t k_last_kf_;
+  size_t k_last_imu_;
+  size_t k_last_gt_;
 };
 
 }  // namespace VIO

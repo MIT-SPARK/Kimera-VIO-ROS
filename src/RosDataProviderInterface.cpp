@@ -1,18 +1,15 @@
 ﻿/**
- * @file   base-data-source.cpp
- * @brief  Base class for ROS wrappers for KimeraVIO.
- * @author Yun Chang
+ * @file   RosDataProviderInterface.cpp
+ * @brief  Base class for ROS wrappers for Kimera-VIO.
  * @author Antoni Rosinol
  */
+
+#include "kimera_vio_ros/RosDataProviderInterface.h"
 
 #include <string>
 #include <vector>
 
-#include "kimera_vio_ros/RosOnlineDataProvider.h"
-
-#include <kimera-vio/pipeline/PipelineModule.h>
-#include <kimera-vio/pipeline/QueueSynchronizer.h>
-#include <kimera-vio/visualizer/Visualizer3D.h>
+#include <glog/logging.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -29,6 +26,11 @@
 #include <pcl_msgs/PolygonMesh.h>
 #include <pcl_ros/point_cloud.h>
 
+#include <kimera-vio/dataprovider/DataProviderInterface.h>
+#include <kimera-vio/pipeline/PipelineModule.h>
+#include <kimera-vio/pipeline/QueueSynchronizer.h>
+#include <kimera-vio/visualizer/Visualizer3D.h>
+
 namespace VIO {
 
 RosDataProviderInterface::RosDataProviderInterface()
@@ -36,14 +38,15 @@ RosDataProviderInterface::RosDataProviderInterface()
       it_(nullptr),
       nh_(),
       nh_private_("~"),
-      backend_output_queue_("Backend output"),
-      frontend_output_queue_("Frontend output"),
-      mesher_output_queue_("Mesher output"),
-      lcd_output_queue_("LCD output") {
-  ROS_INFO(">>>>>>> Initializing Kimera-VIO-ROS <<<<<<<");
+      backend_output_queue_("Backend output ROS"),
+      frame_rate_frontend_output_queue_("Frame Rate Frontend output ROS"),
+      keyframe_rate_frontend_output_queue_("Keyframe Rate Frontend output ROS"),
+      mesher_output_queue_("Mesher output ROS"),
+      lcd_output_queue_("LCD output ROS") {
+  VLOG(1) << "Initializing RosDataProviderInterface.";
 
   // Print parameters to check.
-  printParsedParams();
+  if (VLOG_IS_ON(1)) printParsedParams();
 
   it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
 
@@ -60,18 +63,18 @@ RosDataProviderInterface::RosDataProviderInterface()
   CHECK(!right_cam_frame_id_.empty());
 
   // Publishers
-  odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 10, true);
+  odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 1, true);
   frontend_stats_pub_ =
-      nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 10);
-  resiliency_pub_ =
-      nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 10);
-  imu_bias_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 10);
-  trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 10);
-  posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 10);
+      nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 1);
+  resiliency_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 1);
+  imu_bias_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 1);
+  trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
+  posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1);
   pointcloud_pub_ =
-      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 10, true);
-  mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 5, true);
-  debug_img_pub_ = it_->advertise("debug_mesh_img", 10, true);
+      nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 1, true);
+  mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 1, true);
+  debug_img_pub_ = it_->advertise("debug_mesh_img", 1, true);
+  feature_tracks_pub_ = it_->advertise("feature_tracks", 1, true);
 
   publishStaticTf(pipeline_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
@@ -82,7 +85,7 @@ RosDataProviderInterface::RosDataProviderInterface()
 }
 
 RosDataProviderInterface::~RosDataProviderInterface() {
-  LOG(INFO) << "RosBaseDataProvider destructor called.";
+  VLOG(1) << "RosBaseDataProvider destructor called.";
 }
 
 // TODO(marcus): From this documentation
@@ -95,7 +98,8 @@ RosDataProviderInterface::~RosDataProviderInterface() {
 //  faster.
 const cv::Mat RosDataProviderInterface::readRosImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
-  cv_bridge::CvImagePtr cv_ptr;
+  CHECK(img_msg);
+  cv_bridge::CvImageConstPtr cv_ptr;
   try {
     // TODO(Toni): here we should consider using toCvShare...
     cv_ptr = cv_bridge::toCvCopy(img_msg);
@@ -104,21 +108,30 @@ const cv::Mat RosDataProviderInterface::readRosImage(
     ros::shutdown();
   }
 
+  CHECK(cv_ptr);
+  const cv::Mat img_const = cv_ptr->image;  // Don't modify shared image in ROS.
+  cv::Mat converted_img(img_const.size(), CV_8U);
   if (img_msg->encoding == sensor_msgs::image_encodings::BGR8) {
-    LOG(WARNING) << "Converting image...";
-    cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_BGR2GRAY);
+    LOG_EVERY_N(WARNING, 10) << "Converting image...";
+    cv::cvtColor(img_const, converted_img, cv::COLOR_BGR2GRAY);
+    return converted_img;
+  } else if (img_msg->encoding == sensor_msgs::image_encodings::RGB8) {
+    LOG_EVERY_N(WARNING, 10) << "Converting image...";
+    cv::cvtColor(img_const, converted_img, cv::COLOR_RGB2GRAY);
+    return converted_img;
   } else {
     CHECK_EQ(cv_ptr->encoding, sensor_msgs::image_encodings::MONO8)
-        << "Expected image with MONO8 or BGR8 encoding.";
+        << "Expected image with MONO8, BGR8, or RGB8 encoding."
+           "Add in here more conversions if you wish.";
+    return img_const;
   }
-
-  return cv_ptr->image;
 }
 
 const cv::Mat RosDataProviderInterface::readRosDepthImage(
     const sensor_msgs::ImageConstPtr& img_msg) const {
   cv_bridge::CvImagePtr cv_ptr;
   try {
+    // TODO(Toni): here we should consider using toCvShare...
     cv_ptr =
         cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::TYPE_16UC1);
   } catch (cv_bridge::Exception& exception) {
@@ -127,7 +140,7 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
   }
   cv::Mat img_depth = cv_ptr->image;
   if (img_depth.type() != CV_16UC1) {
-    LOG(WARNING) << "Converting img_depth.";
+    LOG_EVERY_N(WARNING, 10) << "Converting depth image...";
     img_depth.convertTo(img_depth, CV_16UC1);
   }
   return img_depth;
@@ -135,7 +148,7 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
 
 void RosDataProviderInterface::publishBackendOutput(
     const BackendOutput::Ptr& output) {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   publishTf(output);
   if (odometry_pub_.getNumSubscribers() > 0) {
     publishState(output);
@@ -150,15 +163,24 @@ void RosDataProviderInterface::publishBackendOutput(
 
 void RosDataProviderInterface::publishFrontendOutput(
     const FrontendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
   }
+  // TODO(Toni): re-implement
+  // if (feature_tracks_pub_.getNumSubscribers() > 0) {
+  //   std_msgs::Header h;
+  //   h.stamp.fromNSec(output->timestamp_);
+  //   h.frame_id = base_link_frame_id_;
+  //   // Copies...
+  //   feature_tracks_pub_.publish(
+  //       cv_bridge::CvImage(h, "bgr8", output->feature_tracks_).toImageMsg());
+  // }
 }
 
 void RosDataProviderInterface::publishMesherOutput(
     const MesherOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
     publishPerFrameMesh3D(output);
   }
@@ -168,27 +190,26 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
   // First acquire a backend output packet, as it is slowest.
   BackendOutput::Ptr backend_output = nullptr;
   if (backend_output_queue_.pop(backend_output)) {
-    CHECK_NOTNULL(backend_output);
+    CHECK(backend_output);
     publishBackendOutput(backend_output);
     const Timestamp& ts = backend_output->timestamp_;
 
     FrontendOutput::Ptr frontend_output = nullptr;
     bool get_frontend =
-        SimpleQueueSynchronizer<FrontendOutput::Ptr>::getInstance()
-            .syncQueue(ts,
-                       &frontend_output_queue_,
-                       &frontend_output,
-                       "RosDataProvider");
+        SimpleQueueSynchronizer<FrontendOutput::Ptr>::getInstance().syncQueue(
+            ts,
+            &keyframe_rate_frontend_output_queue_,
+            &frontend_output,
+            "RosDataProvider");
     CHECK(frontend_output);
-    publishFrontendOutput(frontend_output);
 
     MesherOutput::Ptr mesher_output = nullptr;
     bool get_mesher =
-        SimpleQueueSynchronizer<MesherOutput::Ptr>::getInstance()
-            .syncQueue(
-                ts, &mesher_output_queue_, &mesher_output, "RosDataProvider");
-    CHECK(mesher_output);
-    publishMesherOutput(mesher_output);
+        SimpleQueueSynchronizer<MesherOutput::Ptr>::getInstance().syncQueue(
+            ts, &mesher_output_queue_, &mesher_output, "RosDataProvider");
+    if (mesher_output) {
+      publishMesherOutput(mesher_output);
+    }
 
     if (frontend_output && mesher_output) {
       // Publish 2d mesh debug image
@@ -200,7 +221,7 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
       }
     }
 
-    if (frontend_output) {
+    if (frontend_output && backend_output) {
       // Publish Resiliency
       if (resiliency_pub_.getNumSubscribers() > 0) {
         publishResiliency(frontend_output, backend_output);
@@ -215,7 +236,7 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
 
 void RosDataProviderInterface::publishLcdOutput(
     const LcdOutput::Ptr& lcd_output) {
-  CHECK_NOTNULL(lcd_output);
+  CHECK(lcd_output);
 
   publishTf(lcd_output);
   if (trajectory_pub_.getNumSubscribers() > 0) {
@@ -228,7 +249,7 @@ void RosDataProviderInterface::publishLcdOutput(
 
 void RosDataProviderInterface::publishTimeHorizonPointCloud(
     const BackendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   const Timestamp& timestamp = output->timestamp_;
   const PointsWithIdMap& points_with_id = output->landmarks_with_id_map_;
   const LmkIdToLmkTypeMap& lmk_id_to_lmk_type_map =
@@ -315,7 +336,7 @@ void RosDataProviderInterface::publishDebugImage(
 
 void RosDataProviderInterface::publishPerFrameMesh3D(
     const MesherOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
 
   const Mesh2D& mesh_2d = output->mesh_2d_;
   const Mesh3D& mesh_3d = output->mesh_3d_;
@@ -422,7 +443,7 @@ void RosDataProviderInterface::publishPerFrameMesh3D(
 
 void RosDataProviderInterface::publishState(
     const BackendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
   // Get latest estimates for odometry.
   const Timestamp& ts = output->timestamp_;
   const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
@@ -496,7 +517,7 @@ void RosDataProviderInterface::publishState(
 }
 
 void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
-  CHECK_NOTNULL(output);
+  CHECK(output);
 
   const Timestamp& timestamp = output->timestamp_;
   const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
@@ -519,7 +540,7 @@ void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
 
 void RosDataProviderInterface::publishFrontendStats(
     const FrontendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
 
   // Get frontend data for resiliency output
   const DebugTrackerInfo& debug_tracker_info = output->getTrackerInfo();
@@ -556,8 +577,8 @@ void RosDataProviderInterface::publishFrontendStats(
 void RosDataProviderInterface::publishResiliency(
     const FrontendOutput::Ptr& frontend_output,
     const BackendOutput::Ptr& backend_output) const {
-  CHECK_NOTNULL(frontend_output);
-  CHECK_NOTNULL(backend_output);
+  CHECK(frontend_output);
+  CHECK(backend_output);
 
   // Get frontend and velocity covariance data for resiliency output
   const DebugTrackerInfo& debug_tracker_info =
@@ -625,7 +646,7 @@ void RosDataProviderInterface::publishResiliency(
 
 void RosDataProviderInterface::publishImuBias(
     const BackendOutput::Ptr& output) const {
-  CHECK_NOTNULL(output);
+  CHECK(output);
 
   // Get imu bias to output
   const ImuBias& imu_bias = output->W_State_Blkf_.imu_bias_;
@@ -656,7 +677,7 @@ void RosDataProviderInterface::publishImuBias(
 
 void RosDataProviderInterface::publishOptimizedTrajectory(
     const LcdOutput::Ptr& lcd_output) const {
-  CHECK_NOTNULL(lcd_output);
+  CHECK(lcd_output);
 
   // Get pgo-optimized trajectory
   const Timestamp& ts = lcd_output->timestamp_kf_;
@@ -819,7 +840,7 @@ pose_graph_tools::PoseGraph RosDataProviderInterface::getPosegraphMsg() {
 
 void RosDataProviderInterface::publishPoseGraph(
     const LcdOutput::Ptr& lcd_output) {
-  CHECK_NOTNULL(lcd_output);
+  CHECK(lcd_output);
 
   // Get the factor graph
   const Timestamp& ts = lcd_output->timestamp_kf_;
@@ -833,7 +854,7 @@ void RosDataProviderInterface::publishPoseGraph(
 }
 
 void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
-  CHECK_NOTNULL(lcd_output);
+  CHECK(lcd_output);
 
   const Timestamp& ts = lcd_output->timestamp_kf_;
   const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
@@ -876,19 +897,23 @@ void RosDataProviderInterface::publishStaticTf(
 }
 
 void RosDataProviderInterface::printParsedParams() const {
-  LOG(INFO) << std::string(80, '=') << '\n' << " - Left camera info:";
+  static constexpr int kSeparatorWidth = 40;
+  LOG(INFO) << std::string(kSeparatorWidth, '=')
+            << " - Left camera info:";
   pipeline_params_.camera_params_.at(0).print();
-  LOG(INFO) << std::string(80, '=') << '\n' << " - Right camera info:";
+  LOG(INFO) << std::string(kSeparatorWidth, '=')
+            << " - Right camera info:";
   pipeline_params_.camera_params_.at(1).print();
-  LOG(INFO) << std::string(80, '=') << '\n' << " - IMU info:";
+  LOG(INFO) << std::string(kSeparatorWidth, '=')
+            << " - Frontend params:";
+  pipeline_params_.frontend_params_.print();
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - IMU params:";
   pipeline_params_.imu_params_.print();
-  LOG(INFO) << std::string(80, '=') << '\n' << " - IMU params:";
-  pipeline_params_.imu_params_.print();
-  LOG(INFO) << std::string(80, '=') << '\n' << " - Backend params";
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Backend params";
   pipeline_params_.backend_params_->print();
-  LOG(INFO) << std::string(80, '=');
+  LOG(INFO) << std::string(kSeparatorWidth, '=');
   pipeline_params_.lcd_params_.print();
-  LOG(INFO) << std::string(80, '=');
+  LOG(INFO) << std::string(kSeparatorWidth, '=');
 }
 
 }  // namespace VIO

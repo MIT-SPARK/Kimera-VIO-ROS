@@ -1,7 +1,6 @@
 /**
- * @file   ros-data-source.h
+ * @file   RosOnlineDataProvider.h
  * @brief  ROS wrapper for online processing.
- * @author Yun Chang
  * @author Antoni Rosinol
  */
 
@@ -16,8 +15,6 @@
 #include <std_msgs/Bool.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
-
-// using namespace StereoImageBuffer;
 
 namespace VIO {
 
@@ -40,7 +37,6 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   inline void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
 
  private:
-  // TODO (Toni): only use one node handle...
   ros::CallbackQueue imu_queue_;
   std::unique_ptr<ros::AsyncSpinner> imu_async_spinner_;
   std::unique_ptr<ros::AsyncSpinner> async_spinner_;
@@ -94,6 +90,9 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Define subscriber for Reinit data
   ros::Subscriber reinit_flag_subscriber_;
   ros::Subscriber reinit_pose_subscriber_;
+
+  // Ground-truth initialization pose received flag
+  bool gt_init_pose_received_ = false;
 };
 
 }  // namespace VIO
