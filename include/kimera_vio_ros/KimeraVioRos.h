@@ -1,11 +1,12 @@
 /* @file   KimeraVioRos.cpp
- * @brief  ROS Wrapper for Spark-VIO
+ * @brief  ROS Wrapper for Kimera-VIO
  * @author Antoni Rosinol
  */
 
 #include <ros/ros.h>
 #include <std_srvs/Trigger.h>
 
+#include <kimera-vio/pipeline/Pipeline-definitions.h>
 #include <kimera-vio/pipeline/Pipeline.h>
 #include <kimera-vio/utils/Macros.h>
 
@@ -25,7 +26,8 @@ class KimeraVioRos {
  protected:
   bool spin();
 
-  VIO::RosDataProviderInterface::UniquePtr createDataProvider();
+  VIO::RosDataProviderInterface::UniquePtr createDataProvider(
+      const VioParams& vio_params);
 
   void connectVioPipelineAndDataProvider();
 
@@ -33,8 +35,9 @@ class KimeraVioRos {
                         std_srvs::Trigger::Response& response);
 
  protected:
-  VIO::RosDataProviderInterface::UniquePtr data_provider_;
-  VIO::Pipeline::UniquePtr vio_pipeline_;
+  VioParams::Ptr vio_params_;
+  Pipeline::UniquePtr vio_pipeline_;
+  RosDataProviderInterface::UniquePtr data_provider_;
   ros::ServiceServer restart_vio_pipeline_srv_;
   std::atomic_bool restart_vio_pipeline_;
 };
