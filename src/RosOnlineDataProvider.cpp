@@ -226,16 +226,16 @@ void RosOnlineDataProvider::callbackStereoImages(
 void RosOnlineDataProvider::callbackCameraInfo(
     const sensor_msgs::CameraInfoConstPtr& left_msg,
     const sensor_msgs::CameraInfoConstPtr& right_msg) {
-  CHECK_GE(pipeline_params_.camera_params_.size(), 2u);
+  CHECK_GE(vio_params_.camera_params_.size(), 2u);
 
   // Initialize CameraParams for pipeline.
   msgCamInfoToCameraParams(
-      left_msg, left_cam_frame_id_, &pipeline_params_.camera_params_.at(0));
+      left_msg, left_cam_frame_id_, &vio_params_.camera_params_.at(0));
   msgCamInfoToCameraParams(
-      right_msg, right_cam_frame_id_, &pipeline_params_.camera_params_.at(1));
+      right_msg, right_cam_frame_id_, &vio_params_.camera_params_.at(1));
 
-  pipeline_params_.camera_params_.at(0).print();
-  pipeline_params_.camera_params_.at(1).print();
+  vio_params_.camera_params_.at(0).print();
+  vio_params_.camera_params_.at(1).print();
 
   // Unregister this callback as it is no longer needed.
   LOG(INFO)
