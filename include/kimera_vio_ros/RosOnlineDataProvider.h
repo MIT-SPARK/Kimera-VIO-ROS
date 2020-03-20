@@ -23,7 +23,7 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   KIMERA_DELETE_COPY_CONSTRUCTORS(RosOnlineDataProvider);
   KIMERA_POINTER_TYPEDEFS(RosOnlineDataProvider);
 
-  RosOnlineDataProvider();
+  RosOnlineDataProvider(const VioParams& vio_params);
 
   virtual ~RosOnlineDataProvider();
 
