@@ -35,7 +35,7 @@
 
 namespace VIO {
 
-RosDataProviderInterface::RosDataProviderInterface()
+RosDataProviderInterface::RosDataProviderInterface(const VioParams& vio_params)
     : DataProviderInterface(),
       it_(nullptr),
       nh_(),
@@ -44,7 +44,8 @@ RosDataProviderInterface::RosDataProviderInterface()
       frame_rate_frontend_output_queue_("Frame Rate Frontend output ROS"),
       keyframe_rate_frontend_output_queue_("Keyframe Rate Frontend output ROS"),
       mesher_output_queue_("Mesher output ROS"),
-      lcd_output_queue_("LCD output ROS") {
+      lcd_output_queue_("LCD output ROS"),
+      vio_params_(vio_params) {
   VLOG(1) << "Initializing RosDataProviderInterface.";
 
   // Print parameters to check.
@@ -78,10 +79,10 @@ RosDataProviderInterface::RosDataProviderInterface()
   debug_img_pub_ = it_->advertise("debug_mesh_img", 1, true);
   feature_tracks_pub_ = it_->advertise("feature_tracks", 1, true);
 
-  publishStaticTf(pipeline_params_.camera_params_.at(0).body_Pose_cam_,
+  publishStaticTf(vio_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
                   left_cam_frame_id_);
-  publishStaticTf(pipeline_params_.camera_params_.at(1).body_Pose_cam_,
+  publishStaticTf(vio_params_.camera_params_.at(1).body_Pose_cam_,
                   base_link_frame_id_,
                   right_cam_frame_id_);
 }
@@ -346,9 +347,9 @@ void RosDataProviderInterface::publishPerFrameMesh3D(
   size_t mesh_2d_poly_dim = mesh_2d.getMeshPolygonDimension();
 
   static const size_t cam_width =
-      pipeline_params_.camera_params_.at(0).image_size_.width;
+      vio_params_.camera_params_.at(0).image_size_.width;
   static const size_t cam_height =
-      pipeline_params_.camera_params_.at(0).image_size_.height;
+      vio_params_.camera_params_.at(0).image_size_.height;
   DCHECK_GT(cam_width, 0);
   DCHECK_GT(cam_height, 0);
 
@@ -882,19 +883,19 @@ void RosDataProviderInterface::printParsedParams() const {
   static constexpr int kSeparatorWidth = 40;
   LOG(INFO) << std::string(kSeparatorWidth, '=')
             << " - Left camera info:";
-  pipeline_params_.camera_params_.at(0).print();
+  vio_params_.camera_params_.at(0).print();
   LOG(INFO) << std::string(kSeparatorWidth, '=')
             << " - Right camera info:";
-  pipeline_params_.camera_params_.at(1).print();
+  vio_params_.camera_params_.at(1).print();
   LOG(INFO) << std::string(kSeparatorWidth, '=')
             << " - Frontend params:";
-  pipeline_params_.frontend_params_.print();
+  vio_params_.frontend_params_.print();
   LOG(INFO) << std::string(kSeparatorWidth, '=') << " - IMU params:";
-  pipeline_params_.imu_params_.print();
+  vio_params_.imu_params_.print();
   LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Backend params";
-  pipeline_params_.backend_params_->print();
+  vio_params_.backend_params_->print();
   LOG(INFO) << std::string(kSeparatorWidth, '=');
-  pipeline_params_.lcd_params_.print();
+  vio_params_.lcd_params_.print();
   LOG(INFO) << std::string(kSeparatorWidth, '=');
 }
 

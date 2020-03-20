@@ -18,8 +18,8 @@
 
 namespace VIO {
 
-RosOnlineDataProvider::RosOnlineDataProvider()
-    : RosDataProviderInterface(),
+RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
+    : RosDataProviderInterface(vio_params),
       frame_count_(FrameId(0)),
       left_img_subscriber_(),
       right_img_subscriber_(),
@@ -48,7 +48,7 @@ RosOnlineDataProvider::RosOnlineDataProvider()
 
   // Define ground truth odometry Subsrciber
   static constexpr size_t kMaxGtOdomQueueSize = 1u;
-  if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
+  if (vio_params_.backend_params_->autoInitialize_ == 0) {
     LOG(INFO) << "Requested initialization from ground-truth. "
               << "Initializing ground-truth odometry one-shot subscriber.";
     gt_odom_subscriber_ =
@@ -79,7 +79,7 @@ RosOnlineDataProvider::RosOnlineDataProvider()
         << (current - start).toSec() << " seconds.\n"
         << "Enabling autoInitialize and continuing without ground-truth "
            "pose.";
-    pipeline_params_.backend_params_->autoInitialize_ = true;
+    vio_params_.backend_params_->autoInitialize_ = true;
   }
 
   // Determine whether to use camera info topics for camera parameters:
@@ -196,9 +196,11 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
 void RosOnlineDataProvider::callbackStereoImages(
     const sensor_msgs::ImageConstPtr& left_msg,
     const sensor_msgs::ImageConstPtr& right_msg) {
-  CHECK_GE(pipeline_params_.camera_params_.size(), 2u);
-  const CameraParams& left_cam_info = pipeline_params_.camera_params_.at(0);
-  const CameraParams& right_cam_info = pipeline_params_.camera_params_.at(1);
+  CHECK_GE(vio_params_.camera_params_.size(), 2u);
+  const CameraParams& left_cam_info =
+      vio_params_.camera_params_.at(0);
+  const CameraParams& right_cam_info =
+      vio_params_.camera_params_.at(1);
 
   CHECK(left_msg);
   CHECK(right_msg);
@@ -261,7 +263,7 @@ void RosOnlineDataProvider::callbackIMU(
   // Adapt imu timestamp to account for time shift in IMU-cam
   Timestamp timestamp = msgIMU->header.stamp.toNSec();
 
-  const ros::Duration imu_shift(pipeline_params_.imu_params_.imu_shift_);
+  const ros::Duration imu_shift(vio_params_.imu_params_.imu_shift_);
   if (imu_shift != ros::Duration(0)) {
     LOG_EVERY_N(WARNING, 1000) << "imu_shift is not 0.";
     timestamp -= imu_shift.toNSec();
@@ -280,7 +282,7 @@ void RosOnlineDataProvider::callbackGtOdomOnce(
   LOG(WARNING) << "Using initial ground-truth state for initialization.";
   msgGtOdomToVioNavState(
       msgGtOdom,
-      &pipeline_params_.backend_params_->initial_ground_truth_state_);
+      &vio_params_.backend_params_->initial_ground_truth_state_);
 
   // Signal receptance of ground-truth pose.
   gt_init_pose_received_ = true;
@@ -344,7 +346,7 @@ void RosOnlineDataProvider::msgGtOdomToVioNavState(
 }
 
 bool RosOnlineDataProvider::spin() {
-  CHECK_EQ(pipeline_params_.camera_params_.size(), 2u);
+  CHECK_EQ(vio_params_.camera_params_.size(), 2u);
 
   LOG(INFO) << "Spinning RosOnlineDataProvider.";
 

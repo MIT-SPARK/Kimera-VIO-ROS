@@ -2,8 +2,6 @@
   <!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
   file and include this one to launch KimeraVIO on the dataset of your choice -->
   <arg name="dataset_name" default="Euroc"/>
-  <!-- If you want to run the pipeline in parallel vs sequential mode -->
-  <arg name="parallel" default="true" />
   <!-- If False, parses the given rosbag, otw it plays the rosbage -->
   <arg name="online" default="true" />
   <!-- !!!! VIT !!!! This should be true when running online with a rosbag publishing clock,
@@ -56,8 +54,6 @@
 
   <!-- General parameters -->
   <arg name="verbosity"    default="0" />
-  <!-- 0: for vanilla VIO, 1: for regular VIO -->
-  <arg name="backend_type" default="1" />
   <!-- Visualize pipeline output in OpenCV. -->
   <!-- Note that this is duplicated from the flags file -->
   <arg name="visualize"    default="false" />
@@ -65,13 +61,7 @@
   <!-- Launch main node  -->
   <node name="kimera_vio_ros_node" pkg="kimera_vio_ros" type="kimera_vio_ros_node"
         output="screen" ns="kimera_vio_ros"
-        args="--left_cam_params_path=$(arg params_folder)/LeftCameraParams.yaml
-              --right_cam_params_path=$(arg params_folder)/RightCameraParams.yaml
-              --imu_params_path=$(arg params_folder)/ImuParams.yaml
-              --backend_params_path=$(arg params_folder)/regularVioParameters.yaml
-              --frontend_params_path=$(arg params_folder)/trackerParameters.yaml
-              --use_lcd=$(arg use_lcd)
-              --lcd_params_path=$(arg params_folder)/LCDParameters.yaml
+        args="--use_lcd=$(arg use_lcd)
               --vocabulary_path=$(arg path_to_vocab)
               --flagfile=$(arg params_folder)/flags/Mesher.flags
               --flagfile=$(arg params_folder)/flags/VioBackEnd.flags
@@ -81,11 +71,10 @@
               --colorlogtostderr=1
               --log_prefix=1
               --v=$(arg verbosity)
-              --backend_type=$(arg backend_type)
               --log_output=$(arg log_output)
               --output_path=$(arg log_output_path)
-              --visualize=$(arg visualize)
-              --parallel_run=$(arg parallel)">
+              --visualize=$(arg visualize)">
+    <param name="params_folder_path" value="$(arg params_folder)"/>
 
     <param name="online_run"            value="$(arg online)"/>
     <param name="use_lcd"               value="$(arg use_lcd)"/>

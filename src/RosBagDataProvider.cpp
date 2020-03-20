@@ -11,10 +11,12 @@
 
 #include <rosgraph_msgs/Clock.h>
 
+#include <kimera-vio/pipeline/Pipeline-definitions.h>.h>
+
 namespace VIO {
 
-RosbagDataProvider::RosbagDataProvider()
-    : RosDataProviderInterface(),
+RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
+    : RosDataProviderInterface(vio_params),
       rosbag_data_(),
       rosbag_path_(""),
       left_imgs_topic_(""),
@@ -64,9 +66,9 @@ bool RosbagDataProvider::spin() {
   CHECK(parseRosbag(rosbag_path_, &rosbag_data_));
 
   // Autoinitialize if necessary:
-  if (pipeline_params_.backend_params_->autoInitialize_ == 0) {
+  if (vio_params_.backend_params_->autoInitialize_ == 0) {
     LOG(WARNING) << "Using initial ground-truth state for initialization.";
-    pipeline_params_.backend_params_->initial_ground_truth_state_ =
+    vio_params_.backend_params_->initial_ground_truth_state_ =
         getGroundTruthVioNavState(0u);  // Send first gt state.
   }
 
@@ -81,9 +83,9 @@ bool RosbagDataProvider::spin() {
       const Timestamp& timestamp_frame_k = rosbag_data_.timestamps_.at(k);
 
       static const CameraParams& left_cam_info =
-          pipeline_params_.camera_params_.at(0);
+          vio_params_.camera_params_.at(0);
       static const CameraParams& right_cam_info =
-          pipeline_params_.camera_params_.at(1);
+          vio_params_.camera_params_.at(1);
 
       if (timestamp_frame_k > timestamp_last_frame) {
         // Send left frame data to Kimera:
@@ -171,13 +173,13 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   topics.push_back(right_imgs_topic_);
   topics.push_back(imu_topic_);
   if (!gt_odom_topic_.empty()) {
-    CHECK(pipeline_params_.backend_params_->autoInitialize_ == 0)
+    CHECK(vio_params_.backend_params_->autoInitialize_ == 0)
         << "Provided a gt_odom_topic; but autoInitialize is not set to 0,"
            " meaning no ground-truth initialization will be done... "
            "Are you sure you don't want to use gt? ";
     topics.push_back(gt_odom_topic_);
   } else {
-    CHECK(pipeline_params_.backend_params_->autoInitialize_ != 0);
+    CHECK(vio_params_.backend_params_->autoInitialize_ != 0);
     ROS_DEBUG("Not parsing ground truth data.");
   }
 

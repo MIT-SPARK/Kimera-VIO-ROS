@@ -26,6 +26,7 @@
 #include <tf/transform_broadcaster.h>
 
 #include <kimera-vio/common/vio_types.h>
+#include <kimera-vio/pipeline/Pipeline-definitions.h>.h>
 #include <kimera-vio/dataprovider/DataProviderInterface.h>
 #include <kimera-vio/frontend/StereoFrame.h>
 #include <kimera-vio/frontend/StereoImuSyncPacket.h>
@@ -38,7 +39,7 @@
 namespace VIO {
 
 /**
- * @breif Struct to hold mesh vertex data.
+ * @brief The PointNormalUV struct holds mesh vertex data.
  */
 struct PointNormalUV {
   PCL_ADD_POINT4D;
@@ -53,7 +54,7 @@ class RosDataProviderInterface : public DataProviderInterface {
   KIMERA_DELETE_COPY_CONSTRUCTORS(RosDataProviderInterface);
   KIMERA_POINTER_TYPEDEFS(RosDataProviderInterface);
 
-  RosDataProviderInterface();
+  explicit RosDataProviderInterface(const VioParams& vio_params);
 
   virtual ~RosDataProviderInterface();
 
@@ -146,6 +147,12 @@ class RosDataProviderInterface : public DataProviderInterface {
   ThreadsafeQueue<FrontendOutput::Ptr> keyframe_rate_frontend_output_queue_;
   ThreadsafeQueue<MesherOutput::Ptr> mesher_output_queue_;
   ThreadsafeQueue<LcdOutput::Ptr> lcd_output_queue_;
+
+  // TODO(Toni): technically the dataprovider should not need these, but
+  // I still haven't removed the requirement to send camera params with each
+  // vio callback...
+  // Pipeline params
+  VioParams vio_params_;
 
  private:
   void publishTf(const BackendOutput::Ptr& output);
