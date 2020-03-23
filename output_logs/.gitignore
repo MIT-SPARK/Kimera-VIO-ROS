@@ -1,0 +1,4 @@
+# Ignore all output logs, but not this folder
+*
+*/
+!.gitignore
