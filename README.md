@@ -176,12 +176,7 @@ roslaunch kimera_vio_ros kimera_vio_ros_euroc run_stereo_dense:=1
 
 This will publish a `/stereo_gray/points2` topic, which you can visualize in Rviz as a 3D pointcloud.
 Alternatively, if you want to visualize the depth image, since Rviz does not provide a plugin to
-visualize a [disparity image](http://docs.ros.org/api/stereo_msgs/html/msg/DisparityImage.html), you will have to run instead:
-
-```bash
-rosrun image_view disparity_view image:=/stereo_gray/disparity
-```
-
+visualize a [disparity image](http://docs.ros.org/api/stereo_msgs/html/msg/DisparityImage.html), we also run a [disparity_image_proc](https://github.com/ToniRV/disparity_image_proc) nodelet that will publish the depth image to `/stereo_gray/disparity_image_proc/depth/image_raw`.
 
 # Hardware use
 
