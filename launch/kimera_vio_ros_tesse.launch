@@ -7,8 +7,6 @@
 
   <param name="use_sim_time" value="true"/>
 
-  <arg name="parallel"       default="true"/>
-
   <arg name="log_output" default="true"/>
   <arg name="log_output_path"
        default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
