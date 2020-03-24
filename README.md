@@ -153,6 +153,13 @@ catkin run_tests --no-deps --this
 
 ## Other functionalities
 
+### Using camera_info topics instead of Yaml parameters
+
+It is sometimes convenient to use the `camera_info` topics to parse the camera's parameters.
+There are currently two ways of using these topics:
+ - Offline: using the launch file `launch/cam_info_yamlizer.launch` which will generate yaml files out of the topics.
+ - Online: setting the flag `use_online_cam_params` (see `launch/kimera_vio_ros.launch`) to true, and ensuring ROS topics are correctly set.
+
 ### Restart Kimera-VIO
 
 The typical use case is that you have multiple rosbags and you don't want to be killing Kimera-VIO(-ROS) each time.

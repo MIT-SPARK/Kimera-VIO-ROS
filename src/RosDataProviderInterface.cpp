@@ -2,6 +2,7 @@
  * @file   RosDataProviderInterface.cpp
  * @brief  Base class for ROS wrappers for Kimera-VIO.
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
@@ -21,6 +22,7 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_msgs/PolygonMesh.h>
@@ -529,13 +531,7 @@ void RosDataProviderInterface::publishTf(const BackendOutput::Ptr& output) {
   odom_tf.header.frame_id = world_frame_id_;
   odom_tf.child_frame_id = base_link_frame_id_;
 
-  odom_tf.transform.translation.x = pose.x();
-  odom_tf.transform.translation.y = pose.y();
-  odom_tf.transform.translation.z = pose.z();
-  odom_tf.transform.rotation.w = quaternion.w();
-  odom_tf.transform.rotation.x = quaternion.x();
-  odom_tf.transform.rotation.y = quaternion.y();
-  odom_tf.transform.rotation.z = quaternion.z();
+  poseToMsgTF(pose, &odom_tf.transform);
   tf_broadcaster_.sendTransform(odom_tf);
 }
 
@@ -865,14 +861,7 @@ void RosDataProviderInterface::publishTf(const LcdOutput::Ptr& lcd_output) {
   map_tf.header.stamp.fromNSec(ts);
   map_tf.header.frame_id = world_frame_id_;
   map_tf.child_frame_id = map_frame_id_;
-
-  map_tf.transform.translation.x = w_Pose_map.x();
-  map_tf.transform.translation.y = w_Pose_map.y();
-  map_tf.transform.translation.z = w_Pose_map.z();
-  map_tf.transform.rotation.w = w_Quat_map.w();
-  map_tf.transform.rotation.x = w_Quat_map.x();
-  map_tf.transform.rotation.y = w_Quat_map.y();
-  map_tf.transform.rotation.z = w_Quat_map.z();
+  poseToMsgTF(w_Pose_map, &map_tf.transform);
   tf_broadcaster_.sendTransform(map_tf);
 }
 
@@ -886,14 +875,7 @@ void RosDataProviderInterface::publishStaticTf(
   static_transform_stamped.header.stamp = ros::Time::now();
   static_transform_stamped.header.frame_id = parent_frame_id;
   static_transform_stamped.child_frame_id = child_frame_id;
-  static_transform_stamped.transform.translation.x = pose.x();
-  static_transform_stamped.transform.translation.y = pose.y();
-  static_transform_stamped.transform.translation.z = pose.z();
-  const gtsam::Quaternion& quat = pose.rotation().toQuaternion();
-  static_transform_stamped.transform.rotation.x = quat.x();
-  static_transform_stamped.transform.rotation.y = quat.y();
-  static_transform_stamped.transform.rotation.z = quat.z();
-  static_transform_stamped.transform.rotation.w = quat.w();
+  poseToMsgTF(pose, &static_transform_stamped.transform);
   static_broadcaster.sendTransform(static_transform_stamped);
 }
 
@@ -915,6 +897,84 @@ void RosDataProviderInterface::printParsedParams() const {
   LOG(INFO) << std::string(kSeparatorWidth, '=');
   vio_params_.lcd_params_.print();
   LOG(INFO) << std::string(kSeparatorWidth, '=');
+}
+
+void RosDataProviderInterface::msgTFtoPose(const geometry_msgs::Transform& tf,
+                                           gtsam::Pose3* pose) {
+  CHECK_NOTNULL(pose);
+
+  *pose = gtsam::Pose3(
+      gtsam::Rot3(gtsam::Quaternion(
+          tf.rotation.w, tf.rotation.x, tf.rotation.y, tf.rotation.z)),
+      gtsam::Point3(tf.translation.x, tf.translation.y, tf.translation.z));
+}
+
+void RosDataProviderInterface::poseToMsgTF(const gtsam::Pose3& pose,
+                                           geometry_msgs::Transform* tf) {
+  CHECK_NOTNULL(tf);
+
+  tf->translation.x = pose.x();
+  tf->translation.y = pose.y();
+  tf->translation.z = pose.z();
+  const gtsam::Quaternion& quat = pose.rotation().toQuaternion();
+  tf->rotation.w = quat.w();
+  tf->rotation.x = quat.x();
+  tf->rotation.y = quat.y();
+  tf->rotation.z = quat.z();
+}
+
+void RosDataProviderInterface::msgCamInfoToCameraParams(
+    const sensor_msgs::CameraInfoConstPtr& cam_info,
+    const std::string& cam_frame_id,
+    VIO::CameraParams* cam_params) {
+  CHECK_NOTNULL(cam_params);
+
+  // Get intrinsics from incoming CameraInfo messages:
+  cam_params->camera_id_ = cam_info->header.frame_id;
+  CHECK(!cam_params->camera_id_.empty());
+
+  cam_params->distortion_model_ = cam_info->distortion_model;
+  CHECK(cam_params->distortion_model_ == "radtan" ||
+        cam_params->distortion_model_ == "radial-tangential" ||
+        cam_params->distortion_model_ == "equidistant");
+
+  const std::vector<double>& distortion_coeffs = cam_info->D;
+  CHECK_EQ(distortion_coeffs.size(), 4);
+  VIO::CameraParams::convertDistortionVectorToMatrix(
+      distortion_coeffs, &cam_params->distortion_coeff_);
+
+  cam_params->image_size_ = cv::Size(cam_info->width, cam_info->height);
+
+  cam_params->frame_rate_ = 0;  // TODO(marcus): is there a way to get this?
+
+  std::array<double, 4> intrinsics = {
+      cam_info->K[0], cam_info->K[4], cam_info->K[2], cam_info->K[5]};
+  cam_params->intrinsics_ = intrinsics;
+  VIO::CameraParams::convertIntrinsicsVectorToMatrix(
+      cam_params->intrinsics_, &cam_params->camera_matrix_);
+
+  VIO::CameraParams::createGtsamCalibration(cam_params->distortion_coeff_,
+                                            cam_params->intrinsics_,
+                                            &cam_params->calibration_);
+
+  // Get extrinsics from the TF tree:
+  tf2_ros::Buffer t_buffer;
+  tf2_ros::TransformListener tf_listener(t_buffer);
+  static constexpr size_t kTfLookupTimeout = 5u;
+  geometry_msgs::TransformStamped cam_tf;
+  
+  try {
+    cam_tf = t_buffer.lookupTransform(base_link_frame_id_,
+                                      cam_frame_id,
+                                      ros::Time(0),
+                                      ros::Duration(kTfLookupTimeout));
+  } catch (tf2::TransformException& ex) {
+    ROS_FATAL(
+        "TF for left/right camera frames not available. Either publish to "
+        "tree or provide CameraParameter yaml files.");
+  }
+
+  msgTFtoPose(cam_tf.transform, &cam_params->body_Pose_cam_);
 }
 
 }  // namespace VIO

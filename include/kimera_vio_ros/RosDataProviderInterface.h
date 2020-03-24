@@ -2,6 +2,7 @@
  * @file   RosDataProviderInterface.h
  * @brief  Base class for ROS wrappers for Kimera-VIO.
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #pragma once
@@ -115,6 +116,15 @@ class RosDataProviderInterface : public DataProviderInterface {
     mesher_output_queue_.shutdown();
     lcd_output_queue_.shutdown();
   }
+
+ protected:
+  void msgTFtoPose(const geometry_msgs::Transform& tf, gtsam::Pose3* pose);
+
+  void poseToMsgTF(const gtsam::Pose3& pose, geometry_msgs::Transform* tf);
+
+  void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
+                                const std::string& cam_frame_id,
+                                VIO::CameraParams* cam_params);
 
  protected:
   // Define Node Handler for general use (Parameter server)

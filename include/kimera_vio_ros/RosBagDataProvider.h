@@ -2,6 +2,7 @@
  * @file   RosBagDataProvider.h
  * @brief  Parse rosbag and run Kimera-VIO.
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #pragma once

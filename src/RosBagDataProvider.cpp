@@ -2,6 +2,7 @@
  * @file   RosBagDataProvider.cpp
  * @brief  Parse rosbag and run Kimera-VIO.
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #include "kimera_vio_ros/RosBagDataProvider.h"

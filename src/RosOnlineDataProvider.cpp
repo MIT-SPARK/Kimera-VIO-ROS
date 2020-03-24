@@ -2,6 +2,7 @@
  * @file   RosOnlineDataProvider.cpp
  * @brief  ROS wrapper for online processing.
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #include "kimera_vio_ros/RosOnlineDataProvider.h"
@@ -22,6 +23,10 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       frame_count_(FrameId(0)),
       left_img_subscriber_(),
       right_img_subscriber_(),
+      left_cam_info_subscriber_(),
+      right_cam_info_subscriber_(),
+      sync_img_(),
+      sync_cam_info_(),
       imu_subscriber_(),
       gt_odom_subscriber_(),
       reinit_flag_subscriber_(),
@@ -29,6 +34,18 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       imu_queue_(),
       imu_async_spinner_(nullptr),
       async_spinner_(nullptr) {
+  // Wait until time is non-zero and valid: this is because at the ctor level
+  // we will be querying for gt pose and/or camera info.
+  while (!ros::Time::now().isValid()) {
+    if (ros::Time::isSimTime()) {
+      LOG_FIRST_N(INFO, 1)
+          << "Waiting for ROS time to be valid... \n"
+          << "(Sim Time is enabled; run rosbag with --clock argument)";
+    } else {
+      LOG_FIRST_N(INFO, 1) << "Waiting for ROS time to be valid...";
+    }
+  }
+
   // Define ground truth odometry Subsrciber
   static constexpr size_t kMaxGtOdomQueueSize = 1u;
   if (vio_params_.backend_params_->autoInitialize_ == 0) {
@@ -40,34 +57,81 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
                       &RosOnlineDataProvider::callbackGtOdomOnce,
                       this);
 
+    // We wait for the gt pose.
     LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO "
                  << "on ros topic: " << gt_odom_subscriber_.getTopic().c_str();
-    // We wait for the gt pose for kMaxIterations, if ros is running (aka
-    // if time is non-zero (as would happen if running with sim_time).
-    static constexpr size_t kMaxIterations = 100u;
-    size_t iterations = 0u;
+    static const ros::Duration kMaxTimeSecsForGtPose(3.0);
+    ros::Time start = ros::Time::now();
+    ros::Time current = ros::Time::now();
     while (!gt_init_pose_received_ &&
-           ros::Time::now().isValid() && // Wait until time is non-zero
-           iterations < kMaxIterations) {
+           (current - start) < kMaxTimeSecsForGtPose) {
       if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
         ros::spinOnce();
       } else {
         LOG(FATAL) << "Ros is not ok... Shutting down.";
       }
-      ++iterations;
+      current = ros::Time::now();
+      CHECK(current.isValid());
     }
 
-    LOG_IF(WARNING, !gt_init_pose_received_)
+    LOG_IF(ERROR, !gt_init_pose_received_)
         << "Missing ground-truth pose while trying for "
-        << kMaxIterations << " times."
+        << (current - start).toSec() << " seconds.\n"
         << "Enabling autoInitialize and continuing without ground-truth "
            "pose.";
     vio_params_.backend_params_->autoInitialize_ = true;
   }
 
-  static constexpr size_t kMaxImuQueueSize = 1000u;
+  // Determine whether to use camera info topics for camera parameters:
+  bool use_online_cam_params = false;
+  CHECK(nh_private_.getParam("use_online_cam_params", use_online_cam_params));
+  if (use_online_cam_params) {
+    LOG(WARNING)
+        << "Using online camera parameters instead of YAML parameter files.";
+
+    static constexpr size_t kMaxCamInfoQueueSize = 10u;
+    static constexpr size_t kMaxCamInfoSynchronizerQueueSize = 10u;
+    left_cam_info_subscriber_.subscribe(
+        nh_, "left_cam/camera_info", kMaxCamInfoQueueSize);
+    right_cam_info_subscriber_.subscribe(
+        nh_, "right_cam/camera_info", kMaxCamInfoQueueSize);
+
+    sync_cam_info_ =
+        VIO::make_unique<message_filters::Synchronizer<sync_pol_info>>(
+            sync_pol_info(kMaxCamInfoSynchronizerQueueSize),
+            left_cam_info_subscriber_,
+            right_cam_info_subscriber_);
+
+    DCHECK(sync_cam_info_);
+    sync_cam_info_->registerCallback(
+        boost::bind(&RosOnlineDataProvider::callbackCameraInfo, this, _1, _2));
+
+    // Wait for camera info to be received.
+    static const ros::Duration kMaxTimeSecsForCamInfo(10.0);
+    ros::Time start = ros::Time::now();
+    ros::Time current = ros::Time::now();
+    while (!camera_info_received_ &&
+           (current - start) < kMaxTimeSecsForCamInfo) {
+      if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
+        ros::spinOnce();
+      } else {
+        LOG(FATAL) << "Ros is not ok... Shutting down.";
+      }
+      current = ros::Time::now();
+      CHECK(current.isValid());
+    }
+    LOG_IF(FATAL, !camera_info_received_)
+        << "Missing camera info, while trying for "
+        << (current - start).toSec() << " seconds.\n"
+        << "Expected camera info in topics:\n"
+        << " - Left cam info topic: " << left_cam_info_subscriber_.getTopic()
+        << '\n'
+        << " - Right cam info topic: " << right_cam_info_subscriber_.getTopic();
+  }
+
   // Create a dedicated queue for the Imu callback so that we can use an async
   // spinner on it to process the data lighting fast.
+  static constexpr size_t kMaxImuQueueSize = 1000u;
   ros::SubscribeOptions imu_subscriber_options =
       ros::SubscribeOptions::create<sensor_msgs::Imu>(
           "imu",
@@ -91,15 +155,18 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   // real-time than to be delayed...
   static constexpr size_t kMaxImagesQueueSize = 1u;
   CHECK(it_);
-  left_img_subscriber_.subscribe(*it_, "left_cam", kMaxImagesQueueSize);
-  right_img_subscriber_.subscribe(*it_, "right_cam", kMaxImagesQueueSize);
-  static constexpr size_t kMaxImageSynchronizerQueueSize = 1u;
-  sync_ = VIO::make_unique<message_filters::Synchronizer<sync_pol>>(
-      sync_pol(kMaxImageSynchronizerQueueSize),
+  left_img_subscriber_.subscribe(
+      *it_, "left_cam/image_raw", kMaxImagesQueueSize);
+  right_img_subscriber_.subscribe(
+      *it_, "right_cam/image_raw", kMaxImagesQueueSize);
+  static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
+  sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
+      sync_pol_img(kMaxImageSynchronizerQueueSize),
       left_img_subscriber_,
       right_img_subscriber_);
-  DCHECK(sync_);
-  sync_->registerCallback(
+
+  DCHECK(sync_img_);
+  sync_img_->registerCallback(
       boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
 
   // Define Reinitializer Subscriber
@@ -148,15 +215,40 @@ void RosOnlineDataProvider::callbackStereoImages(
   if (!shutdown_) {
     left_frame_callback_(VIO::make_unique<Frame>(
         frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
-    right_frame_callback_(VIO::make_unique<Frame>(
-        frame_count_, timestamp_right, right_cam_info, readRosImage(right_msg)));
+    right_frame_callback_(VIO::make_unique<Frame>(frame_count_,
+                                                  timestamp_right,
+                                                  right_cam_info,
+                                                  readRosImage(right_msg)));
     frame_count_++;
   }
 }
 
+void RosOnlineDataProvider::callbackCameraInfo(
+    const sensor_msgs::CameraInfoConstPtr& left_msg,
+    const sensor_msgs::CameraInfoConstPtr& right_msg) {
+  CHECK_GE(vio_params_.camera_params_.size(), 2u);
+
+  // Initialize CameraParams for pipeline.
+  msgCamInfoToCameraParams(
+      left_msg, left_cam_frame_id_, &vio_params_.camera_params_.at(0));
+  msgCamInfoToCameraParams(
+      right_msg, right_cam_frame_id_, &vio_params_.camera_params_.at(1));
+
+  vio_params_.camera_params_.at(0).print();
+  vio_params_.camera_params_.at(1).print();
+
+  // Unregister this callback as it is no longer needed.
+  LOG(INFO)
+      << "Unregistering CameraInfo subscribers as data has been received.";
+  left_cam_info_subscriber_.unsubscribe();
+  right_cam_info_subscriber_.unsubscribe();
+
+  // Signal the correct reception of camera info
+  camera_info_received_ = true;
+}
+
 void RosOnlineDataProvider::callbackIMU(
     const sensor_msgs::ImuConstPtr& msgIMU) {
-
   // TODO(TONI): detect jump backwards in time?
 
   VIO::ImuAccGyr imu_accgyr;
@@ -178,7 +270,8 @@ void RosOnlineDataProvider::callbackIMU(
   }
 
   if (!shutdown_) {
-    CHECK(imu_single_callback_) << "Did you forget to register the IMU callback?";
+    CHECK(imu_single_callback_)
+        << "Did you forget to register the IMU callback?";
     imu_single_callback_(ImuMeasurement(timestamp, imu_accgyr));
   }
 }
@@ -269,7 +362,6 @@ bool RosOnlineDataProvider::spin() {
   while (ros::ok() && !shutdown_) {
     spinOnce();  // TODO(marcus): need a sequential mode?
   }
-
 
   imu_queue_.disable();
 
