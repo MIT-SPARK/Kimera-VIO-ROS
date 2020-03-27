@@ -951,7 +951,7 @@ void RosDataProviderInterface::msgCamInfoToCameraParams(
       cam_info->K[0], cam_info->K[4], cam_info->K[2], cam_info->K[5]};
   cam_params->intrinsics_ = intrinsics;
   VIO::CameraParams::convertIntrinsicsVectorToMatrix(
-      cam_params->intrinsics_, &cam_params->camera_matrix_);
+      cam_params->intrinsics_, &cam_params->K_);
 
   VIO::CameraParams::createGtsamCalibration(cam_params->distortion_coeff_,
                                             cam_params->intrinsics_,
@@ -962,7 +962,7 @@ void RosDataProviderInterface::msgCamInfoToCameraParams(
   tf2_ros::TransformListener tf_listener(t_buffer);
   static constexpr size_t kTfLookupTimeout = 5u;
   geometry_msgs::TransformStamped cam_tf;
-  
+
   try {
     cam_tf = t_buffer.lookupTransform(base_link_frame_id_,
                                       cam_frame_id,
