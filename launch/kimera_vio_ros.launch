@@ -112,16 +112,16 @@
     <remap from="reinit_pose" to="reinit_pose"/>
 
     <!-- Remap publisher topics -->
-    <remap from="odometry"                to="odometry"/>
-    <remap from="resiliency"              to="resiliency"/>
-    <remap from="imu_bias"                to="imu_bias"/>
-    <remap from="optimized_trajectory"    to="optimized_trajectory"/>
-    <remap from="pose_graph"              to="pose_graph"/>
-    <remap from="mesh"                    to="mesh"/>
-    <remap from="frontend_stats"          to="frontend_stats"/>
-    <remap from="debug_mesh_img"          to="debug_mesh_img"/>
-    <remap from="feature_tracks"          to="feature_tracks"/>
-    <remap from="time_horizon_pointcloud" to="time_horizon_pointcloud"/>
+    <remap from="odometry"                       to="odometry"/>
+    <remap from="resiliency"                     to="resiliency"/>
+    <remap from="imu_bias"                       to="imu_bias"/>
+    <remap from="optimized_trajectory"           to="optimized_trajectory"/>
+    <remap from="pose_graph"                     to="pose_graph"/>
+    <remap from="mesh"                           to="mesh"/>
+    <remap from="frontend_stats"                 to="frontend_stats"/>
+    <remap from="debug_mesh_img/image_raw"       to="debug_mesh_img/image_raw"/>
+    <remap from="feature_tracks/image_raw"       to="feature_tracks/image_raw"/>
+    <remap from="time_horizon_pointcloud"        to="time_horizon_pointcloud"/>
 
     <!-- Resiliency Thresholds: TODO(Sandro) document -->
     <param name="velocity_det_threshold"  value="0.1"/>
