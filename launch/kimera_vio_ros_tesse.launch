@@ -11,8 +11,7 @@
        default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
        if="$(arg log_output)"/>
   <arg name="log_gt_data" default="true"/>
-  <arg name="gt_topic"    default="/tesse/odom"
-       if="$(arg log_gt_data)"/>
+  <arg name="gt_topic"    default="/tesse/odom"/>
 
   <arg name="use_online_cam_params" default="false"/>
 
@@ -35,8 +34,7 @@
 
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
-  <arg name="odometry_ground_truth_topic" value="$(arg gt_topic)"
-       if="$(arg log_gt_data)"/>
+  <arg name="odometry_ground_truth_topic" value="$(arg gt_topic)"/>
 
   <!-- Perform stereo dense reconstruction? -->
   <arg name="run_stereo_dense"     default="false"/>

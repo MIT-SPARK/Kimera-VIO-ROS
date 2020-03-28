@@ -106,7 +106,7 @@ bool KimeraVioRos::spin() {
     } else {
       LOG(INFO) << "Restarting Kimera-VIO.";
     }
-    // TODO(TOni): right now vio shutsdown data provider, maybe we should
+    // TODO(Toni): right now vio shutsdown data provider, maybe we should
     // explicitly shutdown data provider: data_provider_->shutdown();
     vio_pipeline_->shutdown();
     LOG(INFO) << "Joining Kimera-VIO thread.";
