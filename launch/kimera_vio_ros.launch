@@ -67,6 +67,7 @@
               --flagfile=$(arg params_folder)/flags/VioBackEnd.flags
               --flagfile=$(arg params_folder)/flags/RegularVioBackEnd.flags
               --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+              --flagfile=$(arg params_folder)/flags/stereoVIOEuroc.flags
               --logtostderr=1
               --colorlogtostderr=1
               --log_prefix=1

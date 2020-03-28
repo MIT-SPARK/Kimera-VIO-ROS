@@ -31,7 +31,7 @@
 #include <kimera-vio/frontend/StereoFrame.h>
 #include <kimera-vio/frontend/StereoImuSyncPacket.h>
 #include <kimera-vio/frontend/StereoMatchingParams.h>
-#include <kimera-vio/frontend/VioFrontEndParams.h>
+#include <kimera-vio/frontend/VisionFrontEndParams.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/utils/ThreadsafeQueue.h>
