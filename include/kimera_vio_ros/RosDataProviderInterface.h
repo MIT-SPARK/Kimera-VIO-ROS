@@ -69,7 +69,9 @@ class RosDataProviderInterface : public DataProviderInterface {
     // Perhaps we should make all our threadsafe queues temporally aware
     // (meaning you can query the time of the message directly)...
     frame_rate_frontend_output_queue_.push(output);
-    keyframe_rate_frontend_output_queue_.push(output);
+    if (output && output->is_keyframe_) {
+      keyframe_rate_frontend_output_queue_.push(output);
+    }
   }
 
   inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
