@@ -26,7 +26,7 @@
 #include <tf/transform_broadcaster.h>
 
 #include <kimera-vio/common/vio_types.h>
-#include <kimera-vio/pipeline/Pipeline-definitions.h>.h>
+#include <kimera-vio/pipeline/Pipeline-definitions.h>
 #include <kimera-vio/dataprovider/DataProviderInterface.h>
 #include <kimera-vio/frontend/StereoFrame.h>
 #include <kimera-vio/frontend/StereoImuSyncPacket.h>

@@ -30,6 +30,7 @@ target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME})
 
 catkin_add_gtest(testKimeraVioRos
   test/testKimeraVioRos.cpp
+  test/testRosDataProviderInterface.cpp
 )
 target_link_libraries(testKimeraVioRos ${PROJECT_NAME})
 
