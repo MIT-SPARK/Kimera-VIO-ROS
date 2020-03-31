@@ -22,7 +22,11 @@ class RosDataProviderInterfaceExposed : public RosDataProviderInterface {
   public:
     RosDataProviderInterfaceExposed(const VioParams& vio_params) 
       : RosDataProviderInterface(vio_params) {} 
+    using RosDataProviderInterface::base_link_frame_id_;
     using RosDataProviderInterface::world_frame_id_;
+    using RosDataProviderInterface::map_frame_id_;
+    using RosDataProviderInterface::left_cam_frame_id_;
+    using RosDataProviderInterface::right_cam_frame_id_;
 };
 
 
@@ -68,7 +72,11 @@ class TestRosDataProviderInterface : public ::testing::Test {
 TEST_F(TestRosDataProviderInterface, constructorTest) {
   RosDataProviderInterfaceExposed test_interface(*dummy_vio_params_);
 
+  EXPECT_EQ(dummy_base_link_frame_id_, test_interface.base_link_frame_id_);
   EXPECT_EQ(dummy_world_frame_id_, test_interface.world_frame_id_);
+  EXPECT_EQ(dummy_map_frame_id_, test_interface.map_frame_id_);
+  EXPECT_EQ(dummy_left_cam_frame_id_, test_interface.left_cam_frame_id_);
+  EXPECT_EQ(dummy_right_cam_frame_id_, test_interface.right_cam_frame_id_);
 }
 
 }  // namespace VIO
