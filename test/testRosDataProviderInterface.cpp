@@ -1,6 +1,13 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
+// Data types for ros subscriptions
+#include <nav_msgs/Odometry.h>
+#include <nav_msgs/Path.h>
+#include <std_msgs/Float64MultiArray.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_msgs/PolygonMesh.h>
+
 #include "kimera_vio_ros/RosDataProviderInterface.h"
 
 namespace VIO {
@@ -72,11 +79,41 @@ class TestRosDataProviderInterface : public ::testing::Test {
 TEST_F(TestRosDataProviderInterface, constructorTest) {
   RosDataProviderInterfaceExposed test_interface(*dummy_vio_params_);
 
+  // Check to see if we parsed the frame ID's properly
   EXPECT_EQ(dummy_base_link_frame_id_, test_interface.base_link_frame_id_);
   EXPECT_EQ(dummy_world_frame_id_, test_interface.world_frame_id_);
   EXPECT_EQ(dummy_map_frame_id_, test_interface.map_frame_id_);
   EXPECT_EQ(dummy_left_cam_frame_id_, test_interface.left_cam_frame_id_);
   EXPECT_EQ(dummy_right_cam_frame_id_, test_interface.right_cam_frame_id_);
+
+  // Check to see if we advertised the topics that we expected to advertise
+  ros::Subscriber odometry_sub = 
+      publishing_node_.subscribe<nav_msgs::Odometry>("odometry", 1, nullptr);
+  ros::Subscriber frontend_stats_sub =
+      publishing_node_.subscribe<std_msgs::Float64MultiArray>("frontend_stats", 1, nullptr);
+  ros::Subscriber resiliency_sub = 
+      publishing_node_.subscribe<std_msgs::Float64MultiArray>("resiliency", 1, nullptr);
+  ros::Subscriber imu_bias_sub = 
+      publishing_node_.subscribe<std_msgs::Float64MultiArray>("imu_bias", 1, nullptr);
+  ros::Subscriber trajectory_sub = 
+      publishing_node_.subscribe<nav_msgs::Path>("optimized_trajectory", 1, nullptr);
+  ros::Subscriber posegraph_sub = 
+      publishing_node_.subscribe<pose_graph_tools::PoseGraph>("pose_graph", 1, nullptr);
+  ros::Subscriber pointcloud_sub =
+      publishing_node_.subscribe<pcl::PointCloud<pcl::PointXYZRGB>>(
+          "time_horizon_pointcloud", 1, nullptr);
+  ros::Subscriber mesh_3d_frame_sub = 
+      publishing_node_.subscribe<pcl_msgs::PolygonMesh>("mesh", 1, nullptr);
+
+  EXPECT_EQ(1, odometry_sub.getNumPublishers());
+  EXPECT_EQ(1, frontend_stats_sub.getNumPublishers());
+  EXPECT_EQ(1, resiliency_sub.getNumPublishers());
+  EXPECT_EQ(1, imu_bias_sub.getNumPublishers());
+  EXPECT_EQ(1, trajectory_sub.getNumPublishers());
+  EXPECT_EQ(1, posegraph_sub.getNumPublishers());
+  EXPECT_EQ(1, pointcloud_sub.getNumPublishers());
+  EXPECT_EQ(1, mesh_3d_frame_sub.getNumPublishers());
+  
 }
 
 }  // namespace VIO
