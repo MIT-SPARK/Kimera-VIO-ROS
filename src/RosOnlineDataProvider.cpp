@@ -36,7 +36,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       async_spinner_(nullptr) {
   // Wait until time is non-zero and valid: this is because at the ctor level
   // we will be querying for gt pose and/or camera info.
-  while (!ros::Time::now().isValid()) {
+  while (ros::ok() && !ros::Time::now().isValid()) {
     if (ros::Time::isSimTime()) {
       LOG_FIRST_N(INFO, 1)
           << "Waiting for ROS time to be valid... \n"
