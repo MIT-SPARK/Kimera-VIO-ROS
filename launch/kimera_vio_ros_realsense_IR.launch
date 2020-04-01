@@ -7,8 +7,7 @@
        default="$(find kimera_vio_ros)/output_logs/"
        if="$(arg log_output)"/>
   <arg name="log_gt_data" default="false"/>
-  <arg name="gt_topic" default=""
-       if="$(arg log_gt_data)"/>
+  <arg name="gt_topic" default=""/>
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <param name="use_sim_time" value="true" if="$(arg online)"/>
 

@@ -14,11 +14,10 @@
        if="$(arg log_output)"/>
   <!-- Set to true and specify gt_topic if you want to log ground-truth data -->
   <arg name="log_gt_data" default="false"/>
-  <arg name="gt_topic" if="$(arg log_gt_data)"
-       default="/vicon/firefly_sbx/firefly_sbx"/>
+  <arg name="gt_topic" default="/vicon/firefly_sbx/firefly_sbx"/>
 
   <arg name="use_lcd"   default="false"/>
-  <arg name="visualize" default="false"/>
+  <arg name="visualize" default="true"/>
 
   <arg name="use_online_cam_params" value="false"/>
 
