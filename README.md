@@ -145,10 +145,18 @@ rosbag play --clock /PATH/TO/KITTI_ROSBAG
 
 ## Running Unit tests
 
-To run unit tests using catkin for this specific package, call (after building the package and sourcing the workspace):
-
+To run unit tests using catkin for this package alone, build the package, source the workspace, then invoke:
 ```bash
+cd ~/catkin_ws/src/Kimera-VIO-ROS/
 catkin run_tests --no-deps --this
+```
+
+To run unit tests through gdb, compile the tests with debug symbols: 
+```bash
+cd ~/catkin_ws/src/Kimera-VIO-ROS/
+catkin run_tests --no-deps --this DCMAKE_BUILD_TYPE=Debug
+cd ~/catkin_ws/devel/lib/kimera_vio_ros
+gdb testKimeraVioRos
 ```
 
 ## Other functionalities
