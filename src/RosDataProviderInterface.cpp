@@ -962,7 +962,7 @@ void RosDataProviderInterface::msgCamInfoToCameraParams(
   tf2_ros::TransformListener tf_listener(t_buffer);
   static constexpr size_t kTfLookupTimeout = 5u;
   geometry_msgs::TransformStamped cam_tf;
-  
+
   try {
     cam_tf = t_buffer.lookupTransform(base_link_frame_id_,
                                       cam_frame_id,
