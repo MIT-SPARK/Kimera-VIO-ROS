@@ -8,6 +8,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_msgs/PolygonMesh.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Pose.h>
 
 // Includes for ROS interfacing
 #include <tf2_ros/transform_listener.h>
@@ -124,17 +125,33 @@ TEST_F(TestRosDataProviderInterface, constructorTest) {
   EXPECT_EQ(1, pointcloud_sub.getNumPublishers());
   EXPECT_EQ(1, mesh_3d_frame_sub.getNumPublishers());
   
-  geometry_msgs::TransformStamped transformStamped;
+  // Make sure it published the static transforms
+  geometry_msgs::TransformStamped transform_stamped;
   try {
-    transformStamped = tf_buffer_.lookupTransform(
+    transform_stamped = tf_buffer_.lookupTransform(
         dummy_base_link_frame_id_, dummy_left_cam_frame_id_, ros::Time(0),
         ros::Duration(RosDataProviderInterfaceExposed::kTfLookupTimeout));
-    EXPECT_EQ(dummy_base_link_frame_id_, transformStamped.header.frame_id);
-    EXPECT_EQ(dummy_left_cam_frame_id_, transformStamped.child_frame_id);
-    EXPECT_EQ(ros::Time(0), transformStamped.header.stamp);
+    EXPECT_EQ(dummy_base_link_frame_id_, transform_stamped.header.frame_id);
+    EXPECT_EQ(dummy_left_cam_frame_id_, transform_stamped.child_frame_id);
+    EXPECT_EQ(ros::Time(0), transform_stamped.header.stamp);
+    // we sent an origin pose, should be all 0's except w
+    EXPECT_EQ(1, transform_stamped.transform.rotation.w);
   }
   catch (tf2::TransformException &ex) {
     FAIL() << "Left cam transform failed: " << ex.what();
+  }
+  try {
+    transform_stamped = tf_buffer_.lookupTransform(
+        dummy_base_link_frame_id_, dummy_right_cam_frame_id_, ros::Time(0),
+        ros::Duration(RosDataProviderInterfaceExposed::kTfLookupTimeout));
+    EXPECT_EQ(dummy_base_link_frame_id_, transform_stamped.header.frame_id);
+    EXPECT_EQ(dummy_right_cam_frame_id_, transform_stamped.child_frame_id);
+    EXPECT_EQ(ros::Time(0), transform_stamped.header.stamp);
+    // we sent an origin pose, should be all 0's except w
+    EXPECT_EQ(1, transform_stamped.transform.rotation.w);
+  }
+  catch (tf2::TransformException &ex) {
+    FAIL() << "Right cam transform failed: " << ex.what();
   }
 }
 
