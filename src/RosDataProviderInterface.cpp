@@ -960,7 +960,6 @@ void RosDataProviderInterface::msgCamInfoToCameraParams(
   // Get extrinsics from the TF tree:
   tf2_ros::Buffer t_buffer;
   tf2_ros::TransformListener tf_listener(t_buffer);
-  static constexpr size_t kTfLookupTimeout = 5u;
   geometry_msgs::TransformStamped cam_tf;
 
   try {

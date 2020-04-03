@@ -7,6 +7,10 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_msgs/PolygonMesh.h>
+#include <geometry_msgs/TransformStamped.h>
+
+// Includes for ROS interfacing
+#include <tf2_ros/transform_listener.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
 
@@ -34,6 +38,8 @@ class RosDataProviderInterfaceExposed : public RosDataProviderInterface {
     using RosDataProviderInterface::map_frame_id_;
     using RosDataProviderInterface::left_cam_frame_id_;
     using RosDataProviderInterface::right_cam_frame_id_;
+    static const size_t kTfLookupTimeout = 
+                  RosDataProviderInterface::kTfLookupTimeout;
 };
 
 
@@ -43,7 +49,9 @@ class TestRosDataProviderInterface : public ::testing::Test {
  public:
   TestRosDataProviderInterface() :
         publishing_node_(),
-        parameter_server_("~")
+        parameter_server_("~"),
+        tf_buffer_(),
+        tf_listener_(tf_buffer_)
         {
     setFrameIDs();
     initializeVioParams();
@@ -54,6 +62,8 @@ class TestRosDataProviderInterface : public ::testing::Test {
  protected:
   ros::NodeHandle publishing_node_;
   ros::NodeHandle parameter_server_;
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
   VIO::VioParams::Ptr dummy_vio_params_;
 
   void setFrameIDs() {
@@ -114,6 +124,18 @@ TEST_F(TestRosDataProviderInterface, constructorTest) {
   EXPECT_EQ(1, pointcloud_sub.getNumPublishers());
   EXPECT_EQ(1, mesh_3d_frame_sub.getNumPublishers());
   
+  geometry_msgs::TransformStamped transformStamped;
+  try {
+    transformStamped = tf_buffer_.lookupTransform(
+        dummy_base_link_frame_id_, dummy_left_cam_frame_id_, ros::Time(0),
+        ros::Duration(RosDataProviderInterfaceExposed::kTfLookupTimeout));
+    EXPECT_EQ(dummy_base_link_frame_id_, transformStamped.header.frame_id);
+    EXPECT_EQ(dummy_left_cam_frame_id_, transformStamped.child_frame_id);
+    EXPECT_EQ(ros::Time(0), transformStamped.header.stamp);
+  }
+  catch (tf2::TransformException &ex) {
+    FAIL() << "Left cam transform failed: " << ex.what();
+  }
 }
 
 }  // namespace VIO
