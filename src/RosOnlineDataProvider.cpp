@@ -74,12 +74,14 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       CHECK(current.isValid());
     }
 
-    LOG_IF(ERROR, !gt_init_pose_received_)
-        << "Missing ground-truth pose while trying for "
-        << (current - start).toSec() << " seconds.\n"
-        << "Enabling autoInitialize and continuing without ground-truth "
-           "pose.";
-    vio_params_.backend_params_->autoInitialize_ = true;
+    if (!gt_init_pose_received_) {
+      LOG(ERROR)
+          << "Missing ground-truth pose while trying for "
+          << (current - start).toSec() << " seconds.\n"
+          << "Enabling autoInitialize and continuing without ground-truth "
+             "pose.";
+      vio_params_.backend_params_->autoInitialize_ = true;
+    }
   }
 
   // Determine whether to use camera info topics for camera parameters:
@@ -121,8 +123,8 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       CHECK(current.isValid());
     }
     LOG_IF(FATAL, !camera_info_received_)
-        << "Missing camera info, while trying for "
-        << (current - start).toSec() << " seconds.\n"
+        << "Missing camera info, while trying for " << (current - start).toSec()
+        << " seconds.\n"
         << "Expected camera info in topics:\n"
         << " - Left cam info topic: " << left_cam_info_subscriber_.getTopic()
         << '\n'
@@ -197,10 +199,8 @@ void RosOnlineDataProvider::callbackStereoImages(
     const sensor_msgs::ImageConstPtr& left_msg,
     const sensor_msgs::ImageConstPtr& right_msg) {
   CHECK_GE(vio_params_.camera_params_.size(), 2u);
-  const CameraParams& left_cam_info =
-      vio_params_.camera_params_.at(0);
-  const CameraParams& right_cam_info =
-      vio_params_.camera_params_.at(1);
+  const CameraParams& left_cam_info = vio_params_.camera_params_.at(0);
+  const CameraParams& right_cam_info = vio_params_.camera_params_.at(1);
 
   CHECK(left_msg);
   CHECK(right_msg);
@@ -281,8 +281,7 @@ void RosOnlineDataProvider::callbackGtOdomOnce(
     const nav_msgs::Odometry::ConstPtr& msgGtOdom) {
   LOG(WARNING) << "Using initial ground-truth state for initialization.";
   msgGtOdomToVioNavState(
-      msgGtOdom,
-      &vio_params_.backend_params_->initial_ground_truth_state_);
+      msgGtOdom, &vio_params_.backend_params_->initial_ground_truth_state_);
 
   // Signal receptance of ground-truth pose.
   gt_init_pose_received_ = true;
@@ -359,7 +358,10 @@ bool RosOnlineDataProvider::spin() {
   }
 
   // Start our own spin to publish output data to ROS
+  // Pop and send output at a 30Hz rate.
+  ros::Rate rate(30);
   while (ros::ok() && !shutdown_) {
+    rate.sleep();
     spinOnce();  // TODO(marcus): need a sequential mode?
   }
 
@@ -378,6 +380,7 @@ bool RosOnlineDataProvider::spin() {
 
 bool RosOnlineDataProvider::spinOnce() {
   // Publish frontend output at frame rate
+  LOG_EVERY_N(INFO, 100) << "Spinning RosOnlineDataProvider.";
   FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
   if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
     publishFrontendOutput(frame_rate_frontend_output);
