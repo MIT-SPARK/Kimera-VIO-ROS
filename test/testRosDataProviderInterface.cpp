@@ -14,6 +14,8 @@
 #include <tf2_ros/transform_listener.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
+// Needed to mock up StereoFrames, needed for FrontendOutput
+DECLARE_bool(images_rectified);
 
 namespace VIO {
 
@@ -101,6 +103,52 @@ class TestRosDataProviderInterface : public ::testing::Test {
     dummy_vio_params_->camera_params_.push_back(dummy_cam_params);
     dummy_vio_params_->camera_params_.push_back(dummy_cam_params);
   }
+
+  FrontendOutput::Ptr makeDummyFrontendOutput(const Timestamp& timestamp) {
+    // There is currently no clean way to satisfy the dependency injection
+    // Make a dummy input for each of the FrontEndOutput args
+    StatusStereoMeasurementsPtr dummy_stereo_measurements = 
+        std::make_shared<StatusStereoMeasurements>();
+    gtsam::Pose3 dummy_pose;
+    VIO::StereoFrame::Ptr dummy_stereo_frame = makeDummyStereoFrame(timestamp);
+    ImuFrontEnd::PimPtr dummy_pim_ptr;
+    DebugTrackerInfo dummy_debug_tracking;
+    FrontendOutput::Ptr dummy_frontend = std::make_shared<VIO::FrontendOutput>(
+        true,
+        dummy_stereo_measurements,
+        TrackingStatus::INVALID,
+        dummy_pose,
+        *dummy_stereo_frame,
+        dummy_pim_ptr,
+        dummy_debug_tracking
+    );
+
+    return dummy_frontend;
+  }
+
+  VIO::StereoFrame::Ptr makeDummyStereoFrame(const Timestamp& timestamp) {
+    // StereoFrame has nested dependencies and some constructor issues
+    VIO::CameraParams dummy_params;
+    dummy_params.R_rectify_ = cv::Mat::zeros(3, 3, CV_32F);
+    dummy_params.P_ = cv::Mat::zeros(3, 3, CV_32F);
+    VIO::Frame dummy_left_frame(0, timestamp, dummy_params, cv::Mat());
+    VIO::Frame dummy_right_frame(0, timestamp, dummy_params, cv::Mat());
+    VIO::StereoMatchingParams dummy_stereo_params;
+    // Rectification on dummy parameters will result in bad calculations
+    // Tell it the images are already rectified
+    FLAGS_images_rectified = true;
+    VIO::StereoFrame::Ptr dummy_stereo_frame = 
+      std::make_shared<VIO::StereoFrame>(
+        0,
+        timestamp,
+        dummy_left_frame,
+        dummy_right_frame,
+        dummy_stereo_params
+    );
+    FLAGS_images_rectified = false;
+
+    return dummy_stereo_frame;
+  }
 };
 
 /* ************************************************************************* */
@@ -187,10 +235,21 @@ TEST_F(TestRosDataProviderInterface, synchronizeOutputEmptyTest) {
 
 TEST_F(TestRosDataProviderInterface, synchronizeOutputFullTest) {
   RosDataProviderInterfaceExposed test_interface(*dummy_vio_params_);
-  test_interface.mock_publish_backend_output_ = true;
 
+  Timestamp common_stamp = 10;
+  FrontendOutput::Ptr dummy_frontend_output
+      = makeDummyFrontendOutput(common_stamp);
+  test_interface.keyframe_rate_frontend_output_queue_
+      .push(dummy_frontend_output);
+      /*
+  BackendOutput::Ptr dummy_backend_output
+      = makeDummyBackendOutput(common_stamp);
+  test_interface.backend_output_queue_.push(dummy_backend_output);
+  */
+
+  test_interface.mock_publish_backend_output_ = true;
   EXPECT_FALSE(test_interface.publishSyncedOutputs());
-  EXPECT_EQ(0, test_interface.mock_publish_backend_call_count_);
+  EXPECT_EQ(1, test_interface.mock_publish_backend_call_count_);
 }
 
 }  // namespace VIO
