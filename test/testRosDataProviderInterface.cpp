@@ -45,10 +45,8 @@ class RosDataProviderInterfaceExposed : public RosDataProviderInterface {
                   RosDataProviderInterface::kTfLookupTimeout;
 
     using RosDataProviderInterface::backend_output_queue_;
-    using RosDataProviderInterface::frame_rate_frontend_output_queue_;
     using RosDataProviderInterface::keyframe_rate_frontend_output_queue_;
     using RosDataProviderInterface::mesher_output_queue_;
-    using RosDataProviderInterface::lcd_output_queue_;
 
     using RosDataProviderInterface::publishSyncedOutputs;
     // To isolate current testing method, turn the methods it calls into stubs
@@ -107,20 +105,21 @@ class TestRosDataProviderInterface : public ::testing::Test {
   FrontendOutput::Ptr makeDummyFrontendOutput(const Timestamp& timestamp) {
     // There is currently no clean way to satisfy the dependency injection
     // Make a dummy input for each of the FrontEndOutput args
-    StatusStereoMeasurementsPtr dummy_stereo_measurements = 
-        std::make_shared<StatusStereoMeasurements>();
+    VIO::StatusStereoMeasurementsPtr dummy_stereo_measurements = 
+        std::make_shared<VIO::StatusStereoMeasurements>();
     gtsam::Pose3 dummy_pose;
     VIO::StereoFrame::Ptr dummy_stereo_frame = makeDummyStereoFrame(timestamp);
-    ImuFrontEnd::PimPtr dummy_pim_ptr;
-    DebugTrackerInfo dummy_debug_tracking;
-    FrontendOutput::Ptr dummy_frontend = std::make_shared<VIO::FrontendOutput>(
-        true,
-        dummy_stereo_measurements,
-        TrackingStatus::INVALID,
-        dummy_pose,
-        *dummy_stereo_frame,
-        dummy_pim_ptr,
-        dummy_debug_tracking
+    VIO::ImuFrontEnd::PimPtr dummy_pim_ptr;
+    VIO::DebugTrackerInfo dummy_debug_tracking;
+    VIO::FrontendOutput::Ptr dummy_frontend 
+        = std::make_shared<VIO::FrontendOutput>(
+            true,
+            dummy_stereo_measurements,
+            TrackingStatus::INVALID,
+            dummy_pose,
+            *dummy_stereo_frame,
+            dummy_pim_ptr,
+            dummy_debug_tracking
     );
 
     return dummy_frontend;
@@ -148,6 +147,37 @@ class TestRosDataProviderInterface : public ::testing::Test {
     FLAGS_images_rectified = false;
 
     return dummy_stereo_frame;
+  }
+  
+  VIO::BackendOutput::Ptr makeDummyBackendOutput(const Timestamp& timestamp) {
+    // There is currently no clean way to satisfy the dependency injection
+    // Make a dummy input for each of the BackEndOutput args
+    gtsam::Values dummy_state;
+    gtsam::Pose3 dummy_W_Pose_B;
+    VIO::Vector3 dummy_W_Vel_B;
+    VIO::ImuBias dummy_imu_bias;
+    gtsam::Matrix dummy_state_covariance;
+    VIO::FrameId dummy_id;
+    int dummy_landmark_count;
+    VIO::DebugVioInfo dummy_debug_info;
+    VIO::PointsWithIdMap dummy_landmarks_with_id_map;
+    VIO::LmkIdToLmkTypeMap dummy_lmk_id_to_lmk_type_map;
+    VIO::BackendOutput::Ptr dummy_backend = 
+        std::make_shared<VIO::BackendOutput>(
+          timestamp,
+          dummy_state,
+          dummy_W_Pose_B,
+          dummy_W_Vel_B,
+          dummy_imu_bias,
+          dummy_state_covariance,
+          dummy_id,
+          dummy_landmark_count,
+          dummy_debug_info,
+          dummy_landmarks_with_id_map,
+          dummy_lmk_id_to_lmk_type_map
+    );
+
+    return dummy_backend;
   }
 };
 
@@ -241,12 +271,11 @@ TEST_F(TestRosDataProviderInterface, synchronizeOutputFullTest) {
       = makeDummyFrontendOutput(common_stamp);
   test_interface.keyframe_rate_frontend_output_queue_
       .push(dummy_frontend_output);
-      /*
+  
   BackendOutput::Ptr dummy_backend_output
       = makeDummyBackendOutput(common_stamp);
   test_interface.backend_output_queue_.push(dummy_backend_output);
-  */
-
+  
   test_interface.mock_publish_backend_output_ = true;
   EXPECT_FALSE(test_interface.publishSyncedOutputs());
   EXPECT_EQ(1, test_interface.mock_publish_backend_call_count_);
