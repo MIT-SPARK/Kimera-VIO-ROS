@@ -41,6 +41,24 @@ class RosDataProviderInterfaceExposed : public RosDataProviderInterface {
     using RosDataProviderInterface::right_cam_frame_id_;
     static const size_t kTfLookupTimeout = 
                   RosDataProviderInterface::kTfLookupTimeout;
+
+    using RosDataProviderInterface::backend_output_queue_;
+    using RosDataProviderInterface::frame_rate_frontend_output_queue_;
+    using RosDataProviderInterface::keyframe_rate_frontend_output_queue_;
+    using RosDataProviderInterface::mesher_output_queue_;
+    using RosDataProviderInterface::lcd_output_queue_;
+
+    using RosDataProviderInterface::publishSyncedOutputs;
+    // To isolate current testing method, turn the methods it calls into stubs
+    bool mock_publish_backend_output_ = false;
+    size_t mock_publish_backend_call_count_ = 0;
+    void publishBackendOutput(const BackendOutput::Ptr& output) {
+      if(!mock_publish_backend_output_) {
+        RosDataProviderInterface::publishBackendOutput(output);
+      } else {
+        mock_publish_backend_output_++;
+      }
+    }
 };
 
 
@@ -153,6 +171,26 @@ TEST_F(TestRosDataProviderInterface, constructorTest) {
   catch (tf2::TransformException &ex) {
     FAIL() << "Right cam transform failed: " << ex.what();
   }
+}
+
+/* ************************************************************************* */
+
+TEST_F(TestRosDataProviderInterface, synchronizeOutputEmptyTest) {
+  RosDataProviderInterfaceExposed test_interface(*dummy_vio_params_);
+  test_interface.mock_publish_backend_output_ = true;
+
+  EXPECT_FALSE(test_interface.publishSyncedOutputs());
+  EXPECT_EQ(0, test_interface.mock_publish_backend_call_count_);
+}
+
+/* ************************************************************************* */
+
+TEST_F(TestRosDataProviderInterface, synchronizeOutputFullTest) {
+  RosDataProviderInterfaceExposed test_interface(*dummy_vio_params_);
+  test_interface.mock_publish_backend_output_ = true;
+
+  EXPECT_FALSE(test_interface.publishSyncedOutputs());
+  EXPECT_EQ(0, test_interface.mock_publish_backend_call_count_);
 }
 
 }  // namespace VIO
