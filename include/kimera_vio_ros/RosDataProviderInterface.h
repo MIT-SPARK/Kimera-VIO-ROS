@@ -31,7 +31,7 @@
 #include <kimera-vio/frontend/StereoFrame.h>
 #include <kimera-vio/frontend/StereoImuSyncPacket.h>
 #include <kimera-vio/frontend/StereoMatchingParams.h>
-#include <kimera-vio/frontend/VioFrontEndParams.h>
+#include <kimera-vio/frontend/VisionFrontEndParams.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/utils/ThreadsafeQueue.h>
@@ -69,7 +69,9 @@ class RosDataProviderInterface : public DataProviderInterface {
     // Perhaps we should make all our threadsafe queues temporally aware
     // (meaning you can query the time of the message directly)...
     frame_rate_frontend_output_queue_.push(output);
-    keyframe_rate_frontend_output_queue_.push(output);
+    if (output && output->is_keyframe_) {
+      keyframe_rate_frontend_output_queue_.push(output);
+    }
   }
 
   inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {

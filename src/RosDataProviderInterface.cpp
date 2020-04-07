@@ -76,8 +76,8 @@ RosDataProviderInterface::RosDataProviderInterface(const VioParams& vio_params)
   pointcloud_pub_ =
       nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 1, true);
   mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 1, true);
-  debug_img_pub_ = it_->advertise("debug_mesh_img", 1, true);
-  feature_tracks_pub_ = it_->advertise("feature_tracks", 1, true);
+  debug_img_pub_ = it_->advertise("debug_mesh_img/image_raw", 1, true);
+  feature_tracks_pub_ = it_->advertise("feature_tracks/image_raw", 1, true);
 
   publishStaticTf(vio_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
@@ -170,15 +170,21 @@ void RosDataProviderInterface::publishFrontendOutput(
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
   }
-  // TODO(Toni): re-implement
-  // if (feature_tracks_pub_.getNumSubscribers() > 0) {
-  //   std_msgs::Header h;
-  //   h.stamp.fromNSec(output->timestamp_);
-  //   h.frame_id = base_link_frame_id_;
-  //   // Copies...
-  //   feature_tracks_pub_.publish(
-  //       cv_bridge::CvImage(h, "bgr8", output->feature_tracks_).toImageMsg());
-  // }
+  if (feature_tracks_pub_.getNumSubscribers() > 0) {
+    if (!output->feature_tracks_.empty()) {
+      std_msgs::Header h;
+      h.stamp.fromNSec(output->timestamp_);
+      h.frame_id = base_link_frame_id_;
+      // Copies...
+      feature_tracks_pub_.publish(
+          cv_bridge::CvImage(h, "bgr8", output->feature_tracks_).toImageMsg());
+    } else {
+      LOG(ERROR) << feature_tracks_pub_.getNumSubscribers()
+                 << " nodes subscribed to the feature tracks topic, but the "
+                    "feature tracks image is empty. Did you set the gflag "
+                    "visualize_feature_tracks in Kimera-VIO to true?";
+    }
+  }
 }
 
 void RosDataProviderInterface::publishMesherOutput(
@@ -881,14 +887,11 @@ void RosDataProviderInterface::publishStaticTf(
 
 void RosDataProviderInterface::printParsedParams() const {
   static constexpr int kSeparatorWidth = 40;
-  LOG(INFO) << std::string(kSeparatorWidth, '=')
-            << " - Left camera info:";
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Left camera info:";
   vio_params_.camera_params_.at(0).print();
-  LOG(INFO) << std::string(kSeparatorWidth, '=')
-            << " - Right camera info:";
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Right camera info:";
   vio_params_.camera_params_.at(1).print();
-  LOG(INFO) << std::string(kSeparatorWidth, '=')
-            << " - Frontend params:";
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Frontend params:";
   vio_params_.frontend_params_.print();
   LOG(INFO) << std::string(kSeparatorWidth, '=') << " - IMU params:";
   vio_params_.imu_params_.print();
@@ -950,8 +953,8 @@ void RosDataProviderInterface::msgCamInfoToCameraParams(
   std::array<double, 4> intrinsics = {
       cam_info->K[0], cam_info->K[4], cam_info->K[2], cam_info->K[5]};
   cam_params->intrinsics_ = intrinsics;
-  VIO::CameraParams::convertIntrinsicsVectorToMatrix(
-      cam_params->intrinsics_, &cam_params->K_);
+  VIO::CameraParams::convertIntrinsicsVectorToMatrix(cam_params->intrinsics_,
+                                                     &cam_params->K_);
 
   VIO::CameraParams::createGtsamCalibration(cam_params->distortion_coeff_,
                                             cam_params->intrinsics_,

@@ -20,8 +20,7 @@
   <!-- If true, log ground-truth poses to a csv file using the
        gt_logger_node, and processing data from the gt_topic rostopic -->
   <arg name="log_gt_data" default="false"/>
-  <arg name="gt_topic" if="$(arg log_gt_data)"
-       default="ground_truth_odometry_topic"/>
+  <arg name="gt_topic" default="ground_truth_odometry_topic"/>
 
   <!-- If true, SparkVio will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
@@ -57,6 +56,8 @@
   <!-- Visualize pipeline output in OpenCV. -->
   <!-- Note that this is duplicated from the flags file -->
   <arg name="visualize"    default="false" />
+  <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
+  <arg name="viz_type"     default="0" />
 
   <!-- Launch main node  -->
   <node name="kimera_vio_ros_node" pkg="kimera_vio_ros" type="kimera_vio_ros_node"
@@ -73,6 +74,7 @@
               --v=$(arg verbosity)
               --log_output=$(arg log_output)
               --output_path=$(arg log_output_path)
+              --viz_type=$(arg viz_type)
               --visualize=$(arg visualize)">
     <param name="params_folder_path" value="$(arg params_folder)"/>
 
@@ -111,16 +113,16 @@
     <remap from="reinit_pose" to="reinit_pose"/>
 
     <!-- Remap publisher topics -->
-    <remap from="odometry"                to="odometry"/>
-    <remap from="resiliency"              to="resiliency"/>
-    <remap from="imu_bias"                to="imu_bias"/>
-    <remap from="optimized_trajectory"    to="optimized_trajectory"/>
-    <remap from="pose_graph"              to="pose_graph"/>
-    <remap from="mesh"                    to="mesh"/>
-    <remap from="frontend_stats"          to="frontend_stats"/>
-    <remap from="debug_mesh_img"          to="debug_mesh_img"/>
-    <remap from="feature_tracks"          to="feature_tracks"/>
-    <remap from="time_horizon_pointcloud" to="time_horizon_pointcloud"/>
+    <remap from="odometry"                       to="odometry"/>
+    <remap from="resiliency"                     to="resiliency"/>
+    <remap from="imu_bias"                       to="imu_bias"/>
+    <remap from="optimized_trajectory"           to="optimized_trajectory"/>
+    <remap from="pose_graph"                     to="pose_graph"/>
+    <remap from="mesh"                           to="mesh"/>
+    <remap from="frontend_stats"                 to="frontend_stats"/>
+    <remap from="debug_mesh_img/image_raw"       to="debug_mesh_img/image_raw"/>
+    <remap from="feature_tracks/image_raw"       to="feature_tracks/image_raw"/>
+    <remap from="time_horizon_pointcloud"        to="time_horizon_pointcloud"/>
 
     <!-- Resiliency Thresholds: TODO(Sandro) document -->
     <param name="velocity_det_threshold"  value="0.1"/>

@@ -93,8 +93,11 @@ bool KimeraVioRos::spin() {
         std::launch::async, &VIO::Pipeline::spin, vio_pipeline_.get());
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.
+    ros::Rate rate (10);  // Check pipeline status at 10Hz
     while (ros::ok() &&
            !restart_vio_pipeline_) {  //&& vio_pipeline.spinViz()) {
+      LOG_EVERY_N(INFO, 5) << vio_pipeline_->printStatistics();
+      rate.sleep();
       continue;
     }
     if (!restart_vio_pipeline_) {
@@ -103,7 +106,7 @@ bool KimeraVioRos::spin() {
     } else {
       LOG(INFO) << "Restarting Kimera-VIO.";
     }
-    // TODO(TOni): right now vio shutsdown data provider, maybe we should
+    // TODO(Toni): right now vio shutsdown data provider, maybe we should
     // explicitly shutdown data provider: data_provider_->shutdown();
     vio_pipeline_->shutdown();
     LOG(INFO) << "Joining Kimera-VIO thread.";
@@ -122,6 +125,7 @@ bool KimeraVioRos::spin() {
   } else {
     ros::start();
     while (ros::ok() && data_provider_->spin() && vio_pipeline_->spin()) {
+      LOG(INFO) << vio_pipeline_->printStatistics();
       continue;
     }
     LOG(INFO) << "Shutting down ROS and VIO pipeline.";
