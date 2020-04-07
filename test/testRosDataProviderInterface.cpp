@@ -56,7 +56,19 @@ class RosDataProviderInterfaceExposed : public RosDataProviderInterface {
       if(!mock_publish_backend_output_) {
         RosDataProviderInterface::publishBackendOutput(output);
       } else {
-        mock_publish_backend_output_++;
+        mock_publish_backend_call_count_++;
+      }
+    }
+    bool mock_publish_mesher_output_ = false;
+    // publishMesherOutput is const; get around it with a pointer
+    std::shared_ptr<size_t> mock_publish_mesher_call_count_ = nullptr;
+    void publishMesherOutput(const MesherOutput::Ptr& output) const {
+      if(!mock_publish_mesher_output_) {
+        RosDataProviderInterface::publishMesherOutput(output);
+      } else {
+        CHECK(mock_publish_mesher_call_count_)
+            << "You must set the mock_publish_mesher_call_count_ pointer!";
+        (*mock_publish_mesher_call_count_)++;
       }
     }
 };
@@ -291,8 +303,13 @@ TEST_F(TestRosDataProviderInterface, synchronizeOutputFullTest) {
   test_interface.mesher_output_queue_.push(dummy_mesher_output);
   
   test_interface.mock_publish_backend_output_ = true;
+  test_interface.mock_publish_mesher_output_ = true;
+  // Mesher publish call is const, use a pointer as a workaround
+  test_interface.mock_publish_mesher_call_count_ =
+      std::make_shared<size_t>(0);
   EXPECT_TRUE(test_interface.publishSyncedOutputs());
   EXPECT_EQ(1, test_interface.mock_publish_backend_call_count_);
+  EXPECT_EQ(1, *test_interface.mock_publish_mesher_call_count_);
 }
 
 }  // namespace VIO
