@@ -61,6 +61,16 @@ class RosDataProviderInterfaceExposed : public RosDataProviderInterface {
     }
 };
 
+class RosDataProviderInterfacePrivateStubbed : 
+    public RosDataProviderInterfaceExposed {
+  public:
+    size_t mock_publish_resiliency_call_count_ = 0;
+    void publishResiliency( const FrontendOutput::Ptr& frontend_output,
+            const BackendOutput::Ptr& backend_output) {
+      mock_publish_resiliency_call_count_++;
+    }
+};
+
 
 /* ************************************************************************** */
 
@@ -267,17 +277,21 @@ TEST_F(TestRosDataProviderInterface, synchronizeOutputFullTest) {
   RosDataProviderInterfaceExposed test_interface(*dummy_vio_params_);
 
   Timestamp common_stamp = 10;
-  FrontendOutput::Ptr dummy_frontend_output
+  VIO::FrontendOutput::Ptr dummy_frontend_output
       = makeDummyFrontendOutput(common_stamp);
   test_interface.keyframe_rate_frontend_output_queue_
       .push(dummy_frontend_output);
   
-  BackendOutput::Ptr dummy_backend_output
+  VIO::BackendOutput::Ptr dummy_backend_output
       = makeDummyBackendOutput(common_stamp);
   test_interface.backend_output_queue_.push(dummy_backend_output);
+
+  VIO::MesherOutput::Ptr dummy_mesher_output
+      = std::make_shared<VIO::MesherOutput>(common_stamp);
+  test_interface.mesher_output_queue_.push(dummy_mesher_output);
   
   test_interface.mock_publish_backend_output_ = true;
-  EXPECT_FALSE(test_interface.publishSyncedOutputs());
+  EXPECT_TRUE(test_interface.publishSyncedOutputs());
   EXPECT_EQ(1, test_interface.mock_publish_backend_call_count_);
 }
 
