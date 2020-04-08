@@ -1,6 +1,9 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include "kimera_vio_ros/KimeraVioRos.h"
+// Executable is at ./devel/lib/kimera_vio_ros/testKimeraVioRos
+DEFINE_string(test_data_path, "../../../Kimera-VIO-ROS/tests/data",
+           "Path to data for unit tests.");
 
 namespace VIO {
 
