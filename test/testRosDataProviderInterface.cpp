@@ -132,6 +132,7 @@ class TestRosDataProviderInterface : public ::testing::Test {
     gtsam::Pose3 dummy_pose;
     VIO::StereoFrame::Ptr dummy_stereo_frame = makeDummyStereoFrame(timestamp);
     VIO::ImuFrontEnd::PimPtr dummy_pim_ptr;
+    cv::Mat dummy_feature_tracks;
     VIO::DebugTrackerInfo dummy_debug_tracking;
     VIO::FrontendOutput::Ptr dummy_frontend 
         = std::make_shared<VIO::FrontendOutput>(
@@ -141,6 +142,7 @@ class TestRosDataProviderInterface : public ::testing::Test {
             dummy_pose,
             *dummy_stereo_frame,
             dummy_pim_ptr,
+            dummy_feature_tracks,
             dummy_debug_tracking
     );
 
