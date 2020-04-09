@@ -15,11 +15,6 @@ DEFINE_string(test_data_path, "../../src/Kimera-VIO-ROS/test/data",
 
 namespace VIO {
 
-TEST(KimeraVioRosTest, KimeraVioRosTest) {
-  // Works?
-  EXPECT_TRUE(false);
-}
-
 }  // namespace VIO
 
 int main(int argc, char** argv) {
