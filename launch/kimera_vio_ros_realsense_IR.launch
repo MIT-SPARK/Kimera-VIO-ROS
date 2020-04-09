@@ -1,6 +1,5 @@
 <launch>
   <arg name="dataset_name" value="RealSenseIR"/>
-  <arg name="parallel" default="True" />
   <arg name="online" default="True" />
 
   <arg name="log_output" default="false"/>
