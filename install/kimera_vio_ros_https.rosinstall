@@ -60,3 +60,7 @@
     local-name: gflags_catkin
     uri: https://github.com/ethz-asl/gflags_catkin.git
     version: master
+- git:
+    local-name: disparity_image_proc
+    uri: https://github.com/ToniRV/disparity_image_proc.git
+    version: master

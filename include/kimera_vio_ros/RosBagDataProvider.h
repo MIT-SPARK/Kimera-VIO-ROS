@@ -2,6 +2,7 @@
  * @file   RosBagDataProvider.h
  * @brief  Parse rosbag and run Kimera-VIO.
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #pragma once
@@ -20,6 +21,8 @@
 #include <sensor_msgs/Imu.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
+
+#include <kimera-vio/pipeline/Pipeline-definitions.h>.h>
 
 namespace VIO {
 
@@ -41,7 +44,7 @@ class RosbagDataProvider : public RosDataProviderInterface {
   KIMERA_DELETE_COPY_CONSTRUCTORS(RosbagDataProvider);
   KIMERA_POINTER_TYPEDEFS(RosbagDataProvider);
 
-  RosbagDataProvider();
+  RosbagDataProvider(const VioParams& vio_params);
   virtual ~RosbagDataProvider() = default;
 
   // Returns true if the whole rosbag was successfully played, false if ROS was

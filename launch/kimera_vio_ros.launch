@@ -2,14 +2,15 @@
   <!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
   file and include this one to launch KimeraVIO on the dataset of your choice -->
   <arg name="dataset_name" default="Euroc"/>
-  <!-- If you want to run the pipeline in parallel vs sequential mode -->
-  <arg name="parallel" default="true" />
   <!-- If False, parses the given rosbag, otw it plays the rosbage -->
   <arg name="online" default="true" />
   <!-- !!!! VIT !!!! This should be true when running online with a rosbag publishing clock,
   but false when parsing rosbag? Needs rosbag to be publishing clock -->
   <param name="use_sim_time" value="true"/>
   <arg name="rosbag_path" unless="$(arg online)"/>
+
+  <!-- Use CameraInfo topics to get parameters, instead of yaml files -->
+  <arg name="use_online_cam_params" default="false"/>
 
   <!-- If true, SparkVio will log output of all modules to the
        'log_output_path' location. -->
@@ -19,8 +20,7 @@
   <!-- If true, log ground-truth poses to a csv file using the
        gt_logger_node, and processing data from the gt_topic rostopic -->
   <arg name="log_gt_data" default="false"/>
-  <arg name="gt_topic" if="$(arg log_gt_data)"
-       default="ground_truth_odometry_topic"/>
+  <arg name="gt_topic" default="ground_truth_odometry_topic"/>
 
   <!-- If true, SparkVio will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
@@ -28,8 +28,7 @@
   <!-- Parameters -->
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
-  <arg name="params_folder"
-                       value="$(find kimera_vio)/params/$(arg dataset_name)"/>
+  <arg name="params_folder" value="$(find kimera_vio)/params/$(arg dataset_name)"/>
 
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
@@ -37,7 +36,9 @@
 
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"                    default="/cam0/image_raw"/>
+  <arg name="left_cam_info_topic"               default="/cam0/camera_info"/>
   <arg name="right_cam_topic"                   default="/cam1/image_raw"/>
+  <arg name="right_cam_info_topic"              default="/cam1/camera_info"/>
   <arg name="imu_topic"                         default="/imu0"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
@@ -52,22 +53,16 @@
 
   <!-- General parameters -->
   <arg name="verbosity"    default="0" />
-  <!-- 0: for vanilla VIO, 1: for regular VIO -->
-  <arg name="backend_type" default="1" />
   <!-- Visualize pipeline output in OpenCV. -->
   <!-- Note that this is duplicated from the flags file -->
   <arg name="visualize"    default="false" />
+  <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
+  <arg name="viz_type"     default="0" />
 
   <!-- Launch main node  -->
   <node name="kimera_vio_ros_node" pkg="kimera_vio_ros" type="kimera_vio_ros_node"
         output="screen" ns="kimera_vio_ros"
-        args="--left_cam_params_path=$(arg params_folder)/LeftCameraParams.yaml
-              --right_cam_params_path=$(arg params_folder)/RightCameraParams.yaml
-              --imu_params_path=$(arg params_folder)/ImuParams.yaml
-              --backend_params_path=$(arg params_folder)/regularVioParameters.yaml
-              --frontend_params_path=$(arg params_folder)/trackerParameters.yaml
-              --use_lcd=$(arg use_lcd)
-              --lcd_params_path=$(arg params_folder)/LCDParameters.yaml
+        args="--use_lcd=$(arg use_lcd)
               --vocabulary_path=$(arg path_to_vocab)
               --flagfile=$(arg params_folder)/flags/Mesher.flags
               --flagfile=$(arg params_folder)/flags/VioBackEnd.flags
@@ -77,14 +72,15 @@
               --colorlogtostderr=1
               --log_prefix=1
               --v=$(arg verbosity)
-              --backend_type=$(arg backend_type)
               --log_output=$(arg log_output)
               --output_path=$(arg log_output_path)
-              --visualize=$(arg visualize)
-              --parallel_run=$(arg parallel)">
+              --viz_type=$(arg viz_type)
+              --visualize=$(arg visualize)">
+    <param name="params_folder_path" value="$(arg params_folder)"/>
 
-    <param name="online_run"        value="$(arg online)"/>
-    <param name="use_lcd"           value="$(arg use_lcd)"/>
+    <param name="online_run"            value="$(arg online)"/>
+    <param name="use_lcd"               value="$(arg use_lcd)"/>
+    <param name="use_online_cam_params" value="$(arg use_online_cam_params)"/>
 
     <!-- Frame IDs for Odometry -->
     <param name="world_frame_id"     value="$(arg world_frame_id)"/>
@@ -95,11 +91,14 @@
 
     <!-- Subscriber topics -->
     <!-- if we run online, use remap -->
-    <remap from="left_cam"  to="$(arg left_cam_topic)"              if="$(arg online)"/>
-    <remap from="right_cam" to="$(arg right_cam_topic)"             if="$(arg online)"/>
+    <remap from="left_cam/image_raw"  to="$(arg left_cam_topic)"    if="$(arg online)"/>
+    <remap from="right_cam/image_raw" to="$(arg right_cam_topic)"   if="$(arg online)"/>
     <remap from="imu"       to="$(arg imu_topic)"                   if="$(arg online)"/>
     <remap from="gt_odom"   to="$(arg odometry_ground_truth_topic)"
            if="$(eval arg('online') and arg('odometry_ground_truth_topic') != '')"/>
+
+    <remap from="left_cam/camera_info"  to="$(arg left_cam_info_topic)"  if="$(arg online)"/>
+    <remap from="right_cam/camera_info" to="$(arg right_cam_info_topic)" if="$(arg online)"/>
 
     <!-- if we run offline, use params -->
     <param name="rosbag_path"            value="$(arg rosbag_path)"     unless="$(arg online)"/>
@@ -114,16 +113,16 @@
     <remap from="reinit_pose" to="reinit_pose"/>
 
     <!-- Remap publisher topics -->
-    <remap from="odometry"                to="odometry"/>
-    <remap from="resiliency"              to="resiliency"/>
-    <remap from="imu_bias"                to="imu_bias"/>
-    <remap from="optimized_trajectory"    to="optimized_trajectory"/>
-    <remap from="pose_graph"              to="pose_graph"/>
-    <remap from="mesh"                    to="mesh"/>
-    <remap from="frontend_stats"          to="frontend_stats"/>
-    <remap from="debug_mesh_img"          to="debug_mesh_img"/>
-    <remap from="feature_tracks"          to="feature_tracks"/>
-    <remap from="time_horizon_pointcloud" to="time_horizon_pointcloud"/>
+    <remap from="odometry"                       to="odometry"/>
+    <remap from="resiliency"                     to="resiliency"/>
+    <remap from="imu_bias"                       to="imu_bias"/>
+    <remap from="optimized_trajectory"           to="optimized_trajectory"/>
+    <remap from="pose_graph"                     to="pose_graph"/>
+    <remap from="mesh"                           to="mesh"/>
+    <remap from="frontend_stats"                 to="frontend_stats"/>
+    <remap from="debug_mesh_img/image_raw"       to="debug_mesh_img/image_raw"/>
+    <remap from="feature_tracks/image_raw"       to="feature_tracks/image_raw"/>
+    <remap from="time_horizon_pointcloud"        to="time_horizon_pointcloud"/>
 
     <!-- Resiliency Thresholds: TODO(Sandro) document -->
     <param name="velocity_det_threshold"  value="0.1"/>
@@ -134,6 +133,43 @@
     <!-- Load calibration -->
     <!-- <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/> -->
   </node>
+
+  <!-- Run stereo_dense_reconstruction_node -->
+  <arg name="run_stereo_dense"     default="false"/>
+  <group ns="stereo_gray" if="$(arg run_stereo_dense)">
+    <!-- StereoBM -->
+    <node name="stereo_image_proc" pkg="stereo_image_proc"
+      type="stereo_image_proc" clear_params="true" output="screen"
+      if="$(arg run_stereo_dense)">
+      <remap from="left/image_rect"   to="/dev/null/left_cam"/>
+      <remap from="right/image_rect"  to="/dev/null/right_cam"/>
+      <!-- Input -->
+      <remap from="left/image_raw"          to="$(arg left_cam_topic)"/>
+      <remap from="left/camera_info"        to="$(arg left_cam_info_topic)"/>
+      <remap from="right/image_raw"         to="$(arg right_cam_topic)"/>
+      <remap from="right/camera_info"       to="$(arg right_cam_info_topic)"/>
+      <!-- Output -->
+      <remap from="/stereo_gray/points2"    to="/stereo_gray/points2"/>
+      <remap from="/stereo_gray/disparity"  to="/stereo_gray/disparity"/>
+      <!-- Params -->
+      <param name="approximate_sync" value="true" />
+    </node>
+    <!-- Run converter from the stereo disparity image to a depth image -->
+    <arg name="depth_img"      value="depth/image_raw"/>
+    <node pkg="nodelet" type="nodelet" name="stereo_proc"  args="manager"/>
+    <node name="disparity_image_proc" pkg="nodelet" type="nodelet"
+      args="load disparity_image_proc/depth_image stereo_proc" output="screen">
+      <!-- Inputs -->
+      <remap from="disparity"             to="/stereo_gray/disparity"/>
+      <remap from="left/camera_info"      to="$(arg left_cam_info_topic)"/>
+      <remap from="right/camera_info"     to="$(arg right_cam_info_topic)"/>
+      <!-- Output -->
+      <remap from="~depth_image"          to="~$(arg depth_img)"/>
+      <!-- Params -->
+      <param name="queue_size"         value="5"/>
+      <param name="approximate_sync"   value="true"/>
+    </node>
+  </group>
 
   <!-- Launch visualizer -->
   <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >

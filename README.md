@@ -10,13 +10,13 @@ ROS Wrapper for [Kimera](https://github.com/MIT-SPARK/Kimera).
 
 We kindly ask to cite our paper if you find this library useful:
 
- - A. Rosinol, M. Abate, Y. Chang, L. Carlone. [**Kimera: an Open-Source Library for Real-Time Metric-Semantic Localization and Mapping**](https://arxiv.org/abs/1910.02490). IEEE Intl. Conf. on Robotics and Automation (ICRA), 2019.
+- A. Rosinol, M. Abate, Y. Chang, L. Carlone, [**Kimera: an Open-Source Library for Real-Time Metric-Semantic Localization and Mapping**](https://arxiv.org/abs/1910.02490). IEEE Intl. Conf. on Robotics and Automation (ICRA), 2020. [arXiv:1910.02490](https://arxiv.org/abs/1910.02490).
  
  ```bibtex
- @InProceedings{Rosinol19icra-Kimera,
+ @InProceedings{Rosinol20icra-Kimera,
    title = {Kimera: an Open-Source Library for Real-Time Metric-Semantic Localization and Mapping},
    author = {Rosinol, Antoni and Abate, Marcus and Chang, Yun and Carlone, Luca},
-   year = {2019},
+   year = {2020},
    booktitle = {IEEE Intl. Conf. on Robotics and Automation (ICRA)},
    url = {https://github.com/MIT-SPARK/Kimera},
    pdf = {https://arxiv.org/pdf/1910.02490.pdf}
@@ -153,6 +153,13 @@ catkin run_tests --no-deps --this
 
 ## Other functionalities
 
+### Using camera_info topics instead of Yaml parameters
+
+It is sometimes convenient to use the `camera_info` topics to parse the camera's parameters.
+There are currently two ways of using these topics:
+ - Offline: using the launch file `launch/cam_info_yamlizer.launch` which will generate yaml files out of the topics.
+ - Online: setting the flag `use_online_cam_params` (see `launch/kimera_vio_ros.launch`) to true, and ensuring ROS topics are correctly set.
+
 ### Restart Kimera-VIO
 
 The typical use case is that you have multiple rosbags and you don't want to be killing Kimera-VIO(-ROS) each time.
@@ -165,6 +172,18 @@ rosservice call /kimera_vio_ros/kimera_vio_ros_node/restart_kimera_vio
 > 2. Stop rosbag
 > 3. Call rosservice to restart VIO
 > 4. Start another rosbag
+
+### Enable Dense Depth Stereo estimation
+
+This will run OpenCV's StereoBM algorithm, more info can be found [here](http://wiki.ros.org/stereo_image_proc) (also checkout this to [choose good parameters](http://wiki.ros.org/stereo_image_proc/Tutorials/ChoosingGoodStereoParameters)):
+
+```bash
+roslaunch kimera_vio_ros kimera_vio_ros_euroc run_stereo_dense:=1
+```
+
+This will publish a `/stereo_gray/points2` topic, which you can visualize in Rviz as a 3D pointcloud.
+Alternatively, if you want to visualize the depth image, since Rviz does not provide a plugin to
+visualize a [disparity image](http://docs.ros.org/api/stereo_msgs/html/msg/DisparityImage.html), we also run a [disparity_image_proc](https://github.com/ToniRV/disparity_image_proc) nodelet that will publish the depth image to `/stereo_gray/disparity_image_proc/depth/image_raw`.
 
 # Hardware use
 

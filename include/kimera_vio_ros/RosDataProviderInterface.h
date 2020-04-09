@@ -2,6 +2,7 @@
  * @file   RosDataProviderInterface.h
  * @brief  Base class for ROS wrappers for Kimera-VIO.
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #pragma once
@@ -25,11 +26,12 @@
 #include <tf/transform_broadcaster.h>
 
 #include <kimera-vio/common/vio_types.h>
+#include <kimera-vio/pipeline/Pipeline-definitions.h>
 #include <kimera-vio/dataprovider/DataProviderInterface.h>
 #include <kimera-vio/frontend/StereoFrame.h>
 #include <kimera-vio/frontend/StereoImuSyncPacket.h>
 #include <kimera-vio/frontend/StereoMatchingParams.h>
-#include <kimera-vio/frontend/VioFrontEndParams.h>
+#include <kimera-vio/frontend/VisionFrontEndParams.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/utils/ThreadsafeQueue.h>
@@ -37,7 +39,7 @@
 namespace VIO {
 
 /**
- * @breif Struct to hold mesh vertex data.
+ * @brief The PointNormalUV struct holds mesh vertex data.
  */
 struct PointNormalUV {
   PCL_ADD_POINT4D;
@@ -52,7 +54,7 @@ class RosDataProviderInterface : public DataProviderInterface {
   KIMERA_DELETE_COPY_CONSTRUCTORS(RosDataProviderInterface);
   KIMERA_POINTER_TYPEDEFS(RosDataProviderInterface);
 
-  RosDataProviderInterface();
+  explicit RosDataProviderInterface(const VioParams& vio_params);
 
   virtual ~RosDataProviderInterface();
 
@@ -67,7 +69,9 @@ class RosDataProviderInterface : public DataProviderInterface {
     // Perhaps we should make all our threadsafe queues temporally aware
     // (meaning you can query the time of the message directly)...
     frame_rate_frontend_output_queue_.push(output);
-    keyframe_rate_frontend_output_queue_.push(output);
+    if (output && output->is_keyframe_) {
+      keyframe_rate_frontend_output_queue_.push(output);
+    }
   }
 
   inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
@@ -116,6 +120,15 @@ class RosDataProviderInterface : public DataProviderInterface {
   }
 
  protected:
+  void msgTFtoPose(const geometry_msgs::Transform& tf, gtsam::Pose3* pose);
+
+  void poseToMsgTF(const gtsam::Pose3& pose, geometry_msgs::Transform* tf);
+
+  void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
+                                const std::string& cam_frame_id,
+                                VIO::CameraParams* cam_params);
+
+ protected:
   // Define Node Handler for general use (Parameter server)
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
@@ -136,6 +149,12 @@ class RosDataProviderInterface : public DataProviderInterface {
   ThreadsafeQueue<FrontendOutput::Ptr> keyframe_rate_frontend_output_queue_;
   ThreadsafeQueue<MesherOutput::Ptr> mesher_output_queue_;
   ThreadsafeQueue<LcdOutput::Ptr> lcd_output_queue_;
+
+  // TODO(Toni): technically the dataprovider should not need these, but
+  // I still haven't removed the requirement to send camera params with each
+  // vio callback...
+  // Pipeline params
+  VioParams vio_params_;
 
  private:
   void publishTf(const BackendOutput::Ptr& output);

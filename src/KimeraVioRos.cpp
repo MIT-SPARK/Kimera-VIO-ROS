@@ -1,6 +1,7 @@
 /* @file   KimeraVioRos.cpp
- * @brief  ROS Wrapper for Spark-VIO
+ * @brief  ROS Wrapper for Kimera-VIO
  * @author Antoni Rosinol
+ * @author Marcus Abate
  */
 
 #include "kimera_vio_ros/KimeraVioRos.h"
@@ -18,6 +19,7 @@
 #include <std_srvs/TriggerResponse.h>
 
 // Dependencies from VIO
+#include <kimera-vio/pipeline/Pipeline-definitions.h>
 #include <kimera-vio/pipeline/Pipeline.h>
 #include <kimera-vio/utils/Timer.h>
 
@@ -29,33 +31,45 @@
 namespace VIO {
 
 KimeraVioRos::KimeraVioRos()
-    : data_provider_(nullptr),
+    : vio_params_(nullptr),
       vio_pipeline_(nullptr),
+      data_provider_(nullptr),
       restart_vio_pipeline_srv_(),
       restart_vio_pipeline_(false) {
   // Add rosservice to restart VIO pipeline if requested.
   ros::NodeHandle nh_("~");
   restart_vio_pipeline_srv_ = nh_.advertiseService(
       "restart_kimera_vio", &KimeraVioRos::restartKimeraVio, this);
+  std::string params_folder_path;
+  CHECK(nh_.getParam("params_folder_path", params_folder_path));
+  CHECK(!params_folder_path.empty());
+  vio_params_ = std::make_shared<VioParams>(params_folder_path);
 }
 
 bool KimeraVioRos::runKimeraVio() {
-  // Create dataset parser.
-  VLOG(1) << "Destroy Data Provider.";
-  data_provider_.reset();
-  VLOG(1) << "Creating Data Provider.";
-  data_provider_ = createDataProvider();
-  CHECK(data_provider_) << "Data provider construction failed.";
-
-  // Create VIO pipeline.
+  // First, destroy VIO pipeline, this will in turn call the shutdown of
+  // the data provider.
+  // NOTE: had the data provider been destroyed before, the vio would be calling
+  // the shutdown function of a deleted object, aka segfault.
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
+
+  // Then, create Kimera-VIO from scratch.
   VLOG(1) << "Creating Kimera-VIO.";
-  vio_pipeline_ =
-      VIO::make_unique<VIO::Pipeline>(data_provider_->pipeline_params_);
+  CHECK(vio_params_);
+  vio_pipeline_ = VIO::make_unique<VIO::Pipeline>(*vio_params_);
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
 
-  // Connect data_provider and vio_pipeline
+  // Second, destroy dataset parser.
+  VLOG(1) << "Destroy Data Provider.";
+  data_provider_.reset();
+
+  // Then, create dataset parser.
+  VLOG(1) << "Creating Data Provider.";
+  data_provider_ = createDataProvider(*vio_params_);
+  CHECK(data_provider_) << "Data provider construction failed.";
+
+  // Finally, connect data_provider and vio_pipeline
   VLOG(1) << "Connecting Vio Pipeline and Data Provider.";
   connectVioPipelineAndDataProvider();
 
@@ -64,12 +78,13 @@ bool KimeraVioRos::runKimeraVio() {
 }
 
 bool KimeraVioRos::spin() {
-  CHECK(data_provider_);
+  CHECK(vio_params_);
   CHECK(vio_pipeline_);
+  CHECK(data_provider_);
 
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
-  if (data_provider_->pipeline_params_.parallel_run_) {
+  if (vio_params_->parallel_run_) {
     std::future<bool> data_provider_handle =
         std::async(std::launch::async,
                    &VIO::RosDataProviderInterface::spin,
@@ -78,8 +93,11 @@ bool KimeraVioRos::spin() {
         std::launch::async, &VIO::Pipeline::spin, vio_pipeline_.get());
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.
+    ros::Rate rate (10);  // Check pipeline status at 10Hz
     while (ros::ok() &&
            !restart_vio_pipeline_) {  //&& vio_pipeline.spinViz()) {
+      LOG_EVERY_N(INFO, 5) << vio_pipeline_->printStatistics();
+      rate.sleep();
       continue;
     }
     if (!restart_vio_pipeline_) {
@@ -88,7 +106,7 @@ bool KimeraVioRos::spin() {
     } else {
       LOG(INFO) << "Restarting Kimera-VIO.";
     }
-    // TODO(TOni): right now vio shutsdown data provider, maybe we should
+    // TODO(Toni): right now vio shutsdown data provider, maybe we should
     // explicitly shutdown data provider: data_provider_->shutdown();
     vio_pipeline_->shutdown();
     LOG(INFO) << "Joining Kimera-VIO thread.";
@@ -107,30 +125,32 @@ bool KimeraVioRos::spin() {
   } else {
     ros::start();
     while (ros::ok() && data_provider_->spin() && vio_pipeline_->spin()) {
+      LOG(INFO) << vio_pipeline_->printStatistics();
       continue;
     }
-    ROS_INFO("Shutting down ROS and VIO pipeline.");
+    LOG(INFO) << "Shutting down ROS and VIO pipeline.";
     ros::shutdown();
     vio_pipeline_->shutdown();
     is_pipeline_successful = true;
   }
   auto spin_duration = VIO::utils::Timer::toc(tic);
-  ROS_WARN_STREAM("Spin took: " << spin_duration.count() << " ms.");
-  ROS_INFO_STREAM("Pipeline successful? "
-                  << (is_pipeline_successful ? "Yes!" : "No!"));
+  LOG(WARNING) << "Spin took: " << spin_duration.count() << " ms.";
+  LOG(INFO) << "Pipeline successful? "
+            << (is_pipeline_successful ? "Yes!" : "No!");
   return is_pipeline_successful;
 }
 
-VIO::RosDataProviderInterface::UniquePtr KimeraVioRos::createDataProvider() {
+RosDataProviderInterface::UniquePtr
+KimeraVioRos::createDataProvider(const VioParams& vio_params) {
   ros::NodeHandle nh_("~");
   bool online_run = false;
   CHECK(nh_.getParam("online_run", online_run));
   if (online_run) {
     // Running ros online.
-    return VIO::make_unique<VIO::RosOnlineDataProvider>();
+    return VIO::make_unique<RosOnlineDataProvider>(vio_params);
   } else {
     // Parse rosbag.
-    return VIO::make_unique<VIO::RosbagDataProvider>();
+    return VIO::make_unique<RosbagDataProvider>(vio_params);
   }
   return nullptr;
 }
