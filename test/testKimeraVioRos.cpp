@@ -2,7 +2,8 @@
 #include <gtest/gtest.h>
 #include "kimera_vio_ros/KimeraVioRos.h"
 // Executable is at ./devel/lib/kimera_vio_ros/testKimeraVioRos
-DEFINE_string(test_data_path, "../../../Kimera-VIO-ROS/tests/data",
+// Executable is run from ./build/kimera_vio_ros
+DEFINE_string(test_data_path, "../../src/Kimera-VIO-ROS/test/data",
            "Path to data for unit tests.");
 
 namespace VIO {
