@@ -1,3 +1,4 @@
+
 # Kimera-VIO-ROS
 
 ROS Wrapper for [Kimera](https://github.com/MIT-SPARK/Kimera).
@@ -150,13 +151,12 @@ To run unit tests using catkin for this package alone, build the package, source
 cd ~/catkin_ws/src/Kimera-VIO-ROS/
 catkin run_tests --no-deps --this
 ```
-
-To run unit tests through gdb, compile the tests with debug symbols: 
+Note that the tests will hang if roscore is not running in another terminal.
+To run unit tests through gdb, compile the tests with debug symbols and run the test executable. Note that the test's relative filepaths assume you are on the same folder level as the Kimera-VIO-ROS. This can be changed by passing the flag `--test_data_path=PATH/TO/KIMERA-VIO-ROS/test/data`
 ```bash
 cd ~/catkin_ws/src/Kimera-VIO-ROS/
 catkin run_tests --no-deps --this DCMAKE_BUILD_TYPE=Debug
-cd ~/catkin_ws/devel/lib/kimera_vio_ros
-gdb testKimeraVioRos
+gdb ../../devel/lib/kimera_vio_ros/testKimeraVioRos
 ```
 
 ## Other functionalities
@@ -199,3 +199,4 @@ See the [documentation on hardware setup](docs/hardware_setup.md) for instructio
 
 # BSD License
 KimeraVIO ROS wrapper is open source under the BSD license, see the [LICENSE.BSD](./LICENSE.BSD) file.
+
