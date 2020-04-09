@@ -1,7 +1,9 @@
-/*
-* Adapted from Vio's testPipeline.cpp'
-*
-*/
+/**
+ * @file   testRosBagDataProvider.cpp
+ * @brief  Test rosbag data provider in many input modes
+ * @author Antoni Rosinol
+ * @author Andrew Violette
+ */
 
 #include <future>
 #include <memory>
@@ -60,12 +62,13 @@ class TestRosBagDataProvider : public ::testing::Test {
     connectVioPipelineWithBlockingIfFullQueues();
   }
 
-  VIO::RosbagDataProvider::UniquePtr 
-  makeMicroEurocRosbagReader(const VioParams& vio_params) {
+  VIO::RosbagDataProvider::UniquePtr makeMicroEurocRosbagReader(
+      const VioParams& vio_params) {
     ros::NodeHandle parameter_server("~");
 
-    parameter_server.setParam("rosbag_path", FLAGS_test_data_path 
-                              + "/MicroEurocRosbag/MicroEuroc.bag");
+    parameter_server.setParam(
+        "rosbag_path",
+        FLAGS_test_data_path + "/MicroEurocRosbag/MicroEuroc.bag");
     // For dataprovider
     parameter_server.setParam("left_cam_rosbag_topic", "/cam0/image_raw");
     parameter_server.setParam("right_cam_rosbag_topic", "/cam1/image_raw");

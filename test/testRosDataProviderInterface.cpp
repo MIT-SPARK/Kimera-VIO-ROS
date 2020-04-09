@@ -1,3 +1,12 @@
+/**
+ * @file   testRosDataProviderInterface.cpp
+ * @brief  Unit tests for base class for ROS wrappers for Kimera-VIO.
+ * @author Andrew Violette
+ */
+
+#include <memory>
+#include <string>
+
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
@@ -33,54 +42,54 @@ static constexpr char dummy_right_cam_frame_id_[] = "dummy_right_cam_frame_id";
 // Expose protected members for testing
 // see: StackOverflow's "How do I unit test a protected method in C++?" KrisTC
 class RosDataProviderInterfaceExposed : public RosDataProviderInterface {
-  public:
-    RosDataProviderInterfaceExposed(const VioParams& vio_params) 
-      : RosDataProviderInterface(vio_params) {} 
-    using RosDataProviderInterface::base_link_frame_id_;
-    using RosDataProviderInterface::world_frame_id_;
-    using RosDataProviderInterface::map_frame_id_;
-    using RosDataProviderInterface::left_cam_frame_id_;
-    using RosDataProviderInterface::right_cam_frame_id_;
-    static const size_t kTfLookupTimeout = 
-                  RosDataProviderInterface::kTfLookupTimeout;
+ public:
+  explicit RosDataProviderInterfaceExposed(const VioParams& vio_params)
+      : RosDataProviderInterface(vio_params) {}
+  using RosDataProviderInterface::base_link_frame_id_;
+  using RosDataProviderInterface::left_cam_frame_id_;
+  using RosDataProviderInterface::map_frame_id_;
+  using RosDataProviderInterface::right_cam_frame_id_;
+  using RosDataProviderInterface::world_frame_id_;
+  static const size_t kTfLookupTimeout =
+      RosDataProviderInterface::kTfLookupTimeout;
 
-    using RosDataProviderInterface::backend_output_queue_;
-    using RosDataProviderInterface::keyframe_rate_frontend_output_queue_;
-    using RosDataProviderInterface::mesher_output_queue_;
+  using RosDataProviderInterface::backend_output_queue_;
+  using RosDataProviderInterface::keyframe_rate_frontend_output_queue_;
+  using RosDataProviderInterface::mesher_output_queue_;
 
-    using RosDataProviderInterface::publishSyncedOutputs;
-    // To isolate current testing method, turn the methods it calls into stubs
-    bool mock_publish_backend_output_ = false;
-    size_t mock_publish_backend_call_count_ = 0;
-    void publishBackendOutput(const BackendOutput::Ptr& output) {
-      if(!mock_publish_backend_output_) {
-        RosDataProviderInterface::publishBackendOutput(output);
-      } else {
-        mock_publish_backend_call_count_++;
-      }
+  using RosDataProviderInterface::publishSyncedOutputs;
+  // To isolate current testing method, stub the methods it calls
+  bool mock_publish_backend_output_ = false;
+  size_t mock_publish_backend_call_count_ = 0;
+  void publishBackendOutput(const BackendOutput::Ptr& output) {
+    if (!mock_publish_backend_output_) {
+      RosDataProviderInterface::publishBackendOutput(output);
+    } else {
+      mock_publish_backend_call_count_++;
     }
-    bool mock_publish_mesher_output_ = false;
-    // publishMesherOutput is const; get around it with a pointer
-    std::shared_ptr<size_t> mock_publish_mesher_call_count_ = nullptr;
-    void publishMesherOutput(const MesherOutput::Ptr& output) const {
-      if(!mock_publish_mesher_output_) {
-        RosDataProviderInterface::publishMesherOutput(output);
-      } else {
-        CHECK(mock_publish_mesher_call_count_)
-            << "You must set the mock_publish_mesher_call_count_ pointer!";
-        (*mock_publish_mesher_call_count_)++;
       }
-    }
+      bool mock_publish_mesher_output_ = false;
+      // publishMesherOutput is const; get around it with a pointer
+      std::shared_ptr<size_t> mock_publish_mesher_call_count_ = nullptr;
+      void publishMesherOutput(const MesherOutput::Ptr& output) const {
+        if (!mock_publish_mesher_output_) {
+          RosDataProviderInterface::publishMesherOutput(output);
+        } else {
+          CHECK(mock_publish_mesher_call_count_)
+              << "You must set the mock_publish_mesher_call_count_ pointer!";
+          (*mock_publish_mesher_call_count_)++;
+        }
+      }
 };
 
-class RosDataProviderInterfacePrivateStubbed : 
-    public RosDataProviderInterfaceExposed {
-  public:
-    size_t mock_publish_resiliency_call_count_ = 0;
-    void publishResiliency( const FrontendOutput::Ptr& frontend_output,
-            const BackendOutput::Ptr& backend_output) {
-      mock_publish_resiliency_call_count_++;
-    }
+class RosDataProviderInterfacePrivateStubbed
+    : public RosDataProviderInterfaceExposed {
+ public:
+  size_t mock_publish_resiliency_call_count_ = 0;
+  void publishResiliency(const FrontendOutput::Ptr& frontend_output,
+                         const BackendOutput::Ptr& backend_output) {
+    mock_publish_resiliency_call_count_++;
+  }
 };
 
 
@@ -88,12 +97,11 @@ class RosDataProviderInterfacePrivateStubbed :
 
 class TestRosDataProviderInterface : public ::testing::Test {
  public:
-  TestRosDataProviderInterface() :
-        publishing_node_(),
+  TestRosDataProviderInterface()
+      : publishing_node_(),
         parameter_server_("~"),
         tf_buffer_(),
-        tf_listener_(tf_buffer_)
-        {
+        tf_listener_(tf_buffer_) {
     setFrameIDs();
     initializeVioParams();
   }
@@ -116,7 +124,7 @@ class TestRosDataProviderInterface : public ::testing::Test {
   }
 
   void initializeVioParams() {
-    dummy_vio_params_ = 
+    dummy_vio_params_ =
         std::make_shared<VIO::VioParams>(std::string(params_folder_path));
     // need to push two dummy camera params-- assumes a left and right camera
     VIO::CameraParams dummy_cam_params;
@@ -127,24 +135,22 @@ class TestRosDataProviderInterface : public ::testing::Test {
   FrontendOutput::Ptr makeDummyFrontendOutput(const Timestamp& timestamp) {
     // There is currently no clean way to satisfy the dependency injection
     // Make a dummy input for each of the FrontEndOutput args
-    VIO::StatusStereoMeasurementsPtr dummy_stereo_measurements = 
+    VIO::StatusStereoMeasurementsPtr dummy_stereo_measurements =
         std::make_shared<VIO::StatusStereoMeasurements>();
     gtsam::Pose3 dummy_pose;
     VIO::StereoFrame::Ptr dummy_stereo_frame = makeDummyStereoFrame(timestamp);
     VIO::ImuFrontEnd::PimPtr dummy_pim_ptr;
     cv::Mat dummy_feature_tracks;
     VIO::DebugTrackerInfo dummy_debug_tracking;
-    VIO::FrontendOutput::Ptr dummy_frontend 
-        = std::make_shared<VIO::FrontendOutput>(
-            true,
-            dummy_stereo_measurements,
-            TrackingStatus::INVALID,
-            dummy_pose,
-            *dummy_stereo_frame,
-            dummy_pim_ptr,
-            dummy_feature_tracks,
-            dummy_debug_tracking
-    );
+    VIO::FrontendOutput::Ptr dummy_frontend =
+        std::make_shared<VIO::FrontendOutput>(true,
+                                              dummy_stereo_measurements,
+                                              TrackingStatus::INVALID,
+                                              dummy_pose,
+                                              *dummy_stereo_frame,
+                                              dummy_pim_ptr,
+                                              dummy_feature_tracks,
+                                              dummy_debug_tracking);
 
     return dummy_frontend;
   }
@@ -160,19 +166,17 @@ class TestRosDataProviderInterface : public ::testing::Test {
     // Rectification on dummy parameters will result in bad calculations
     // Tell it the images are already rectified
     FLAGS_images_rectified = true;
-    VIO::StereoFrame::Ptr dummy_stereo_frame = 
-      std::make_shared<VIO::StereoFrame>(
-        0,
-        timestamp,
-        dummy_left_frame,
-        dummy_right_frame,
-        dummy_stereo_params
-    );
+    VIO::StereoFrame::Ptr dummy_stereo_frame =
+        std::make_shared<VIO::StereoFrame>(0,
+                                           timestamp,
+                                           dummy_left_frame,
+                                           dummy_right_frame,
+                                           dummy_stereo_params);
     FLAGS_images_rectified = false;
 
     return dummy_stereo_frame;
   }
-  
+
   VIO::BackendOutput::Ptr makeDummyBackendOutput(const Timestamp& timestamp) {
     // There is currently no clean way to satisfy the dependency injection
     // Make a dummy input for each of the BackEndOutput args
@@ -186,20 +190,18 @@ class TestRosDataProviderInterface : public ::testing::Test {
     VIO::DebugVioInfo dummy_debug_info;
     VIO::PointsWithIdMap dummy_landmarks_with_id_map;
     VIO::LmkIdToLmkTypeMap dummy_lmk_id_to_lmk_type_map;
-    VIO::BackendOutput::Ptr dummy_backend = 
-        std::make_shared<VIO::BackendOutput>(
-          timestamp,
-          dummy_state,
-          dummy_W_Pose_B,
-          dummy_W_Vel_B,
-          dummy_imu_bias,
-          dummy_state_covariance,
-          dummy_id,
-          dummy_landmark_count,
-          dummy_debug_info,
-          dummy_landmarks_with_id_map,
-          dummy_lmk_id_to_lmk_type_map
-    );
+    VIO::BackendOutput::Ptr dummy_backend =
+        std::make_shared<VIO::BackendOutput>(timestamp,
+                                             dummy_state,
+                                             dummy_W_Pose_B,
+                                             dummy_W_Vel_B,
+                                             dummy_imu_bias,
+                                             dummy_state_covariance,
+                                             dummy_id,
+                                             dummy_landmark_count,
+                                             dummy_debug_info,
+                                             dummy_landmarks_with_id_map,
+                                             dummy_lmk_id_to_lmk_type_map);
 
     return dummy_backend;
   }
@@ -218,22 +220,26 @@ TEST_F(TestRosDataProviderInterface, constructorTest) {
   EXPECT_EQ(dummy_right_cam_frame_id_, test_interface.right_cam_frame_id_);
 
   // Check to see if we advertised the topics that we expected to advertise
-  ros::Subscriber odometry_sub = 
+  ros::Subscriber odometry_sub =
       publishing_node_.subscribe<nav_msgs::Odometry>("odometry", 1, nullptr);
   ros::Subscriber frontend_stats_sub =
-      publishing_node_.subscribe<std_msgs::Float64MultiArray>("frontend_stats", 1, nullptr);
-  ros::Subscriber resiliency_sub = 
-      publishing_node_.subscribe<std_msgs::Float64MultiArray>("resiliency", 1, nullptr);
-  ros::Subscriber imu_bias_sub = 
-      publishing_node_.subscribe<std_msgs::Float64MultiArray>("imu_bias", 1, nullptr);
-  ros::Subscriber trajectory_sub = 
-      publishing_node_.subscribe<nav_msgs::Path>("optimized_trajectory", 1, nullptr);
-  ros::Subscriber posegraph_sub = 
-      publishing_node_.subscribe<pose_graph_tools::PoseGraph>("pose_graph", 1, nullptr);
+      publishing_node_.subscribe<std_msgs::Float64MultiArray>(
+          "frontend_stats", 1, nullptr);
+  ros::Subscriber resiliency_sub =
+      publishing_node_.subscribe<std_msgs::Float64MultiArray>(
+          "resiliency", 1, nullptr);
+  ros::Subscriber imu_bias_sub =
+      publishing_node_.subscribe<std_msgs::Float64MultiArray>(
+          "imu_bias", 1, nullptr);
+  ros::Subscriber trajectory_sub = publishing_node_.subscribe<nav_msgs::Path>(
+      "optimized_trajectory", 1, nullptr);
+  ros::Subscriber posegraph_sub =
+      publishing_node_.subscribe<pose_graph_tools::PoseGraph>(
+          "pose_graph", 1, nullptr);
   ros::Subscriber pointcloud_sub =
       publishing_node_.subscribe<pcl::PointCloud<pcl::PointXYZRGB>>(
           "time_horizon_pointcloud", 1, nullptr);
-  ros::Subscriber mesh_3d_frame_sub = 
+  ros::Subscriber mesh_3d_frame_sub =
       publishing_node_.subscribe<pcl_msgs::PolygonMesh>("mesh", 1, nullptr);
 
   EXPECT_EQ(1, odometry_sub.getNumPublishers());
@@ -244,7 +250,7 @@ TEST_F(TestRosDataProviderInterface, constructorTest) {
   EXPECT_EQ(1, posegraph_sub.getNumPublishers());
   EXPECT_EQ(1, pointcloud_sub.getNumPublishers());
   EXPECT_EQ(1, mesh_3d_frame_sub.getNumPublishers());
-  
+
   // Make sure it published the static transforms
   geometry_msgs::TransformStamped transform_stamped;
   try {
@@ -295,7 +301,7 @@ TEST_F(TestRosDataProviderInterface, synchronizeOutputFullTest) {
       = makeDummyFrontendOutput(common_stamp);
   test_interface.keyframe_rate_frontend_output_queue_
       .push(dummy_frontend_output);
-  
+
   VIO::BackendOutput::Ptr dummy_backend_output
       = makeDummyBackendOutput(common_stamp);
   test_interface.backend_output_queue_.push(dummy_backend_output);
@@ -303,7 +309,7 @@ TEST_F(TestRosDataProviderInterface, synchronizeOutputFullTest) {
   VIO::MesherOutput::Ptr dummy_mesher_output
       = std::make_shared<VIO::MesherOutput>(common_stamp);
   test_interface.mesher_output_queue_.push(dummy_mesher_output);
-  
+
   test_interface.mock_publish_backend_output_ = true;
   test_interface.mock_publish_mesher_output_ = true;
   // Mesher publish call is const, use a pointer as a workaround

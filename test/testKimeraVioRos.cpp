@@ -1,3 +1,10 @@
+/**
+ * @file   testKimeraVioRos.cpp
+ * @brief  Unit test stub and entry point.
+ * @author Antoni Rosinol
+ * @author Andrew Violette
+ */
+
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include "kimera_vio_ros/KimeraVioRos.h"
@@ -18,7 +25,7 @@ TEST(KimeraVioRosTest, KimeraVioRosTest) {
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   google::InitGoogleLogging(argv[0]);
-  
+
   // Initialize ROS node.
   ros::init(argc, argv, "kimera_vio");
 
