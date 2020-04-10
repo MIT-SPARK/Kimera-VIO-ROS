@@ -5,7 +5,10 @@
  * @author Marcus Abate
  */
 
-#pragma once
+#ifndef INCLUDE_KIMERA_VIO_ROS_ROSONLINEDATAPROVIDER_H_
+#define INCLUDE_KIMERA_VIO_ROS_ROSONLINEDATAPROVIDER_H_
+
+#include <memory>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -25,7 +28,7 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   KIMERA_DELETE_COPY_CONSTRUCTORS(RosOnlineDataProvider);
   KIMERA_POINTER_TYPEDEFS(RosOnlineDataProvider);
 
-  RosOnlineDataProvider(const VioParams& vio_params);
+  explicit RosOnlineDataProvider(const VioParams& vio_params);
 
   virtual ~RosOnlineDataProvider();
 
@@ -110,6 +113,11 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Ground-truth initialization pose received flag
   bool gt_init_pose_received_ = false;
   bool camera_info_received_ = false;
+
+  // Parameter read from launch server
+  double publishing_frequency_;
 };
 
 }  // namespace VIO
+
+#endif  // INCLUDE_KIMERA_VIO_ROS_ROSONLINEDATAPROVIDER_H_

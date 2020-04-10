@@ -8,6 +8,8 @@
   but false when parsing rosbag? Needs rosbag to be publishing clock -->
   <param name="use_sim_time" value="true"/>
   <arg name="rosbag_path" unless="$(arg online)"/>
+  <!-- Publishing rate of the rosnode, in hz -->
+  <arg name="publishing_frequency" default="30" />
 
   <!-- Use CameraInfo topics to get parameters, instead of yaml files -->
   <arg name="use_online_cam_params" default="false"/>
@@ -81,6 +83,7 @@
     <param name="online_run"            value="$(arg online)"/>
     <param name="use_lcd"               value="$(arg use_lcd)"/>
     <param name="use_online_cam_params" value="$(arg use_online_cam_params)"/>
+    <param name="publishing_frequency" value="$(arg publishing_frequency)"/>
 
     <!-- Frame IDs for Odometry -->
     <param name="world_frame_id"     value="$(arg world_frame_id)"/>

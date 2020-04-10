@@ -33,7 +33,8 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       reinit_pose_subscriber_(),
       imu_queue_(),
       imu_async_spinner_(nullptr),
-      async_spinner_(nullptr) {
+      async_spinner_(nullptr),
+      publishing_frequency_() {
   // Wait until time is non-zero and valid: this is because at the ctor level
   // we will be querying for gt pose and/or camera info.
   while (ros::ok() && !ros::Time::now().isValid()) {
@@ -45,6 +46,9 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       LOG_FIRST_N(INFO, 1) << "Waiting for ROS time to be valid...";
     }
   }
+
+  CHECK(nh_private_.getParam("publishing_frequency", publishing_frequency_))
+      << "Publishing frequency is required. Check your .launch file.";
 
   // Define ground truth odometry Subsrciber
   static constexpr size_t kMaxGtOdomQueueSize = 1u;
@@ -359,7 +363,7 @@ bool RosOnlineDataProvider::spin() {
 
   // Start our own spin to publish output data to ROS
   // Pop and send output at a 30Hz rate.
-  ros::WallRate rate(30);
+  ros::WallRate rate(publishing_frequency_);
   while (ros::ok() && !shutdown_) {
     rate.sleep();
     spinOnce();  // TODO(marcus): need a sequential mode?
