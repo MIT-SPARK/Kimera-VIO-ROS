@@ -359,7 +359,7 @@ bool RosOnlineDataProvider::spin() {
 
   // Start our own spin to publish output data to ROS
   // Pop and send output at a 30Hz rate.
-  ros::Rate rate(30);
+  ros::WallRate rate(30);
   while (ros::ok() && !shutdown_) {
     rate.sleep();
     spinOnce();  // TODO(marcus): need a sequential mode?
