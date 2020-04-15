@@ -2,7 +2,7 @@
   <arg name="dataset_name"   value="Tesse"/>
   <arg name="verbosity"      default="0"/>
   <arg name="online"         default="true"/>
-  <arg name="use_lcd"        default="false"/>
+  <arg name="use_lcd"        default="true"/>
 
   <param name="use_sim_time" value="true"/>
 
