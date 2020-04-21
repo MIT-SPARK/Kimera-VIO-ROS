@@ -88,6 +88,6 @@ def main(argv):
         outbag.close()
 
 if __name__ == "__main__":
-   main(sys.argv[1:])!/usr/bin/env python3
+   main(sys.argv[1:])
 
 
