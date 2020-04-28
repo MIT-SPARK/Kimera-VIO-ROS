@@ -106,7 +106,7 @@ Visualization Manager:
       Value: false
     - Class: rviz/Image
       Enabled: false
-      Image Topic: /kimera_vio_ros/debug_mesh_img
+      Image Topic: /kimera_vio_ros/debug_mesh_img/image_raw
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -129,7 +129,7 @@ Visualization Manager:
       Shader Program: TEXTURE
       Show Normals: false
       Texture Transport Hint: raw
-      Texture topic: /kimera_vio_ros/debug_mesh_img
+      Texture topic: /kimera_vio_ros/debug_mesh_img/image_raw
       Value: true
     - Angle Tolerance: 0.10000000149011612
       Class: rviz/Odometry
