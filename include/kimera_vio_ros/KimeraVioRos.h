@@ -18,9 +18,11 @@ class KimeraVioRos {
  public:
   KIMERA_DELETE_COPY_CONSTRUCTORS(KimeraVioRos);
   KIMERA_POINTER_TYPEDEFS(KimeraVioRos);
+
   KimeraVioRos();
   virtual ~KimeraVioRos() = default;
 
+ public:
   bool runKimeraVio();
 
  protected:
@@ -31,13 +33,27 @@ class KimeraVioRos {
 
   void connectVioPipelineAndDataProvider();
 
+  /**
+   * @brief restartKimeraVio Callback for the rosservice to restart the pipeline
+   * @param request
+   * @param response
+   * @return
+   */
   bool restartKimeraVio(std_srvs::Trigger::Request& request,
                         std_srvs::Trigger::Response& response);
 
  protected:
+  //! ROS
+  ros::NodeHandle nh_private_;
+
+  //! VIO
   VioParams::Ptr vio_params_;
   Pipeline::UniquePtr vio_pipeline_;
+
+  //! Data provider
   RosDataProviderInterface::UniquePtr data_provider_;
+
+  //! ROS Services
   ros::ServiceServer restart_vio_pipeline_srv_;
   std::atomic_bool restart_vio_pipeline_;
 };

@@ -22,7 +22,7 @@
   <arg name="use_online_cam_params" value="false"/>
 
   <!-- Change rosbag path if online argument is false -->
-  <arg name="rosbag_path" default="/home/tonirv/datasets/euroc/V1_01_easy/V1_01_easy.bag"
+  <arg name="rosbag_path" default="/home/tonirv/datasets/EuRoC/V1_01_easy/V1_01_easy_retimestamped.bag"
     unless="$(arg online)"/>
 
   <!-- Frame IDs -->
