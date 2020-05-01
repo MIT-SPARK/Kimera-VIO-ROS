@@ -6,7 +6,8 @@
   <arg name="online" default="true" />
   <!-- !!!! VIT !!!! This should be true when running online with a rosbag publishing clock,
   but false when parsing rosbag? Needs rosbag to be publishing clock -->
-  <param name="use_sim_time" value="true"/>
+  <arg name="should_use_sim_time" default="true"/>
+  <param name="use_sim_time" value="$(arg should_use_sim_time)"/>
   <arg name="rosbag_path" unless="$(arg online)"/>
 
   <!-- Use CameraInfo topics to get parameters, instead of yaml files -->
