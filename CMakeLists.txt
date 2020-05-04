@@ -4,8 +4,7 @@ project(kimera_vio_ros)
 find_package(catkin_simple REQUIRED)
 
 ### System Dependencies
-find_package(Boost REQUIRED COMPONENTS
-  serialization system filesystem thread date_time regex timer chrono)
+find_package(Boost REQUIRED COMPONENTS filesystem)
 if(NOT TARGET Boost::boost)
   add_library(Boost::boost INTERFACE IMPORTED)
   set_target_properties(Boost::boost PROPERTIES
@@ -21,7 +20,7 @@ cs_add_library(${PROJECT_NAME}
   src/RosBagDataProvider.cpp
   src/RosOnlineDataProvider.cpp
 )
-target_link_libraries(${PROJECT_NAME} kimera_vio)
+target_link_libraries(${PROJECT_NAME} kimera_vio Boost::boost)
 
 cs_add_executable(${PROJECT_NAME}_node
   src/KimeraVioRosNode.cpp

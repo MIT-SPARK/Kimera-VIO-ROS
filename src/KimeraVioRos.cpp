@@ -12,6 +12,9 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
+// Dependencies from Boost
+#include <boost/filesystem.hpp>
+
 // Dependencies from ROS
 #include <ros/ros.h>
 #include <std_srvs/Trigger.h>
@@ -35,7 +38,8 @@ KimeraVioRos::KimeraVioRos()
       vio_pipeline_(nullptr),
       data_provider_(nullptr),
       restart_vio_pipeline_srv_(),
-      restart_vio_pipeline_(false) {
+      restart_vio_pipeline_(false),
+      restart_counter_(0) {
   // Add rosservice to restart VIO pipeline if requested.
   ros::NodeHandle nh_("~");
   restart_vio_pipeline_srv_ = nh_.advertiseService(
@@ -93,7 +97,7 @@ bool KimeraVioRos::spin() {
         std::launch::async, &VIO::Pipeline::spin, vio_pipeline_.get());
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.
-    ros::Rate rate (10);  // Check pipeline status at 10Hz
+    ros::Rate rate(10);  // Check pipeline status at 10Hz
     while (ros::ok() &&
            !restart_vio_pipeline_) {  //&& vio_pipeline.spinViz()) {
       LOG_EVERY_N(INFO, 5) << vio_pipeline_->printStatistics();
@@ -118,8 +122,19 @@ bool KimeraVioRos::spin() {
     if (restart_vio_pipeline_) {
       // Mind that this is a recursive call! As we call this function
       // inside runKimeraVio. Sorry, couldn't find a better way.
-      restart_vio_pipeline_ = false;
       LOG(INFO) << "Restarting...";
+      restart_vio_pipeline_ = false;
+      if (!vio_params_->log_output_path_.empty()) {
+        // This is to log to another folder, otw VIO will overwrite logs.
+        static const std::string original_output_path =
+            vio_params_->log_output_path_;
+        vio_params_->log_output_path_ =
+            original_output_path + std::to_string(restart_counter_);
+        boost::filesystem::create_directory(
+            boost::filesystem::path(vio_params_->log_output_path_.c_str()));
+        LOG(INFO) << "New log output path: "
+                  << vio_params_->log_output_path_.c_str();
+      }
       return runKimeraVio();
     }
   } else {
@@ -140,8 +155,8 @@ bool KimeraVioRos::spin() {
   return is_pipeline_successful;
 }
 
-RosDataProviderInterface::UniquePtr
-KimeraVioRos::createDataProvider(const VioParams& vio_params) {
+RosDataProviderInterface::UniquePtr KimeraVioRos::createDataProvider(
+    const VioParams& vio_params) {
   ros::NodeHandle nh_("~");
   bool online_run = false;
   CHECK(nh_.getParam("online_run", online_run));
@@ -217,6 +232,7 @@ bool KimeraVioRos::restartKimeraVio(std_srvs::Trigger::Request& request,
                                     std_srvs::Trigger::Response& response) {
   if (!restart_vio_pipeline_) {
     restart_vio_pipeline_ = true;
+    restart_counter_++;
     response.message = "Kimera-VIO restart requested.";
     response.success = true;
   } else {

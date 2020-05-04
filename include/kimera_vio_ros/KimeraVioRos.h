@@ -40,6 +40,7 @@ class KimeraVioRos {
   RosDataProviderInterface::UniquePtr data_provider_;
   ros::ServiceServer restart_vio_pipeline_srv_;
   std::atomic_bool restart_vio_pipeline_;
+  std::atomic_int restart_counter_;
 };
 
 }  // namespace VIO
