@@ -6,15 +6,13 @@
   <arg name="online" default="true" />
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <param name="use_sim_time" value="true"/>
-  <!-- Set log_output to true and SparkVio will log output of all modules to
+  <!-- Set log_output to true and Kimera-VIO will log output of all modules to
        the log_output_path location. -->
   <arg name="log_output" default="false"/>
-  <arg name="log_output_path"
-    default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
-       if="$(arg log_output)"/>
-  <!-- Set to true and specify gt_topic if you want to log ground-truth data -->
-  <arg name="log_gt_data" default="false"/>
-  <arg name="gt_topic" default="/vicon/firefly_sbx/firefly_sbx"/>
+  <arg if="$(arg log_output)" name="log_output_path"
+    default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"/>
+  <!-- Specify gt_topic if you want to log ground-truth data -->
+  <arg if="$(arg log_output)" name="gt_topic" default="/vicon/firefly_sbx/firefly_sbx"/>
 
   <arg name="use_lcd"   default="false"/>
   <arg name="visualize" default="true"/>

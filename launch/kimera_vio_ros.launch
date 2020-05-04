@@ -15,13 +15,11 @@
 
   <!-- If true, SparkVio will log output of all modules to the
        'log_output_path' location. -->
-  <arg name="log_output" default="false"/>
-  <arg name="log_output_path"
-       default="$(find kimera_vio_ros)/output_logs/"/>
-  <!-- If true, log ground-truth poses to a csv file using the
+  <arg name="log_output"      default="false"/>
+  <arg if="$(arg log_output)" name="log_output_path" default="$(find kimera_vio_ros)/output_logs/" />
+  <!-- Log ground-truth poses to a csv file using the
        gt_logger_node, and processing data from the gt_topic rostopic -->
-  <arg name="log_gt_data" default="false"/>
-  <arg name="gt_topic" default="ground_truth_odometry_topic"/>
+  <arg if="$(arg log_output)" name="gt_topic"        default="ground_truth_odometry_topic"/>
 
   <!-- If true, SparkVio will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
@@ -76,8 +74,6 @@
               --colorlogtostderr=1
               --log_prefix=1
               --v=$(arg verbosity)
-              --log_output=$(arg log_output)
-              --log_euroc_gt_data=$(arg log_output)
               --output_path=$(arg log_output_path)
               --viz_type=$(arg viz_type)
               --visualize=$(arg visualize)">
@@ -147,7 +143,7 @@
   </include>
 
   <!-- Log ground-truth data only if requested-->
-  <node if="$(arg log_gt_data)" name="gt_logger_node" pkg="kimera_vio_ros"
+  <node if="$(arg log_output)" name="gt_logger_node" pkg="kimera_vio_ros"
         type="gt_logger_node.py" output="screen">
     <param name="gt_topic"   value="$(arg gt_topic)"/>
     <param name="output_dir" value="$(arg log_output_path)"/>
