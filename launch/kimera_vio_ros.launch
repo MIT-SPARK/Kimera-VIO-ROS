@@ -54,9 +54,9 @@
 
   <!-- General parameters -->
   <arg name="verbosity"    default="0" />
-  <!-- Visualize pipeline output in OpenCV. -->
+  <!-- Publish pipeline output to ROS. -->
   <!-- Note that this is duplicated from the flags file -->
-  <arg name="visualize"    default="false" />
+  <arg name="visualize"    default="true" />
   <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
   <arg name="viz_type"     default="0" />
 
