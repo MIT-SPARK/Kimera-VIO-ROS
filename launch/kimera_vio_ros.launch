@@ -81,7 +81,7 @@
               --output_path=$(arg log_output_path)
               --viz_type=$(arg viz_type)
               --visualize=$(arg visualize)">
-    <param name="params_folder_path" value="$(arg params_folder)"/>
+    <param name="params_folder_path"    value="$(arg params_folder)"/>
 
     <param name="online_run"            value="$(arg online)"/>
     <param name="use_lcd"               value="$(arg use_lcd)"/>

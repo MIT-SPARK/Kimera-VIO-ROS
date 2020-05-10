@@ -349,6 +349,7 @@ bool RosOnlineDataProvider::spin() {
 
   LOG(INFO) << "Spinning RosOnlineDataProvider.";
 
+  // TODO(Toni): add sequential mode!
   // Start async spinners to get input data.
   if (!shutdown_) {
     CHECK(imu_async_spinner_);
@@ -362,7 +363,7 @@ bool RosOnlineDataProvider::spin() {
   ros::Rate rate(30);
   while (ros::ok() && !shutdown_) {
     rate.sleep();
-    spinOnce();  // TODO(marcus): need a sequential mode?
+    spinOnce();
   }
 
   imu_queue_.disable();
@@ -395,6 +396,7 @@ bool RosOnlineDataProvider::spinOnce() {
     publishLcdOutput(lcd_output);
   }
 
+  // TODO(Toni): add sequential mode!
   // ros::spinOnce(); // No need because we use an async spinner, see ctor.
 
   return true;
