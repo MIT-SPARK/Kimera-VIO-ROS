@@ -68,6 +68,7 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   void callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose);
 
  private:
+  // TODO(Toni): perhaps put in utils
   void msgGtOdomToVioNavState(const nav_msgs::Odometry::ConstPtr& gt_odom,
                               VioNavState* vio_navstate);
 

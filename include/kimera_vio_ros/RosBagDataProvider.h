@@ -8,9 +8,9 @@
 #pragma once
 
 #include <functional>
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/matx.hpp>
 #include <string>
+
+#include <opencv2/opencv.hpp>
 
 #include <nav_msgs/Odometry.h>
 #include <ros/console.h>
@@ -20,22 +20,22 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/Imu.h>
 
-#include "kimera_vio_ros/RosDataProviderInterface.h"
+#include <kimera-vio/pipeline/Pipeline-definitions.h>
 
-#include <kimera-vio/pipeline/Pipeline-definitions.h>.h>
+#include "kimera_vio_ros/RosDataProviderInterface.h"
 
 namespace VIO {
 
 struct RosbagData {
-  // IMU messages
+  /// IMU messages
   std::vector<sensor_msgs::ImuConstPtr> imu_msgs_;
-  // The names of the images from left camera
+  /// The names of the images from left camera
   std::vector<sensor_msgs::ImageConstPtr> left_imgs_;
-  // The names of the images from right camera
+  /// The names of the images from right camera
   std::vector<sensor_msgs::ImageConstPtr> right_imgs_;
-  // Vector of timestamps see issue in .cpp file
+  /// Vector of timestamps see issue in .cpp file
   std::vector<Timestamp> timestamps_;
-  // Ground-truth Odometry (only if available)
+  /// Ground-truth Odometry (only if available)
   std::vector<nav_msgs::OdometryConstPtr> gt_odometry_;
 };
 
@@ -64,7 +64,7 @@ class RosbagDataProvider : public RosDataProviderInterface {
   // by the sequential order in the rosbag).
   VioNavState getGroundTruthVioNavState(const size_t& k_frame) const;
 
-  void publishBackendOutput(const BackendOutput::Ptr& output) override;
+  void publishBackendOutput(const BackendOutput::Ptr& output); //override;
 
   // Publish clock
   void publishClock(const Timestamp& timestamp) const;

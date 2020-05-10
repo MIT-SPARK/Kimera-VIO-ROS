@@ -30,7 +30,7 @@ class KimeraVioRos {
   VIO::RosDataProviderInterface::UniquePtr createDataProvider(
       const VioParams& vio_params);
 
-  void connectVioPipelineAndDataProvider();
+  void connectVIO();
 
   bool restartKimeraVio(std_srvs::Trigger::Request& request,
                         std_srvs::Trigger::Response& response);
@@ -39,6 +39,7 @@ class KimeraVioRos {
   VioParams::Ptr vio_params_;
   Pipeline::UniquePtr vio_pipeline_;
   RosDataProviderInterface::UniquePtr data_provider_;
+  RosDisplay ros_display_;
   ros::ServiceServer restart_vio_pipeline_srv_;
   std::atomic_bool restart_vio_pipeline_;
 };

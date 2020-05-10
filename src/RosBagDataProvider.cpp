@@ -111,16 +111,16 @@ bool RosbagDataProvider::spin() {
         // Publish VIO output if any.
         // TODO(Toni) this could go faster if running in another thread or
         // node...
-        bool got_synced_outputs = publishSyncedOutputs();
-        if (!got_synced_outputs) {
-          LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
-        }
+        // bool got_synced_outputs = publishSyncedOutputs();
+        // if (!got_synced_outputs) {
+        //   LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
+        // }
 
-        // Publish LCD output if any.
-        LcdOutput::Ptr lcd_output = nullptr;
-        if (lcd_output_queue_.pop(lcd_output)) {
-          publishLcdOutput(lcd_output);
-        }
+        // // Publish LCD output if any.
+        // LcdOutput::Ptr lcd_output = nullptr;
+        // if (lcd_output_queue_.pop(lcd_output)) {
+        //   publishLcdOutput(lcd_output);
+        // }
 
         timestamp_last_frame = timestamp_frame_k;
       } else {
@@ -140,20 +140,20 @@ bool RosbagDataProvider::spin() {
   LOG(INFO) << "Rosbag processing finished.";
 
   // Endless loop until ros dies to publish left-over outputs.
-  while (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
-    FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
-    if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
-      publishFrontendOutput(frame_rate_frontend_output);
-    }
+  // while (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
+  //   FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
+  //   if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
+  //     publishFrontendOutput(frame_rate_frontend_output);
+  //   }
 
-    // Publish backend, mesher, etc output
-    publishSyncedOutputs();
+  //   // Publish backend, mesher, etc output
+  //   publishSyncedOutputs();
 
-    LcdOutput::Ptr lcd_output = nullptr;
-    if (lcd_output_queue_.pop(lcd_output)) {
-      publishLcdOutput(lcd_output);
-    }
-  }
+  //   LcdOutput::Ptr lcd_output = nullptr;
+  //   if (lcd_output_queue_.pop(lcd_output)) {
+  //     publishLcdOutput(lcd_output);
+  //   }
+  // }
 
   return true;
 }

@@ -34,6 +34,7 @@ KimeraVioRos::KimeraVioRos()
     : vio_params_(nullptr),
       vio_pipeline_(nullptr),
       data_provider_(nullptr),
+      ros_display_(nullptr),
       restart_vio_pipeline_srv_(),
       restart_vio_pipeline_(false) {
   // Add rosservice to restart VIO pipeline if requested.
@@ -51,15 +52,21 @@ bool KimeraVioRos::runKimeraVio() {
   // the data provider.
   // NOTE: had the data provider been destroyed before, the vio would be calling
   // the shutdown function of a deleted object, aka segfault.
+  VLOG(1) << "Destroy Ros Display.";
+  ros_display_.reset();
+
+  VLOG(1) << "Creating Ros Display.";
+  CHECK(vio_params_);
+  ros_display_ = VIO::make_unique<RosDisplay>(*vio_params_);
+
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
 
   // Then, create Kimera-VIO from scratch.
   VLOG(1) << "Creating Kimera-VIO.";
-  CHECK(vio_params_);
-  vio_pipeline_ =
-      VIO::make_unique<VIO::Pipeline>(*vio_params_,
-                                      VIO::make_unique<RosDisplay>());
+  CHECK(ros_display_);
+  vio_pipeline_ = VIO::make_unique<VIO::Pipeline>(*vio_params_,
+                                                  std::move(ros_display_));
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
 
   // Second, destroy dataset parser.
@@ -73,7 +80,7 @@ bool KimeraVioRos::runKimeraVio() {
 
   // Finally, connect data_provider and vio_pipeline
   VLOG(1) << "Connecting Vio Pipeline and Data Provider.";
-  connectVioPipelineAndDataProvider();
+  connectVIO();
 
   // Run
   return spin();
@@ -156,7 +163,7 @@ RosDataProviderInterface::UniquePtr KimeraVioRos::createDataProvider(
   return nullptr;
 }
 
-void KimeraVioRos::connectVioPipelineAndDataProvider() {
+void KimeraVioRos::connectVIO() {
   CHECK(data_provider_);
   CHECK(vio_pipeline_);
 
@@ -168,18 +175,18 @@ void KimeraVioRos::connectVioPipelineAndDataProvider() {
 
   // Register callback to retrieve vio pipeline output from all modules.
   vio_pipeline_->registerBackendOutputCallback(
-      std::bind(&VIO::RosDataProviderInterface::callbackBackendOutput,
-                std::ref(*data_provider_),
+      std::bind(&VIO::RosDisplay::callbackBackendOutput,
+                std::ref(*ros_display_),
                 std::placeholders::_1));
 
   vio_pipeline_->registerFrontendOutputCallback(
-      std::bind(&VIO::RosDataProviderInterface::callbackFrontendOutput,
-                std::ref(*data_provider_),
+      std::bind(&VIO::RosDisplay::callbackFrontendOutput,
+                std::ref(*ros_display_),
                 std::placeholders::_1));
 
   vio_pipeline_->registerMesherOutputCallback(
-      std::bind(&VIO::RosDataProviderInterface::callbackMesherOutput,
-                std::ref(*data_provider_),
+      std::bind(&VIO::RosDisplay::callbackMesherOutput,
+                std::ref(*ros_display_),
                 std::placeholders::_1));
 
   bool use_lcd = false;
@@ -187,8 +194,8 @@ void KimeraVioRos::connectVioPipelineAndDataProvider() {
   nh_.getParam("use_lcd", use_lcd);
   if (use_lcd) {
     vio_pipeline_->registerLcdOutputCallback(
-        std::bind(&VIO::RosDataProviderInterface::callbackLcdOutput,
-                  std::ref(*data_provider_),
+        std::bind(&VIO::RosDisplay::callbackLcdOutput,
+                  std::ref(*ros_display_),
                   std::placeholders::_1));
   }
 
