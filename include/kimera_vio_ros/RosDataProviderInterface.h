@@ -187,7 +187,6 @@ class RosDataProviderInterface : public DataProviderInterface {
 
   pose_graph_tools::PoseGraph getPosegraphMsg();
 
-  // Publish/print debugging information.
   void publishDebugImage(const Timestamp& timestamp,
                          const cv::Mat& debug_image) const;
 

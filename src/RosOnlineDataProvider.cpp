@@ -188,10 +188,27 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   // This async spinner will process the regular Global callback queue of ROS.
   static constexpr size_t kGlobalSpinnerThreads = 2u;
   async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
+
+  // Start async spinners to get input data.
+  if (!shutdown_) {
+    CHECK(imu_async_spinner_);
+    imu_async_spinner_->start();
+    CHECK(async_spinner_);
+    async_spinner_->start();
+  }
 }
 
 RosOnlineDataProvider::~RosOnlineDataProvider() {
-  VLOG(1) << "RosDataProvider destructor called.";
+  VLOG(1) << "RosOnlineDataProvider destructor called.";
+  imu_queue_.disable();
+
+  LOG(INFO) << "Shutting down queues ROS Async Spinner.";
+  CHECK(imu_async_spinner_);
+  imu_async_spinner_->stop();
+  CHECK(async_spinner_);
+  async_spinner_->stop();
+
+  LOG(INFO) << "RosOnlineDataProvider successfully shutdown.";
 }
 
 // TODO(marcus): with the readRosImage, this is a slow callback. Might be too
@@ -345,60 +362,26 @@ void RosOnlineDataProvider::msgGtOdomToVioNavState(
   vio_navstate->imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
 }
 
-bool RosOnlineDataProvider::spin() {
-  CHECK_EQ(vio_params_.camera_params_.size(), 2u);
-
-  LOG(INFO) << "Spinning RosOnlineDataProvider.";
-
-  // Start async spinners to get input data.
-  if (!shutdown_) {
-    CHECK(imu_async_spinner_);
-    imu_async_spinner_->start();
-    CHECK(async_spinner_);
-    async_spinner_->start();
-  }
-
-  // Start our own spin to publish output data to ROS
-  // Pop and send output at a 30Hz rate.
-  ros::Rate rate(30);
-  while (ros::ok() && !shutdown_) {
-    rate.sleep();
-    spinOnce();  // TODO(marcus): need a sequential mode?
-  }
-
-  imu_queue_.disable();
-
-  LOG(INFO) << "Shutting down queues ROS Async Spinner.";
-  CHECK(imu_async_spinner_);
-  imu_async_spinner_->stop();
-  CHECK(async_spinner_);
-  async_spinner_->stop();
-
-  LOG(INFO) << "RosOnlineDataProvider successfully shutdown.";
-
-  return false;
-}
-
-bool RosOnlineDataProvider::spinOnce() {
-  // Publish frontend output at frame rate
-  LOG_EVERY_N(INFO, 100) << "Spinning RosOnlineDataProvider.";
-  FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
-  if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
-    publishFrontendOutput(frame_rate_frontend_output);
-  }
-
-  // Publish all output at keyframe rate (backend, mesher, etc)
-  publishSyncedOutputs();
-
-  // Publish lcd output at whatever frame rate it might go
-  LcdOutput::Ptr lcd_output = nullptr;
-  if (lcd_output_queue_.pop(lcd_output)) {
-    publishLcdOutput(lcd_output);
-  }
-
-  // ros::spinOnce(); // No need because we use an async spinner, see ctor.
-
-  return true;
-}
+//bool RosOnlineDataProvider::spinOnce() {
+//  // Publish frontend output at frame rate
+//  LOG_EVERY_N(INFO, 100) << "Spinning RosOnlineDataProvider.";
+//  // FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
+//  // if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
+//  //   publishFrontendOutput(frame_rate_frontend_output);
+//  // }
+//
+//  // // Publish all output at keyframe rate (backend, mesher, etc)
+//  // publishSyncedOutputs();
+//
+//  // // Publish lcd output at whatever frame rate it might go
+//  // LcdOutput::Ptr lcd_output = nullptr;
+//  // if (lcd_output_queue_.pop(lcd_output)) {
+//  //   publishLcdOutput(lcd_output);
+//  // }
+//
+//  // ros::spinOnce(); // No need because we use an async spinner, see ctor.
+//
+//  return true;
+//}
 
 }  // namespace VIO

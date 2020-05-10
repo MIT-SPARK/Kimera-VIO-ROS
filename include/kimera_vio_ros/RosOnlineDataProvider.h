@@ -29,10 +29,7 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
 
   virtual ~RosOnlineDataProvider();
 
-  bool spin() override;
-
-  bool spinOnce();
-
+ public:
   // Checks the current status of reinitialization flag
   inline bool getReinitFlag() const { return reinit_flag_; }
   // Resets the current status of reinitialization flag

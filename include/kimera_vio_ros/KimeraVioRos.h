@@ -11,6 +11,7 @@
 #include <kimera-vio/utils/Macros.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
+#include "kimera_vio_ros/RosDisplay.h"
 
 namespace VIO {
 
