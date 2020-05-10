@@ -26,7 +26,6 @@
 #include <tf/transform_broadcaster.h>
 
 #include <kimera-vio/common/vio_types.h>
-#include <kimera-vio/pipeline/Pipeline-definitions.h>
 #include <kimera-vio/dataprovider/DataProviderInterface.h>
 #include <kimera-vio/frontend/StereoFrame.h>
 #include <kimera-vio/frontend/StereoImuSyncPacket.h>
@@ -34,7 +33,10 @@
 #include <kimera-vio/frontend/VisionFrontEndParams.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/mesh/Mesher-definitions.h>
+#include <kimera-vio/pipeline/Pipeline-definitions.h>
 #include <kimera-vio/utils/ThreadsafeQueue.h>
+
+#include "kimera_vio_ros/RosPublishers.h"
 
 namespace VIO {
 
@@ -133,9 +135,6 @@ class RosDataProviderInterface : public DataProviderInterface {
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
 
-  // Define image transport for this and derived classes.
-  std::unique_ptr<image_transport::ImageTransport> it_;
-
   // Define frame ids for odometry message
   std::string world_frame_id_;
   std::string base_link_frame_id_;
@@ -195,9 +194,8 @@ class RosDataProviderInterface : public DataProviderInterface {
   void printParsedParams() const;
 
  private:
-  // Define publisher for debug images.
-  image_transport::Publisher debug_img_pub_;
-  image_transport::Publisher feature_tracks_pub_;
+  // Define image publishers manager
+  std::unique_ptr<ImagePublishers> image_publishers_;
 
   // Publishers
   ros::Publisher pointcloud_pub_;

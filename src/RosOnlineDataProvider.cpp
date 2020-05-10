@@ -20,6 +20,7 @@ namespace VIO {
 
 RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
     : RosDataProviderInterface(vio_params),
+      it_(nullptr),
       frame_count_(FrameId(0)),
       left_img_subscriber_(),
       right_img_subscriber_(),
@@ -156,7 +157,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   // We set the queue to only 1, since we prefer to drop messages to reach
   // real-time than to be delayed...
   static constexpr size_t kMaxImagesQueueSize = 1u;
-  CHECK(it_);
+  it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
   left_img_subscriber_.subscribe(
       *it_, "left_cam/image_raw", kMaxImagesQueueSize);
   right_img_subscriber_.subscribe(

@@ -75,6 +75,9 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
                               VioNavState* vio_navstate);
 
  private:
+  // Define image transport for this and derived classes.
+  std::unique_ptr<image_transport::ImageTransport> it_;
+
   // Message filters and to sync stereo images
   typedef image_transport::SubscriberFilter ImageSubscriber;
   ImageSubscriber left_img_subscriber_;

@@ -37,7 +37,6 @@ namespace VIO {
 
 RosDataProviderInterface::RosDataProviderInterface(const VioParams& vio_params)
     : DataProviderInterface(),
-      it_(nullptr),
       nh_(),
       nh_private_("~"),
       backend_output_queue_("Backend output ROS"),
@@ -45,13 +44,14 @@ RosDataProviderInterface::RosDataProviderInterface(const VioParams& vio_params)
       keyframe_rate_frontend_output_queue_("Keyframe Rate Frontend output ROS"),
       mesher_output_queue_("Mesher output ROS"),
       lcd_output_queue_("LCD output ROS"),
-      vio_params_(vio_params) {
+      vio_params_(vio_params),
+      image_publishers_(nullptr) {
   VLOG(1) << "Initializing RosDataProviderInterface.";
 
   // Print parameters to check.
   if (VLOG_IS_ON(1)) printParsedParams();
 
-  it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
+  image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
 
   // Get ROS params
   CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
@@ -76,8 +76,6 @@ RosDataProviderInterface::RosDataProviderInterface(const VioParams& vio_params)
   pointcloud_pub_ =
       nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 1, true);
   mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 1, true);
-  debug_img_pub_ = it_->advertise("debug_mesh_img/image_raw", 1, true);
-  feature_tracks_pub_ = it_->advertise("feature_tracks/image_raw", 1, true);
 
   publishStaticTf(vio_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
@@ -170,16 +168,20 @@ void RosDataProviderInterface::publishFrontendOutput(
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
   }
-  if (feature_tracks_pub_.getNumSubscribers() > 0) {
+
+  CHECK_NOTNULL(image_publishers_);
+  if (image_publishers_->getNumSubscribersForPublisher("feature_tracks") > 0) {
     if (!output->feature_tracks_.empty()) {
       std_msgs::Header h;
       h.stamp.fromNSec(output->timestamp_);
       h.frame_id = base_link_frame_id_;
       // Copies...
-      feature_tracks_pub_.publish(
+      image_publishers_->publish(
+          "feature_tracks",
           cv_bridge::CvImage(h, "bgr8", output->feature_tracks_).toImageMsg());
     } else {
-      LOG(ERROR) << feature_tracks_pub_.getNumSubscribers()
+      LOG(ERROR) << image_publishers_->getNumSubscribersForPublisher(
+                        "feature_tracks")
                  << " nodes subscribed to the feature tracks topic, but the "
                     "feature tracks image is empty. Did you set the gflag "
                     "visualize_feature_tracks in Kimera-VIO to true?";
@@ -222,7 +224,8 @@ bool RosDataProviderInterface::publishSyncedOutputs() {
 
     if (frontend_output && mesher_output) {
       // Publish 2d mesh debug image
-      if (debug_img_pub_.getNumSubscribers() > 0) {
+      CHECK_NOTNULL(image_publishers_);
+      if (image_publishers_->getNumSubscribersForPublisher("debug_img") > 0) {
         cv::Mat mesh_2d_img = Visualizer3D::visualizeMesh2D(
             mesher_output->mesh_2d_for_viz_,
             frontend_output->stereo_frame_lkf_.getLeftFrame().img_);
@@ -333,8 +336,8 @@ void RosDataProviderInterface::publishDebugImage(
   h.stamp.fromNSec(timestamp);
   h.frame_id = base_link_frame_id_;
   // Copies...
-  debug_img_pub_.publish(
-      cv_bridge::CvImage(h, "bgr8", debug_image).toImageMsg());
+  image_publishers_->publish(
+      "debug_img", cv_bridge::CvImage(h, "bgr8", debug_image).toImageMsg());
 }
 
 // void RosBaseDataProvider::publishTimeHorizonMesh3D(

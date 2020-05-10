@@ -3,6 +3,9 @@
 #include <string>
 #include <unordered_map>
 
+#include <glog/logging.h>
+
+#include <image_transport/image_transport.h>
 #include <ros/ros.h>
 
 namespace VIO {
@@ -14,10 +17,21 @@ namespace VIO {
 * IdxType: typically the name of the topic (which we use to index the map of
 * publishers). It must be UNIQUE, or you will override previous publishers.
 * MsgType: type of the message to be sent via the publishers.
+* PublisherType = ros::Publisher,  the actual ros publisher, it can be the
+* classic
+* ros::Publisher (default), or an image_transport::Publisher.
+* NodeHandleType = ros::NodeHandle, the actual ros node handle, it can be the
+* classic ros::NodeHandle (default), or a image_transport::ImageTransport.
 */
-template <class IdxType, class MsgType>
+template <class IdxType,
+          class MsgType,
+          class PublisherType = ros::Publisher,
+          class NodeHandleType = ros::NodeHandle>
 class RosPublishers {
-  typedef std::unordered_map<IdxType, ros::Publisher> RosPubs;
+ private:
+  //! Map from unique idx to ros Publisher (either a classic ros::Publisher or
+  //! a image_transport::Publisher).
+  using RosPubs = std::unordered_map<IdxType, PublisherType>;
 
  public:
   /**
@@ -39,7 +53,11 @@ class RosPublishers {
         queue_size_(queue_size),
         latch_msgs_(latch_msgs),
         nh_private_(nh_private),
-        pubs_() {}
+        pubs_() {
+    // TODO(Toni): add check on PublisherType and NodeHandleType, they can only
+    // be either ros::Publisher + ros::NodeHandle or image_transport::Publisher
+    // + image_transport::ImageTransport. Not other combinations.
+  }
   virtual ~RosPublishers() = default;
 
  public:
@@ -62,12 +80,50 @@ class RosPublishers {
 
     // If publisher does not exist, we create a new one.
     if (pub_it == pubs_.end()) {
-      pubs_[idx] = nh_private_.advertise<MsgType>(
-          base_topic_name_ + std::to_string(idx), queue_size_, latch_msgs_);
+      pubs_[idx] = createPublisher(idx, &nh_private_);
     }
 
     // Publish msg (use .at since pub_it might be invalid).
     pubs_.at(idx).publish(msg);
+  }
+
+  /**
+   * @brief getNumSubscribersForPublisher Get the number of subscribers to a
+   * given
+   * publisher
+   * @param idx Index of the publisher in the map (unique id).
+   * @return The number of subscribers to the publisher (NOTE:
+   * if there is no such publisher with index `idx` in our map of publishers,
+   * we will create one!
+   */
+  size_t getNumSubscribersForPublisher(const IdxType& idx) {
+    const auto& pub_it = pubs_.find(idx);
+    if (pub_it == pubs_.end()) {
+      pubs_[idx] = createPublisher(idx, &nh_private_);
+    }
+    // Use .at(0 since pub_it might be invalid.
+    return pubs_.at(idx).getNumSubscribers();
+  }
+
+ protected:
+  // We need the two below because one advertise is templated, the other is not.
+  PublisherType createPublisher(const IdxType& idx, ros::NodeHandle* nh) const {
+    return CHECK_NOTNULL(nh)->advertise<MsgType>(
+        base_topic_name_ + safeToString(idx), queue_size_, latch_msgs_);
+  }
+  PublisherType createPublisher(const IdxType& idx,
+                                image_transport::ImageTransport* it) const {
+    return CHECK_NOTNULL(it)->advertise(
+        base_topic_name_ + safeToString(idx), queue_size_, latch_msgs_);
+  }
+
+ private:
+  // The two below is to get around the lack of template for std::to_string
+  // for an actual string :/
+  static std::string to_string(const std::string& value) { return value; }
+  std::string safeToString(const IdxType& idx) const {
+    using namespace std;
+    return to_string(idx);
   }
 
  private:
@@ -82,7 +138,15 @@ class RosPublishers {
   //! Map of indices to publishers, it contains all our publishers.
   RosPubs pubs_;
 
-  //! Ros stuff
-  ros::NodeHandle nh_private_;
+  //! Ros handle: can be the classic ros::NodeHandle, or a
+  //! image_transport::ImageTransport
+  NodeHandleType nh_private_;
 };
+
+//! Define some classics:
+using ImagePublishers = RosPublishers<std::string,
+                                      sensor_msgs::ImagePtr,
+                                      image_transport::Publisher,
+                                      image_transport::ImageTransport>;
+
 }  // namespace VIO
