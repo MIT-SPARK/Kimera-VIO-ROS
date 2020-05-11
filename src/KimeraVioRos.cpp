@@ -31,17 +31,19 @@
 namespace VIO {
 
 KimeraVioRos::KimeraVioRos()
-    : vio_params_(nullptr),
+    : nh_private_("~"),
+      vio_params_(nullptr),
       vio_pipeline_(nullptr),
       data_provider_(nullptr),
       restart_vio_pipeline_srv_(),
       restart_vio_pipeline_(false) {
   // Add rosservice to restart VIO pipeline if requested.
-  ros::NodeHandle nh_("~");
-  restart_vio_pipeline_srv_ = nh_.advertiseService(
+  restart_vio_pipeline_srv_ = nh_private_.advertiseService(
       "restart_kimera_vio", &KimeraVioRos::restartKimeraVio, this);
+
+  // Parse VIO parameters
   std::string params_folder_path;
-  CHECK(nh_.getParam("params_folder_path", params_folder_path));
+  CHECK(nh_private_.getParam("params_folder_path", params_folder_path));
   CHECK(!params_folder_path.empty());
   vio_params_ = std::make_shared<VioParams>(params_folder_path);
 }
@@ -125,6 +127,7 @@ bool KimeraVioRos::spin() {
   } else {
     ros::start();
     while (ros::ok() && data_provider_->spin() && vio_pipeline_->spin()) {
+      // TODO(Toni): right now this will loop forwever unless ROS dies or Ctrl+C
       LOG(INFO) << vio_pipeline_->printStatistics();
       continue;
     }
@@ -142,9 +145,8 @@ bool KimeraVioRos::spin() {
 
 RosDataProviderInterface::UniquePtr
 KimeraVioRos::createDataProvider(const VioParams& vio_params) {
-  ros::NodeHandle nh_("~");
   bool online_run = false;
-  CHECK(nh_.getParam("online_run", online_run));
+  CHECK(nh_private_.getParam("online_run", online_run));
   if (online_run) {
     // Running ros online.
     return VIO::make_unique<RosOnlineDataProvider>(vio_params);
@@ -182,8 +184,7 @@ void KimeraVioRos::connectVioPipelineAndDataProvider() {
                 std::placeholders::_1));
 
   bool use_lcd = false;
-  ros::NodeHandle nh_("~");
-  nh_.getParam("use_lcd", use_lcd);
+  CHECK(nh_private_.getParam("use_lcd", use_lcd));
   if (use_lcd) {
     vio_pipeline_->registerLcdOutputCallback(
         std::bind(&VIO::RosDataProviderInterface::callbackLcdOutput,

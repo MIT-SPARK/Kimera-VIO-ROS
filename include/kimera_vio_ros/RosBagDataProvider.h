@@ -72,6 +72,9 @@ class RosbagDataProvider : public RosDataProviderInterface {
   // Publish raw input data to ROS at keyframe rate
   void publishInputs(const Timestamp& timestamp_kf);
 
+  // Publish outputs
+  void publishOutputs();
+
  private:
   RosbagData rosbag_data_;
 
@@ -87,9 +90,14 @@ class RosbagDataProvider : public RosDataProviderInterface {
   ros::Publisher right_img_pub_;
   ros::Publisher gt_odometry_pub_;
 
+  Timestamp timestamp_last_frame_;
   Timestamp timestamp_last_kf_;
   Timestamp timestamp_last_imu_;
   Timestamp timestamp_last_gt_;
+
+  // Frame indices
+  //! Left frame index
+  size_t k_;
   size_t k_last_kf_;
   size_t k_last_imu_;
   size_t k_last_gt_;
