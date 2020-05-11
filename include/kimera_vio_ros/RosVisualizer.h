@@ -1,7 +1,12 @@
+/**
+ * @file   RosVisualizer.h
+ * @brief  Equivalent Kimera Visualizer but in ROS. Publishes 3D data to ROS.
+ * @author Antoni Rosinol
+ */
+
 #pragma once
 
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #define PCL_NO_PRECOMPILE  // Define this before you include any PCL headers
@@ -13,28 +18,18 @@
 
 #include <glog/logging.h>
 
-#include <cv_bridge/cv_bridge.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <image_transport/image_transport.h>
-#include <nav_msgs/Odometry.h>
-#include <nav_msgs/Path.h>
 #include <ros/ros.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/image_encodings.h>
-#include <std_msgs/Header.h>
-#include <std_msgs/Bool.h>
-#include <std_msgs/Float64MultiArray.h>
 #include <tf/transform_broadcaster.h>
 
 #include <pose_graph_tools/PoseGraph.h>
 #include <pose_graph_tools/PoseGraphEdge.h>
 #include <pose_graph_tools/PoseGraphNode.h>
 
-#include <kimera-vio/pipeline/QueueSynchronizer.h>
-#include <kimera-vio/visualizer/Display.h>
+#include <kimera-vio/backend/VioBackEnd-definitions.h>
+#include <kimera-vio/frontend/StereoVisionFrontEnd-definitions.h>
+#include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
+#include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/visualizer/Visualizer3D.h>
-
-#include <kimera_vio_ros/RosPublishers.h>
 
 namespace VIO {
 
@@ -49,90 +44,25 @@ struct PointNormalUV {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
 
-class RosVisualizer : public DisplayBase {
+class RosVisualizer : public Visualizer3D {
  public:
   KIMERA_POINTER_TYPEDEFS(RosVisualizer);
   KIMERA_DELETE_COPY_CONSTRUCTORS(RosVisualizer);
 
  public:
-  RosVisualizer(const VioParams& vio_params)
-      : DisplayBase(),
-        nh_(),
-        nh_private_("~"),
-        vio_params_(vio_params),
-        backend_output_queue_("Backend output ROS"),
-        frame_rate_frontend_output_queue_("Frame Rate Frontend output ROS"),
-        keyframe_rate_frontend_output_queue_(
-            "Keyframe Rate Frontend output ROS"),
-        mesher_output_queue_("Mesher output ROS"),
-        lcd_output_queue_("LCD output ROS") {
-    // Get ROS params
-    CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
-    CHECK(!base_link_frame_id_.empty());
-    CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
-    CHECK(!world_frame_id_.empty());
-    CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
-    CHECK(!map_frame_id_.empty());
-
-    // Publishers
-    odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 1, true);
-    frontend_stats_pub_ =
-        nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 1);
-    resiliency_pub_ =
-        nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 1);
-    imu_bias_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 1);
-    trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
-    posegraph_pub_ =
-        nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1);
-    pointcloud_pub_ =
-        nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 1, true);
-    mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 1, true);
-  }
+  RosVisualizer(const VioParams& vio_params);
   virtual ~RosVisualizer() = default;
 
  public:
-  // Spins the display once to render the visualizer output.
-  void spinOnce(DisplayInputBase::UniquePtr&& viz_output) override {
-    CHECK(viz_output);
-    // Display 2D images.
-    spin2dWindow(*viz_output);
-    // No need to run ros::spinOnce(), since it is done with async spinner.
-  }
-
- public:
-  inline void callbackBackendOutput(const VIO::BackendOutput::Ptr& output) {
-    backend_output_queue_.push(output);
-  }
-
-  inline void callbackFrontendOutput(const VIO::FrontendOutput::Ptr& output) {
-    // TODO(Toni): pushing twice to two different queues bcs we are missing
-    // the functionality to ".front()" a queue, now we can just pop()...
-    // Perhaps we should make all our threadsafe queues temporally aware
-    // (meaning you can query the time of the message directly)...
-    frame_rate_frontend_output_queue_.push(output);
-    if (output && output->is_keyframe_) {
-      keyframe_rate_frontend_output_queue_.push(output);
-    }
-  }
-
-  inline void callbackMesherOutput(const VIO::MesherOutput::Ptr& output) {
-    mesher_output_queue_.push(output);
-  }
-
-  inline void callbackLcdOutput(const VIO::LcdOutput::Ptr& output) {
-    lcd_output_queue_.push(output);
-  }
-
-  virtual void shutdownQueues() {
-    backend_output_queue_.shutdown();
-    frame_rate_frontend_output_queue_.shutdown();
-    keyframe_rate_frontend_output_queue_.shutdown();
-    mesher_output_queue_.shutdown();
-    lcd_output_queue_.shutdown();
-  }
+  /**
+   * @brief spinOnce
+   * Spins the display once to render the visualizer output.
+   * @param viz_input
+   */
+  VisualizerOutput::UniquePtr spinOnce(
+      const VisualizerInput& viz_input) override;
 
  protected:
-
   // Publish VIO outputs.
   virtual void publishBackendOutput(const BackendOutput::Ptr& output);
 
@@ -140,20 +70,16 @@ class RosVisualizer : public DisplayBase {
 
   virtual void publishMesherOutput(const MesherOutput::Ptr& output) const;
 
-  virtual bool publishSyncedOutputs();
-
   // Publish all outputs for LCD
   // TODO(marcus): make like other outputs
   virtual void publishLcdOutput(const LcdOutput::Ptr& lcd_output);
 
  private:
-  void publishTf(const BackendOutput::Ptr& output);
-
   void publishTimeHorizonPointCloud(const BackendOutput::Ptr& output) const;
 
   void publishPerFrameMesh3D(const MesherOutput::Ptr& output) const;
 
-  void publishTimeHorizonMesh3D(const MesherOutput::Ptr& output) const;
+  // void publishTimeHorizonMesh3D(const MesherOutput::Ptr& output) const;
 
   void publishState(const BackendOutput::Ptr& output) const;
 
@@ -164,7 +90,7 @@ class RosVisualizer : public DisplayBase {
 
   void publishImuBias(const BackendOutput::Ptr& output) const;
 
-  // Publish LCD/PGO outputs.
+  void publishTf(const BackendOutput::Ptr& output);
   void publishTf(const LcdOutput::Ptr& lcd_output);
 
   void publishOptimizedTrajectory(const LcdOutput::Ptr& lcd_output) const;
@@ -182,15 +108,13 @@ class RosVisualizer : public DisplayBase {
                          const cv::Mat& debug_image) const;
 
  private:
+  // ROS handles
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
 
-  // Just to get left/right cam to body tfs...
-  VioParams vio_params_;
-
-  // Publishers
+  // ROS publishers
   ros::Publisher pointcloud_pub_;
-  // Published 3d mesh per frame (not time horizon of opitimization!)
+  //! Published 3d mesh per frame (not time horizon of opitimization!)
   ros::Publisher mesh_3d_frame_pub_;
   ros::Publisher odometry_pub_;
   ros::Publisher resiliency_pub_;
@@ -199,27 +123,25 @@ class RosVisualizer : public DisplayBase {
   ros::Publisher trajectory_pub_;
   ros::Publisher posegraph_pub_;
 
-  // Define tf broadcaster for world to base_link (IMU) and to map (PGO).
+  //! Define tf broadcaster for world to base_link (IMU) and to map (PGO).
   tf::TransformBroadcaster tf_broadcaster_;
 
-  // Stored pose graph related objects
+  //! Stored pose graph related objects
   std::vector<pose_graph_tools::PoseGraphEdge> loop_closure_edges_;
   std::vector<pose_graph_tools::PoseGraphEdge> odometry_edges_;
   std::vector<pose_graph_tools::PoseGraphEdge> inlier_edges_;
   std::vector<pose_graph_tools::PoseGraphNode> pose_graph_nodes_;
 
  private:
-  // Define frame ids for odometry message
+  //! Define frame ids for odometry message
   std::string world_frame_id_;
   std::string base_link_frame_id_;
   std::string map_frame_id_;
 
-  // Queues to store and retrieve VIO output in a thread-safe way.
-  ThreadsafeQueue<BackendOutput::Ptr> backend_output_queue_;
-  ThreadsafeQueue<FrontendOutput::Ptr> frame_rate_frontend_output_queue_;
-  ThreadsafeQueue<FrontendOutput::Ptr> keyframe_rate_frontend_output_queue_;
-  ThreadsafeQueue<MesherOutput::Ptr> mesher_output_queue_;
-  ThreadsafeQueue<LcdOutput::Ptr> lcd_output_queue_;
+  cv::Size image_size_;
+
+  //! Whether we publish lcd things or not. (TODO:(Toni) Not used, implement...)
+  bool use_lcd_;
 
  private:
   // Typedefs
