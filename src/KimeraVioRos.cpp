@@ -33,8 +33,9 @@ namespace VIO {
 KimeraVioRos::KimeraVioRos()
     : vio_params_(nullptr),
       vio_pipeline_(nullptr),
-      data_provider_(nullptr),
       ros_display_(nullptr),
+      ros_display_2_(nullptr),
+      data_provider_(nullptr),
       restart_vio_pipeline_srv_(),
       restart_vio_pipeline_(false) {
   // Add rosservice to restart VIO pipeline if requested.
@@ -54,10 +55,12 @@ bool KimeraVioRos::runKimeraVio() {
   // the shutdown function of a deleted object, aka segfault.
   VLOG(1) << "Destroy Ros Display.";
   ros_display_.reset();
+  ros_display_2_.reset();
 
   VLOG(1) << "Creating Ros Display.";
   CHECK(vio_params_);
   ros_display_ = VIO::make_unique<RosDisplay>(*vio_params_);
+  ros_display_2_ = VIO::make_unique<RosDisplay>(*vio_params_);
 
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
@@ -164,29 +167,29 @@ RosDataProviderInterface::UniquePtr KimeraVioRos::createDataProvider(
 }
 
 void KimeraVioRos::connectVIO() {
-  CHECK(data_provider_);
-  CHECK(vio_pipeline_);
-
   // Register VIO pipeline callbacks
   // Register callback to shutdown data provider in case VIO pipeline
   // shutsdown.
+  CHECK(data_provider_);
+  CHECK(vio_pipeline_);
   vio_pipeline_->registerShutdownCallback(std::bind(
       &VIO::DataProviderInterface::shutdown, std::ref(*data_provider_)));
 
   // Register callback to retrieve vio pipeline output from all modules.
+  CHECK(ros_display_2_);
   vio_pipeline_->registerBackendOutputCallback(
       std::bind(&VIO::RosDisplay::callbackBackendOutput,
-                std::ref(*ros_display_),
+                std::ref(*ros_display_2_),
                 std::placeholders::_1));
 
   vio_pipeline_->registerFrontendOutputCallback(
       std::bind(&VIO::RosDisplay::callbackFrontendOutput,
-                std::ref(*ros_display_),
+                std::ref(*ros_display_2_),
                 std::placeholders::_1));
 
   vio_pipeline_->registerMesherOutputCallback(
       std::bind(&VIO::RosDisplay::callbackMesherOutput,
-                std::ref(*ros_display_),
+                std::ref(*ros_display_2_),
                 std::placeholders::_1));
 
   bool use_lcd = false;
@@ -195,7 +198,7 @@ void KimeraVioRos::connectVIO() {
   if (use_lcd) {
     vio_pipeline_->registerLcdOutputCallback(
         std::bind(&VIO::RosDisplay::callbackLcdOutput,
-                  std::ref(*ros_display_),
+                  std::ref(*ros_display_2_),
                   std::placeholders::_1));
   }
 

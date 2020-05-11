@@ -39,7 +39,8 @@ class KimeraVioRos {
   VioParams::Ptr vio_params_;
   Pipeline::UniquePtr vio_pipeline_;
   RosDataProviderInterface::UniquePtr data_provider_;
-  RosDisplay ros_display_;
+  RosDisplay::UniquePtr ros_display_;
+  RosDisplay::UniquePtr ros_display_2_;
   ros::ServiceServer restart_vio_pipeline_srv_;
   std::atomic_bool restart_vio_pipeline_;
 };

@@ -49,13 +49,13 @@ struct PointNormalUV {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
 
-class RosDisplay : public DisplayBase {
+class RosVisualizer : public DisplayBase {
  public:
-  KIMERA_POINTER_TYPEDEFS(RosDisplay);
-  KIMERA_DELETE_COPY_CONSTRUCTORS(RosDisplay);
+  KIMERA_POINTER_TYPEDEFS(RosVisualizer);
+  KIMERA_DELETE_COPY_CONSTRUCTORS(RosVisualizer);
 
  public:
-  RosDisplay(const VioParams& vio_params)
+  RosVisualizer(const VioParams& vio_params)
       : DisplayBase(),
         nh_(),
         nh_private_("~"),
@@ -65,10 +65,7 @@ class RosDisplay : public DisplayBase {
         keyframe_rate_frontend_output_queue_(
             "Keyframe Rate Frontend output ROS"),
         mesher_output_queue_("Mesher output ROS"),
-        lcd_output_queue_("LCD output ROS"),
-        image_publishers_(nullptr) {
-    image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
-
+        lcd_output_queue_("LCD output ROS") {
     // Get ROS params
     CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
     CHECK(!base_link_frame_id_.empty());
@@ -91,7 +88,7 @@ class RosDisplay : public DisplayBase {
         nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 1, true);
     mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 1, true);
   }
-  virtual ~RosDisplay() = default;
+  virtual ~RosVisualizer() = default;
 
  public:
   // Spins the display once to render the visualizer output.
@@ -135,17 +132,6 @@ class RosDisplay : public DisplayBase {
   }
 
  protected:
-  void spin2dWindow(const DisplayInputBase& viz_output) {
-    for (const ImageToDisplay& img_to_display : viz_output.images_to_display_) {
-      std_msgs::Header header;
-      header.stamp.fromNSec(viz_output.timestamp_);
-      header.frame_id = base_link_frame_id_;
-      // Copies...
-      image_publishers_->publish(
-          img_to_display.name_,
-          cv_bridge::CvImage(header, "bgr8", img_to_display.image_).toImageMsg());
-    }
-  }
 
   // Publish VIO outputs.
   virtual void publishBackendOutput(const BackendOutput::Ptr& output);
@@ -201,9 +187,6 @@ class RosDisplay : public DisplayBase {
 
   // Just to get left/right cam to body tfs...
   VioParams vio_params_;
-
-  // Define image publishers manager
-  std::unique_ptr<ImagePublishers> image_publishers_;
 
   // Publishers
   ros::Publisher pointcloud_pub_;

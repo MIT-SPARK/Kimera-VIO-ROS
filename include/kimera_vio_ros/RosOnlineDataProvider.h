@@ -67,6 +67,11 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Reinitialization pose
   void callbackReinitPose(const geometry_msgs::PoseStamped& reinitPose);
 
+  // Publish static transforms (for camera frames) to the tf tree
+  void publishStaticTf(const gtsam::Pose3& pose,
+                       const std::string& parent_frame_id,
+                       const std::string& child_frame_id);
+
  private:
   // TODO(Toni): perhaps put in utils
   void msgGtOdomToVioNavState(const nav_msgs::Odometry::ConstPtr& gt_odom,
@@ -111,6 +116,11 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Ground-truth initialization pose received flag
   bool gt_init_pose_received_ = false;
   bool camera_info_received_ = false;
+
+  // Frame ids
+  std::string base_link_frame_id_;
+  std::string left_cam_frame_id_;
+  std::string right_cam_frame_id_;
 };
 
 }  // namespace VIO

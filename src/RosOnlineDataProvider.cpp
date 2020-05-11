@@ -15,6 +15,9 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/Bool.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+
+#include "kimera_vio_ros/utils/UtilsRos.h"
 
 namespace VIO {
 
@@ -185,6 +188,20 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
                     &RosOnlineDataProvider::callbackReinitPose,
                     this);
 
+  CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
+  CHECK(!base_link_frame_id_.empty());
+  CHECK(nh_private_.getParam("left_cam_frame_id", left_cam_frame_id_));
+  CHECK(!left_cam_frame_id_.empty());
+  CHECK(nh_private_.getParam("right_cam_frame_id", right_cam_frame_id_));
+  CHECK(!right_cam_frame_id_.empty());
+
+  publishStaticTf(vio_params_.camera_params_.at(0).body_Pose_cam_,
+                  base_link_frame_id_,
+                  left_cam_frame_id_);
+  publishStaticTf(vio_params_.camera_params_.at(1).body_Pose_cam_,
+                  base_link_frame_id_,
+                  right_cam_frame_id_);
+
   // This async spinner will process the regular Global callback queue of ROS.
   static constexpr size_t kGlobalSpinnerThreads = 2u;
   async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
@@ -247,10 +264,10 @@ void RosOnlineDataProvider::callbackCameraInfo(
   CHECK_GE(vio_params_.camera_params_.size(), 2u);
 
   // Initialize CameraParams for pipeline.
-  msgCamInfoToCameraParams(
-      left_msg, left_cam_frame_id_, &vio_params_.camera_params_.at(0));
-  msgCamInfoToCameraParams(
-      right_msg, right_cam_frame_id_, &vio_params_.camera_params_.at(1));
+  utils::msgCamInfoToCameraParams(
+      left_msg, base_link_frame_id_, left_cam_frame_id_, &vio_params_.camera_params_.at(0));
+  utils::msgCamInfoToCameraParams(
+      right_msg, base_link_frame_id_, right_cam_frame_id_, &vio_params_.camera_params_.at(1));
 
   vio_params_.camera_params_.at(0).print();
   vio_params_.camera_params_.at(1).print();
@@ -362,7 +379,21 @@ void RosOnlineDataProvider::msgGtOdomToVioNavState(
   vio_navstate->imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
 }
 
-//bool RosOnlineDataProvider::spinOnce() {
+void RosOnlineDataProvider::publishStaticTf(const gtsam::Pose3& pose,
+                                            const std::string& parent_frame_id,
+                                            const std::string& child_frame_id) {
+  static tf2_ros::StaticTransformBroadcaster static_broadcaster;
+  geometry_msgs::TransformStamped static_transform_stamped;
+  // TODO(Toni): Warning: using ros::Time::now(), will that bring issues?
+  // Remove this... Pass timestamp from pose.
+  static_transform_stamped.header.stamp = ros::Time::now();
+  static_transform_stamped.header.frame_id = parent_frame_id;
+  static_transform_stamped.child_frame_id = child_frame_id;
+  utils::poseToMsgTF(pose, &static_transform_stamped.transform);
+  static_broadcaster.sendTransform(static_transform_stamped);
+}
+
+// bool RosOnlineDataProvider::spinOnce() {
 //  // Publish frontend output at frame rate
 //  LOG_EVERY_N(INFO, 100) << "Spinning RosOnlineDataProvider.";
 //  // FrontendOutput::Ptr frame_rate_frontend_output = nullptr;

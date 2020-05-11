@@ -312,7 +312,7 @@ void RosbagDataProvider::publishBackendOutput(
     const BackendOutput::Ptr& output) {
   CHECK(output);
   publishInputs(output->timestamp_);
-  RosDataProviderInterface::publishBackendOutput(output);
+  // RosDataProviderInterface::publishBackendOutput(output);
   publishClock(output->timestamp_);
 }
 
