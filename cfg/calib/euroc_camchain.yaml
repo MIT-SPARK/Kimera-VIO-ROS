@@ -1,5 +1,8 @@
 # Only used by stereo depth from image_undistort for Euroc dataset
 # which does not provide camera_info topics...
+# Taken from https://github.com/ethz-asl/voxblox/blob/master/voxblox_ros/cfg/calibrations/euroc_camchain.yaml
+# This configuration file is read by dense_stereo reconstruction node: https://github.com/ethz-asl/image_undistort
+# inside kimera_vio_ros_euroc.launch
 cam0:
   T_cam_imu:
   - [0.014067833389924844, 0.9996023098557362, -0.024440094001271714, 0.0657094717307726]

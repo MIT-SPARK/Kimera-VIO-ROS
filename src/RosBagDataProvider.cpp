@@ -11,7 +11,7 @@
 
 #include <rosgraph_msgs/Clock.h>
 
-#include <kimera-vio/pipeline/Pipeline-definitions.h>.h>
+#include <kimera-vio/pipeline/Pipeline-definitions.h>
 
 namespace VIO {
 
@@ -28,12 +28,14 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
       left_img_pub_(),
       right_img_pub_(),
       gt_odometry_pub_(),
-      timestamp_last_kf_(0),
-      timestamp_last_imu_(0),
-      timestamp_last_gt_(0),
-      k_last_kf_(0),
-      k_last_imu_(0),
-      k_last_gt_(0) {
+      timestamp_last_frame_(std::numeric_limits<Timestamp>::min()),
+      timestamp_last_kf_(std::numeric_limits<Timestamp>::min()),
+      timestamp_last_imu_(std::numeric_limits<Timestamp>::min()),
+      timestamp_last_gt_(std::numeric_limits<Timestamp>::min()),
+      k_(0u),
+      k_last_kf_(0u),
+      k_last_imu_(0u),
+      k_last_gt_(0u) {
   LOG(INFO) << "Starting Kimera-VIO wrapper offline mode.";
 
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
@@ -53,68 +55,71 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
 
   clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("/clock", kQueueSize);
   imu_pub_ = nh_.advertise<sensor_msgs::Imu>(imu_topic_, kQueueSize);
-  left_img_pub_ = nh_.advertise<sensor_msgs::Image>(left_imgs_topic_, kQueueSize);
-  right_img_pub_ = nh_.advertise<sensor_msgs::Image>(right_imgs_topic_, kQueueSize);
+  left_img_pub_ =
+      nh_.advertise<sensor_msgs::Image>(left_imgs_topic_, kQueueSize);
+  right_img_pub_ =
+      nh_.advertise<sensor_msgs::Image>(right_imgs_topic_, kQueueSize);
 
   if (!gt_odom_topic_.empty()) {
-    gt_odometry_pub_ = nh_.advertise<nav_msgs::Odometry>(gt_odom_topic_, kQueueSize);
+    gt_odometry_pub_ =
+        nh_.advertise<nav_msgs::Odometry>(gt_odom_topic_, kQueueSize);
   }
 }
 
 bool RosbagDataProvider::spin() {
-  // Parse data from rosbag:
-  CHECK(parseRosbag(rosbag_path_, &rosbag_data_));
+  if (k_ == 0) {
+    // Initialize!
+    // Parse data from rosbag first thing:
+    CHECK(parseRosbag(rosbag_path_, &rosbag_data_));
 
-  // Autoinitialize if necessary:
-  if (vio_params_.backend_params_->autoInitialize_ == 0) {
-    LOG(WARNING) << "Using initial ground-truth state for initialization.";
-    vio_params_.backend_params_->initial_ground_truth_state_ =
-        getGroundTruthVioNavState(0u);  // Send first gt state.
+    // Autoinitialize if necessary:
+    if (vio_params_.backend_params_->autoInitialize_ == 0) {
+      LOG(WARNING) << "Using initial ground-truth state for initialization.";
+      vio_params_.backend_params_->initial_ground_truth_state_ =
+          getGroundTruthVioNavState(0u);  // Send first gt state.
+    }
   }
 
-  // Send image data to VIO:
-  Timestamp timestamp_last_frame = rosbag_data_.timestamps_.at(0);
-
-  for (size_t k = 0u; k < rosbag_data_.left_imgs_.size(); k++) {
+  // We break the while loop (but increase k_!) if we run in sequential mode.
+  while (k_ < rosbag_data_.left_imgs_.size()) {
     if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
       // Main spin of the data provider: Interpolates IMU data
       // and builds StereoImuSyncPacket
       // (Think of this as the spin of the other parser/data-providers)
-      const Timestamp& timestamp_frame_k = rosbag_data_.timestamps_.at(k);
+      const Timestamp& timestamp_frame_k = rosbag_data_.timestamps_.at(k_);
 
       static const CameraParams& left_cam_info =
           vio_params_.camera_params_.at(0);
       static const CameraParams& right_cam_info =
           vio_params_.camera_params_.at(1);
 
-      if (timestamp_frame_k > timestamp_last_frame) {
+      LOG_IF(WARNING, timestamp_frame_k == timestamp_last_frame_)
+          << "Timestamps for current and previous frames are equal! This should"
+             "not happen...";
+      if (timestamp_frame_k > timestamp_last_frame_) {
         // Send left frame data to Kimera:
         CHECK(left_frame_callback_)
             << "Did you forget to register the left frame callback?";
         left_frame_callback_(VIO::make_unique<Frame>(
-            k,
+            k_,
             timestamp_frame_k,
             left_cam_info,
-            readRosImage(rosbag_data_.left_imgs_.at(k))));
+            readRosImage(rosbag_data_.left_imgs_.at(k_))));
 
         // Send right frame data to Kimera:
         CHECK(right_frame_callback_)
             << "Did you forget to register the right frame callback?";
         right_frame_callback_(VIO::make_unique<Frame>(
-            k,
+            k_,
             timestamp_frame_k,
             right_cam_info,
-            readRosImage(rosbag_data_.right_imgs_.at(k))));
+            readRosImage(rosbag_data_.right_imgs_.at(k_))));
 
-        VLOG(10) << "Finished VIO processing for frame k = " << k;
+        VLOG(10) << "Finished VIO processing for frame k = " << k_;
 
         // Publish VIO output if any.
         // TODO(Toni) this could go faster if running in another thread or
         // node...
-        // bool got_synced_outputs = publishSyncedOutputs();
-        // if (!got_synced_outputs) {
-        //   LOG(WARNING) << "Pipeline lagging behind rosbag parser.";
-        // }
 
         // // Publish LCD output if any.
         // LcdOutput::Ptr lcd_output = nullptr;
@@ -122,38 +127,32 @@ bool RosbagDataProvider::spin() {
         //   publishLcdOutput(lcd_output);
         // }
 
-        timestamp_last_frame = timestamp_frame_k;
+        timestamp_last_frame_ = timestamp_frame_k;
       } else {
-        LOG(WARNING) <<
-            "Skipping frame %d. Frame timestamps out of order:"
-            " less than or equal to last frame." <<
-            static_cast<int>(k);
+        LOG(WARNING) << "Skipping frame: " << k_ << '\n'
+                     << " Frame timestamps out of order:\n"
+                     << " Timestamp Current Frame: " << timestamp_frame_k
+                     << "\n"
+                     << " Timestamp Last Frame:    " << timestamp_last_frame_;
       }
 
+      publishRosbagInfo(timestamp_frame_k);
       ros::spinOnce();
     } else {
       LOG(ERROR) << "ROS SHUTDOWN requested, stopping rosbag spin.";
       ros::shutdown();
       return false;
     }
+
+    // Next iteration
+    k_++;
+    if (!vio_params_.parallel_run_) {
+      // Break while loop (but keep increasing k_!) if we run in sequential
+      // mode.
+      break;
+    }
   }  // End of for loop over rosbag images.
   LOG(INFO) << "Rosbag processing finished.";
-
-  // Endless loop until ros dies to publish left-over outputs.
-  // while (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
-  //   FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
-  //   if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
-  //     publishFrontendOutput(frame_rate_frontend_output);
-  //   }
-
-  //   // Publish backend, mesher, etc output
-  //   publishSyncedOutputs();
-
-  //   LcdOutput::Ptr lcd_output = nullptr;
-  //   if (lcd_output_queue_.pop(lcd_output)) {
-  //     publishLcdOutput(lcd_output);
-  //   }
-  // }
 
   return true;
 }
@@ -174,13 +173,17 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   topics.push_back(imu_topic_);
   if (!gt_odom_topic_.empty()) {
     CHECK(vio_params_.backend_params_->autoInitialize_ == 0)
-        << "Provided a gt_odom_topic; but autoInitialize is not set to 0,"
+        << "Provided a gt_odom_topic; but autoInitialize "
+           "(BackendParameters.yaml) is not set to 0,"
            " meaning no ground-truth initialization will be done... "
-           "Are you sure you don't want to use gt? ";
+           "Are you sure you don't want to use gt?)";
     topics.push_back(gt_odom_topic_);
   } else {
-    CHECK(vio_params_.backend_params_->autoInitialize_ != 0);
-    ROS_DEBUG("Not parsing ground truth data.");
+    // TODO(Toni): autoinit should be a bool...
+    CHECK_EQ(vio_params_.backend_params_->autoInitialize_, 1)
+        << "Requested ground-truth initialization, but no gt_odom_topic "
+           "was given. Make sure you set ground_truth_odometry_rosbag_topic, "
+           "or turn autoInitialize to false in BackendParameters.yaml.";
   }
 
   // Query rosbag for given topics
@@ -276,9 +279,11 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   ROS_ERROR_COND(
       !gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() == 0,
       "Requested to parse ground-truth odometry, but parsed 0 msgs.");
-  ROS_ERROR_COND(!gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() <
-                                                rosbag_data->left_imgs_.size(),
-                 "Fewer ground_truth data than image data.");
+  ROS_ERROR_COND(
+      !gt_odom_topic_.empty() &&
+          rosbag_data->gt_odometry_.size() < rosbag_data->left_imgs_.size(),
+      "Fewer ground_truth data than image data.");
+  LOG(INFO) << "Finished parsing rosbag data.";
   return true;
 }
 
@@ -308,12 +313,9 @@ VioNavState RosbagDataProvider::getGroundTruthVioNavState(
   return gt_init;
 }
 
-void RosbagDataProvider::publishBackendOutput(
-    const BackendOutput::Ptr& output) {
-  CHECK(output);
-  publishInputs(output->timestamp_);
-  // RosDataProviderInterface::publishBackendOutput(output);
-  publishClock(output->timestamp_);
+void RosbagDataProvider::publishRosbagInfo(const Timestamp& timestamp) {
+  publishInputs(timestamp);
+  publishClock(timestamp);
 }
 
 void RosbagDataProvider::publishClock(const Timestamp& timestamp) const {
@@ -337,7 +339,7 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
   // Publish ground-truth data if available:
   if (rosbag_data_.gt_odometry_.size() > k_last_gt_) {
     while (timestamp_last_gt_ < timestamp_kf &&
-            k_last_gt_ < rosbag_data_.gt_odometry_.size()) {
+           k_last_gt_ < rosbag_data_.gt_odometry_.size()) {
       gt_odometry_pub_.publish(rosbag_data_.gt_odometry_.at(k_last_gt_));
       k_last_gt_++;
       timestamp_last_gt_ =

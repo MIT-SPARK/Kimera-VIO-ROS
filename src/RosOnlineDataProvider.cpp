@@ -385,7 +385,6 @@ void RosOnlineDataProvider::publishStaticTf(const gtsam::Pose3& pose,
   static tf2_ros::StaticTransformBroadcaster static_broadcaster;
   geometry_msgs::TransformStamped static_transform_stamped;
   // TODO(Toni): Warning: using ros::Time::now(), will that bring issues?
-  // Remove this... Pass timestamp from pose.
   static_transform_stamped.header.stamp = ros::Time::now();
   static_transform_stamped.header.frame_id = parent_frame_id;
   static_transform_stamped.child_frame_id = child_frame_id;
@@ -393,26 +392,5 @@ void RosOnlineDataProvider::publishStaticTf(const gtsam::Pose3& pose,
   static_broadcaster.sendTransform(static_transform_stamped);
 }
 
-// bool RosOnlineDataProvider::spinOnce() {
-//  // Publish frontend output at frame rate
-//  LOG_EVERY_N(INFO, 100) << "Spinning RosOnlineDataProvider.";
-//  // FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
-//  // if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
-//  //   publishFrontendOutput(frame_rate_frontend_output);
-//  // }
-//
-//  // // Publish all output at keyframe rate (backend, mesher, etc)
-//  // publishSyncedOutputs();
-//
-//  // // Publish lcd output at whatever frame rate it might go
-//  // LcdOutput::Ptr lcd_output = nullptr;
-//  // if (lcd_output_queue_.pop(lcd_output)) {
-//  //   publishLcdOutput(lcd_output);
-//  // }
-//
-//  // ros::spinOnce(); // No need because we use an async spinner, see ctor.
-//
-//  return true;
-//}
 
 }  // namespace VIO

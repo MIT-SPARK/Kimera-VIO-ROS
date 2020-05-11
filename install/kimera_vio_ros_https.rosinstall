@@ -64,3 +64,7 @@
     local-name: disparity_image_proc
     uri: https://github.com/ToniRV/disparity_image_proc.git
     version: master
+- git:
+    local-name: image_undistort
+    uri: https://github.com:ethz-asl/image_undistort.git
+    version: master
