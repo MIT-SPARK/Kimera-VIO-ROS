@@ -42,7 +42,12 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
     : Visualizer3D(VisualizationType::kMesh2dTo3dSparse),
       nh_(),
       nh_private_("~"),
-      image_size_(vio_params.camera_params_.at(0).image_size_) {
+      image_size_(vio_params.camera_params_.at(0).image_size_),
+      image_publishers_(nullptr) {
+
+  //! To publish 2d images
+  image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
+
   // Get ROS params
   CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
   CHECK(!base_link_frame_id_.empty());
@@ -66,8 +71,6 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
   mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 1, true);
 }
 
-virtual RosVisualizer::~RosVisualizer() {}
-
 VisualizerOutput::UniquePtr RosVisualizer::spinOnce(
     const VisualizerInput& viz_input) {
   publishBackendOutput(viz_input.backend_output_);
@@ -78,7 +81,7 @@ VisualizerOutput::UniquePtr RosVisualizer::spinOnce(
   return VIO::make_unique<VisualizerOutput>();
 }
 
-void RosVisualizer::publishBackendOutput(const BackendOutput::Ptr& output) {
+void RosVisualizer::publishBackendOutput(const BackendOutput::ConstPtr& output) {
   CHECK(output);
   publishTf(output);
   if (odometry_pub_.getNumSubscribers() > 0) {
@@ -93,21 +96,21 @@ void RosVisualizer::publishBackendOutput(const BackendOutput::Ptr& output) {
 }
 
 void RosVisualizer::publishFrontendOutput(
-    const FrontendOutput::Ptr& output) const {
+    const FrontendOutput::ConstPtr& output) const {
   CHECK(output);
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
   }
 }
 
-void RosVisualizer::publishMesherOutput(const MesherOutput::Ptr& output) const {
+void RosVisualizer::publishMesherOutput(const MesherOutput::ConstPtr& output) const {
   CHECK(output);
   if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
     publishPerFrameMesh3D(output);
   }
 }
 
-void RosVisualizer::publishLcdOutput(const LcdOutput::Ptr& lcd_output) {
+void RosVisualizer::publishLcdOutput(const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   publishTf(lcd_output);
@@ -121,7 +124,7 @@ void RosVisualizer::publishLcdOutput(const LcdOutput::Ptr& lcd_output) {
 
 
 void RosVisualizer::publishTimeHorizonPointCloud(
-    const BackendOutput::Ptr& output) const {
+    const BackendOutput::ConstPtr& output) const {
   CHECK(output);
   const Timestamp& timestamp = output->timestamp_;
   const PointsWithIdMap& points_with_id = output->landmarks_with_id_map_;
@@ -197,11 +200,11 @@ void RosVisualizer::publishDebugImage(const Timestamp& timestamp,
   h.frame_id = base_link_frame_id_;
   // Copies...
   image_publishers_->publish(
-      "debug_img", cv_bridge::CvImage(h, "bgr8", debug_image).toImageMsg());
+      "mesh_2d", cv_bridge::CvImage(h, "bgr8", debug_image).toImageMsg());
 }
 
 void RosVisualizer::publishPerFrameMesh3D(
-    const MesherOutput::Ptr& output) const {
+    const MesherOutput::ConstPtr& output) const {
   CHECK(output);
 
   const Mesh2D& mesh_2d = output->mesh_2d_;
@@ -305,7 +308,7 @@ void RosVisualizer::publishPerFrameMesh3D(
   return;
 }  // namespace VIO
 
-void RosVisualizer::publishState(const BackendOutput::Ptr& output) const {
+void RosVisualizer::publishState(const BackendOutput::ConstPtr& output) const {
   CHECK(output);
   // Get latest estimates for odometry.
   const Timestamp& ts = output->timestamp_;
@@ -380,7 +383,7 @@ void RosVisualizer::publishState(const BackendOutput::Ptr& output) const {
 }
 
 void RosVisualizer::publishFrontendStats(
-    const FrontendOutput::Ptr& output) const {
+    const FrontendOutput::ConstPtr& output) const {
   CHECK(output);
 
   // Get frontend data for resiliency output
@@ -416,8 +419,8 @@ void RosVisualizer::publishFrontendStats(
 }
 
 void RosVisualizer::publishResiliency(
-    const FrontendOutput::Ptr& frontend_output,
-    const BackendOutput::Ptr& backend_output) const {
+    const FrontendOutput::ConstPtr& frontend_output,
+    const BackendOutput::ConstPtr& backend_output) const {
   CHECK(frontend_output);
   CHECK(backend_output);
 
@@ -485,7 +488,7 @@ void RosVisualizer::publishResiliency(
   resiliency_pub_.publish(resiliency_msg);
 }
 
-void RosVisualizer::publishImuBias(const BackendOutput::Ptr& output) const {
+void RosVisualizer::publishImuBias(const BackendOutput::ConstPtr& output) const {
   CHECK(output);
 
   // Get imu bias to output
@@ -516,7 +519,7 @@ void RosVisualizer::publishImuBias(const BackendOutput::Ptr& output) const {
 }
 
 void RosVisualizer::publishOptimizedTrajectory(
-    const LcdOutput::Ptr& lcd_output) const {
+    const LcdOutput::ConstPtr& lcd_output) const {
   CHECK(lcd_output);
 
   // Get pgo-optimized trajectory
@@ -677,7 +680,7 @@ pose_graph_tools::PoseGraph RosVisualizer::getPosegraphMsg() {
   return pose_graph;
 }
 
-void RosVisualizer::publishPoseGraph(const LcdOutput::Ptr& lcd_output) {
+void RosVisualizer::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   // Get the factor graph
@@ -691,7 +694,7 @@ void RosVisualizer::publishPoseGraph(const LcdOutput::Ptr& lcd_output) {
   posegraph_pub_.publish(graph);
 }
 
-void RosVisualizer::publishTf(const LcdOutput::Ptr& lcd_output) {
+void RosVisualizer::publishTf(const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   const Timestamp& ts = lcd_output->timestamp_kf_;
@@ -706,7 +709,7 @@ void RosVisualizer::publishTf(const LcdOutput::Ptr& lcd_output) {
   tf_broadcaster_.sendTransform(map_tf);
 }
 
-void RosVisualizer::publishTf(const BackendOutput::Ptr& output) {
+void RosVisualizer::publishTf(const BackendOutput::ConstPtr& output) {
   CHECK(output);
 
   const Timestamp& timestamp = output->timestamp_;

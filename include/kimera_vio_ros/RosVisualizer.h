@@ -31,6 +31,8 @@
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/visualizer/Visualizer3D.h>
 
+#include "kimera_vio_ros/RosPublishers.h"
+
 namespace VIO {
 
 /**
@@ -64,38 +66,38 @@ class RosVisualizer : public Visualizer3D {
 
  protected:
   // Publish VIO outputs.
-  virtual void publishBackendOutput(const BackendOutput::Ptr& output);
+  virtual void publishBackendOutput(const BackendOutput::ConstPtr& output);
 
-  virtual void publishFrontendOutput(const FrontendOutput::Ptr& output) const;
+  virtual void publishFrontendOutput(const FrontendOutput::ConstPtr& output) const;
 
-  virtual void publishMesherOutput(const MesherOutput::Ptr& output) const;
+  virtual void publishMesherOutput(const MesherOutput::ConstPtr& output) const;
 
   // Publish all outputs for LCD
   // TODO(marcus): make like other outputs
-  virtual void publishLcdOutput(const LcdOutput::Ptr& lcd_output);
+  virtual void publishLcdOutput(const LcdOutput::ConstPtr& lcd_output);
 
  private:
-  void publishTimeHorizonPointCloud(const BackendOutput::Ptr& output) const;
+  void publishTimeHorizonPointCloud(const BackendOutput::ConstPtr& output) const;
 
-  void publishPerFrameMesh3D(const MesherOutput::Ptr& output) const;
+  void publishPerFrameMesh3D(const MesherOutput::ConstPtr& output) const;
 
-  // void publishTimeHorizonMesh3D(const MesherOutput::Ptr& output) const;
+  // void publishTimeHorizonMesh3D(const MesherOutput::ConstPtr& output) const;
 
-  void publishState(const BackendOutput::Ptr& output) const;
+  void publishState(const BackendOutput::ConstPtr& output) const;
 
-  void publishFrontendStats(const FrontendOutput::Ptr& output) const;
+  void publishFrontendStats(const FrontendOutput::ConstPtr& output) const;
 
-  void publishResiliency(const FrontendOutput::Ptr& frontend_output,
-                         const BackendOutput::Ptr& backend_output) const;
+  void publishResiliency(const FrontendOutput::ConstPtr& frontend_output,
+                         const BackendOutput::ConstPtr& backend_output) const;
 
-  void publishImuBias(const BackendOutput::Ptr& output) const;
+  void publishImuBias(const BackendOutput::ConstPtr& output) const;
 
-  void publishTf(const BackendOutput::Ptr& output);
-  void publishTf(const LcdOutput::Ptr& lcd_output);
+  void publishTf(const BackendOutput::ConstPtr& output);
+  void publishTf(const LcdOutput::ConstPtr& lcd_output);
 
-  void publishOptimizedTrajectory(const LcdOutput::Ptr& lcd_output) const;
+  void publishOptimizedTrajectory(const LcdOutput::ConstPtr& lcd_output) const;
 
-  void publishPoseGraph(const LcdOutput::Ptr& lcd_output);
+  void publishPoseGraph(const LcdOutput::ConstPtr& lcd_output);
 
   void updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
                            const gtsam::Values& values);
@@ -139,6 +141,9 @@ class RosVisualizer : public Visualizer3D {
   std::string map_frame_id_;
 
   cv::Size image_size_;
+
+  //! Define image publishers manager
+  std::unique_ptr<ImagePublishers> image_publishers_;
 
   //! Whether we publish lcd things or not. (TODO:(Toni) Not used, implement...)
   bool use_lcd_;
