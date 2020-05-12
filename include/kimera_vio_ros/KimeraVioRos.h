@@ -11,6 +11,8 @@
 #include <kimera-vio/utils/Macros.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
+#include "kimera_vio_ros/RosDisplay.h"
+#include "kimera_vio_ros/RosVisualizer.h"
 
 namespace VIO {
 
@@ -31,7 +33,7 @@ class KimeraVioRos {
   VIO::RosDataProviderInterface::UniquePtr createDataProvider(
       const VioParams& vio_params);
 
-  void connectVioPipelineAndDataProvider();
+  void connectVIO();
 
   /**
    * @brief restartKimeraVio Callback for the rosservice to restart the pipeline
@@ -52,6 +54,8 @@ class KimeraVioRos {
 
   //! Data provider
   RosDataProviderInterface::UniquePtr data_provider_;
+  RosDisplay::UniquePtr ros_display_;
+  RosVisualizer::UniquePtr ros_visualizer_;
 
   //! ROS Services
   ros::ServiceServer restart_vio_pipeline_srv_;
