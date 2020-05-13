@@ -34,6 +34,8 @@ KimeraVioRos::KimeraVioRos()
     : nh_private_("~"),
       vio_params_(nullptr),
       vio_pipeline_(nullptr),
+      ros_display_(nullptr),
+      ros_visualizer_(nullptr),
       data_provider_(nullptr),
       restart_vio_pipeline_srv_(),
       restart_vio_pipeline_(false) {
@@ -53,13 +55,24 @@ bool KimeraVioRos::runKimeraVio() {
   // the data provider.
   // NOTE: had the data provider been destroyed before, the vio would be calling
   // the shutdown function of a deleted object, aka segfault.
+  VLOG(1) << "Destroy Ros Display.";
+  ros_display_.reset();
+  ros_visualizer_.reset();
+
+  VLOG(1) << "Creating Ros Display.";
+  CHECK(vio_params_);
+  ros_display_ = VIO::make_unique<RosDisplay>();
+  ros_visualizer_ = VIO::make_unique<RosVisualizer>(*vio_params_);
+
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
 
   // Then, create Kimera-VIO from scratch.
   VLOG(1) << "Creating Kimera-VIO.";
-  CHECK(vio_params_);
-  vio_pipeline_ = VIO::make_unique<VIO::Pipeline>(*vio_params_);
+  CHECK(ros_display_);
+  vio_pipeline_ = VIO::make_unique<VIO::Pipeline>(*vio_params_,
+                                                  std::move(ros_visualizer_),
+                                                  std::move(ros_display_));
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
 
   // Second, destroy dataset parser.
@@ -73,7 +86,7 @@ bool KimeraVioRos::runKimeraVio() {
 
   // Finally, connect data_provider and vio_pipeline
   VLOG(1) << "Connecting Vio Pipeline and Data Provider.";
-  connectVioPipelineAndDataProvider();
+  connectVIO();
 
   // Run
   return spin();
@@ -87,20 +100,19 @@ bool KimeraVioRos::spin() {
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (vio_params_->parallel_run_) {
-    std::future<bool> data_provider_handle =
+    std::future<bool> vio_viz_handle =
         std::async(std::launch::async,
-                   &VIO::RosDataProviderInterface::spin,
-                   data_provider_.get());
+                   &VIO::Pipeline::spinViz,
+                   vio_pipeline_.get());
     std::future<bool> vio_pipeline_handle = std::async(
         std::launch::async, &VIO::Pipeline::spin, vio_pipeline_.get());
     // Run while ROS is ok and vio pipeline is not shutdown.
     // Ideally make a thread that shutdowns pipeline if ros is not ok.
-    ros::Rate rate (10);  // Check pipeline status at 10Hz
-    while (ros::ok() &&
-           !restart_vio_pipeline_) {  //&& vio_pipeline.spinViz()) {
-      LOG_EVERY_N(INFO, 5) << vio_pipeline_->printStatistics();
+    ros::Rate rate(20);  // Check pipeline status at 20Hz
+    while (ros::ok() && !restart_vio_pipeline_) {
+      // Print stats at 10hz
+      LOG_EVERY_N(INFO, 10) << vio_pipeline_->printStatistics();
       rate.sleep();
-      continue;
     }
     if (!restart_vio_pipeline_) {
       LOG(INFO) << "Shutting down ROS and Kimera-VIO.";
@@ -114,9 +126,9 @@ bool KimeraVioRos::spin() {
     LOG(INFO) << "Joining Kimera-VIO thread.";
     vio_pipeline_handle.get();
     LOG(INFO) << "Kimera-VIO thread joined successfully.";
-    LOG(INFO) << "Joining DataProvider thread.";
-    is_pipeline_successful = !data_provider_handle.get();
-    LOG(INFO) << "DataProvider thread joined successfully.";
+    LOG(INFO) << "Joining RosDisplay thread.";
+    is_pipeline_successful = !vio_viz_handle.get();
+    LOG(INFO) << "RosDisplay thread joined successfully.";
     if (restart_vio_pipeline_) {
       // Mind that this is a recursive call! As we call this function
       // inside runKimeraVio. Sorry, couldn't find a better way.
@@ -129,7 +141,7 @@ bool KimeraVioRos::spin() {
     while (ros::ok() && data_provider_->spin() && vio_pipeline_->spin()) {
       // TODO(Toni): right now this will loop forwever unless ROS dies or Ctrl+C
       LOG(INFO) << vio_pipeline_->printStatistics();
-      continue;
+      vio_pipeline_->spinViz();
     }
     LOG(INFO) << "Shutting down ROS and VIO pipeline.";
     ros::shutdown();
@@ -157,40 +169,14 @@ KimeraVioRos::createDataProvider(const VioParams& vio_params) {
   return nullptr;
 }
 
-void KimeraVioRos::connectVioPipelineAndDataProvider() {
-  CHECK(data_provider_);
-  CHECK(vio_pipeline_);
-
+void KimeraVioRos::connectVIO() {
   // Register VIO pipeline callbacks
   // Register callback to shutdown data provider in case VIO pipeline
   // shutsdown.
+  CHECK(data_provider_);
+  CHECK(vio_pipeline_);
   vio_pipeline_->registerShutdownCallback(std::bind(
       &VIO::DataProviderInterface::shutdown, std::ref(*data_provider_)));
-
-  // Register callback to retrieve vio pipeline output from all modules.
-  vio_pipeline_->registerBackendOutputCallback(
-      std::bind(&VIO::RosDataProviderInterface::callbackBackendOutput,
-                std::ref(*data_provider_),
-                std::placeholders::_1));
-
-  vio_pipeline_->registerFrontendOutputCallback(
-      std::bind(&VIO::RosDataProviderInterface::callbackFrontendOutput,
-                std::ref(*data_provider_),
-                std::placeholders::_1));
-
-  vio_pipeline_->registerMesherOutputCallback(
-      std::bind(&VIO::RosDataProviderInterface::callbackMesherOutput,
-                std::ref(*data_provider_),
-                std::placeholders::_1));
-
-  bool use_lcd = false;
-  CHECK(nh_private_.getParam("use_lcd", use_lcd));
-  if (use_lcd) {
-    vio_pipeline_->registerLcdOutputCallback(
-        std::bind(&VIO::RosDataProviderInterface::callbackLcdOutput,
-                  std::ref(*data_provider_),
-                  std::placeholders::_1));
-  }
 
   // Register Data Provider callbacks
   data_provider_->registerImuSingleCallback(

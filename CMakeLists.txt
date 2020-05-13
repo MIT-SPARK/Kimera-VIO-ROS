@@ -20,6 +20,9 @@ cs_add_library(${PROJECT_NAME}
   src/RosDataProviderInterface.cpp
   src/RosBagDataProvider.cpp
   src/RosOnlineDataProvider.cpp
+  src/RosDisplay.cpp
+  src/RosVisualizer.cpp
+  src/utils/UtilsRos.cpp
 )
 target_link_libraries(${PROJECT_NAME} kimera_vio)
 

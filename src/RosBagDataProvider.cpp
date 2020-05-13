@@ -120,15 +120,12 @@ bool RosbagDataProvider::spin() {
         // Publish VIO output if any.
         // TODO(Toni) this could go faster if running in another thread or
         // node...
-        bool got_synced_outputs = publishSyncedOutputs();
-        VLOG_IF(5, !got_synced_outputs)
-            << "Pipeline lagging behind rosbag parser...";
 
-        // Publish LCD output if any.
-        LcdOutput::Ptr lcd_output = nullptr;
-        if (lcd_output_queue_.pop(lcd_output)) {
-          publishLcdOutput(lcd_output);
-        }
+        // // Publish LCD output if any.
+        // LcdOutput::Ptr lcd_output = nullptr;
+        // if (lcd_output_queue_.pop(lcd_output)) {
+        //   publishLcdOutput(lcd_output);
+        // }
 
         timestamp_last_frame_ = timestamp_frame_k;
       } else {
@@ -139,6 +136,7 @@ bool RosbagDataProvider::spin() {
                      << " Timestamp Last Frame:    " << timestamp_last_frame_;
       }
 
+      publishRosbagInfo(timestamp_frame_k);
       ros::spinOnce();
     } else {
       LOG(ERROR) << "ROS SHUTDOWN requested, stopping rosbag spin.";
@@ -156,32 +154,7 @@ bool RosbagDataProvider::spin() {
   }  // End of for loop over rosbag images.
   LOG(INFO) << "Rosbag processing finished.";
 
-  if (vio_params_.parallel_run_) {
-    // Endless loop until ros dies to publish left-over outputs.
-    while (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
-      publishOutputs();
-    }
-  } else {
-    // Publish just once otw we will be blocking kimera-vio spin.
-    publishOutputs();
-  }
-
   return true;
-}
-
-void RosbagDataProvider::publishOutputs() {
-  FrontendOutput::Ptr frame_rate_frontend_output = nullptr;
-  if (frame_rate_frontend_output_queue_.pop(frame_rate_frontend_output)) {
-    publishFrontendOutput(frame_rate_frontend_output);
-  }
-
-  // Publish backend, mesher, etc output
-  publishSyncedOutputs();
-
-  LcdOutput::Ptr lcd_output = nullptr;
-  if (lcd_output_queue_.pop(lcd_output)) {
-    publishLcdOutput(lcd_output);
-  }
 }
 
 bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
@@ -340,12 +313,9 @@ VioNavState RosbagDataProvider::getGroundTruthVioNavState(
   return gt_init;
 }
 
-void RosbagDataProvider::publishBackendOutput(
-    const BackendOutput::Ptr& output) {
-  CHECK(output);
-  publishInputs(output->timestamp_);
-  RosDataProviderInterface::publishBackendOutput(output);
-  publishClock(output->timestamp_);
+void RosbagDataProvider::publishRosbagInfo(const Timestamp& timestamp) {
+  publishInputs(timestamp);
+  publishClock(timestamp);
 }
 
 void RosbagDataProvider::publishClock(const Timestamp& timestamp) const {

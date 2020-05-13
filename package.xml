@@ -1,10 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>kimera_vio_ros</name>
-  <version>4.0.0</version>
+  <version>5.0.0</version>
   <description>KimeraVIO ROS Wrapper</description>
 
-  <maintainer email="yunchang@mit.edu">Yun Chang</maintainer>
   <maintainer email="mabate@mit.edu">Marcus Abate</maintainer>
   <maintainer email="arosinol@mit.edu">Antoni Rosinol</maintainer>
 
