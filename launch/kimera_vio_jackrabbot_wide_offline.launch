@@ -1,0 +1,27 @@
+<launch>
+  <!-- Where to find intrinsics, extrinsics, parameters -->
+  <arg name="dataset_name" value="JackrabbotWide"/>
+  <arg name="online" default="false" />  
+  <arg name="rosbag_path" value="/home/andrew/Documents/SPARK/JackRabbot/tressider-2019-04-26_0.bag"/>
+  <arg name="verbosity"    default="0" />
+  <arg name="viz_type"     default="0" />
+
+  <arg name="log_output" default="true"/>
+  <arg name="log_output_path"
+       default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)/"
+       if="$(arg log_output)"/>
+  <arg name="log_gt_data" default="false"/>
+
+  <!-- Subscribed Topics -->
+  <arg name="left_cam_topic"  value="/ros_indigosdk_node/image0"/>
+  <arg name="right_cam_topic" value="/ros_indigosdk_node/image2"/>
+  <arg name="imu_topic"       value="/imu/data"/>
+  <!-- arg name="odometry_ground_truth_topic" default="/uav/gt_pose" -->
+
+  <!-- Frame IDs for Odometry -->
+  <arg name="base_link_frame_id" value="kimera_base_link" />
+
+  <!-- Launch actual pipeline -->
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
+           pass_all_args="true"/>
+</launch>
