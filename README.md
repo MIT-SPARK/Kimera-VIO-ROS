@@ -69,7 +69,10 @@ echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
 
 # Clone repo
 cd ~/catkin_ws/src
+# For ssh:
 git clone git@github.com:MIT-SPARK/Kimera-VIO-ROS.git
+# For https:
+# git clone https://github.com/MIT-SPARK/Kimera-VIO-ROS.git
 
 # Install dependencies from rosinstall file using wstool
 wstool init # Use unless wstool is already initialized
