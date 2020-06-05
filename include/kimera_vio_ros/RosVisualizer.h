@@ -72,10 +72,6 @@ class RosVisualizer : public Visualizer3D {
 
   virtual void publishMesherOutput(const MesherOutput::ConstPtr& output) const;
 
-  // Publish all outputs for LCD
-  // TODO(marcus): make like other outputs
-  virtual void publishLcdOutput(const LcdOutput::ConstPtr& lcd_output);
-
  private:
   void publishTimeHorizonPointCloud(const BackendOutput::ConstPtr& output) const;
 
@@ -93,18 +89,6 @@ class RosVisualizer : public Visualizer3D {
   void publishImuBias(const BackendOutput::ConstPtr& output) const;
 
   void publishTf(const BackendOutput::ConstPtr& output);
-  void publishTf(const LcdOutput::ConstPtr& lcd_output);
-
-  void publishOptimizedTrajectory(const LcdOutput::ConstPtr& lcd_output) const;
-
-  void publishPoseGraph(const LcdOutput::ConstPtr& lcd_output);
-
-  void updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
-                           const gtsam::Values& values);
-
-  void updateRejectedEdges();
-
-  pose_graph_tools::PoseGraph getPosegraphMsg();
 
   void publishDebugImage(const Timestamp& timestamp,
                          const cv::Mat& debug_image) const;
@@ -122,17 +106,9 @@ class RosVisualizer : public Visualizer3D {
   ros::Publisher resiliency_pub_;
   ros::Publisher frontend_stats_pub_;
   ros::Publisher imu_bias_pub_;
-  ros::Publisher trajectory_pub_;
-  ros::Publisher posegraph_pub_;
 
   //! Define tf broadcaster for world to base_link (IMU) and to map (PGO).
   tf::TransformBroadcaster tf_broadcaster_;
-
-  //! Stored pose graph related objects
-  std::vector<pose_graph_tools::PoseGraphEdge> loop_closure_edges_;
-  std::vector<pose_graph_tools::PoseGraphEdge> odometry_edges_;
-  std::vector<pose_graph_tools::PoseGraphEdge> inlier_edges_;
-  std::vector<pose_graph_tools::PoseGraphNode> pose_graph_nodes_;
 
  private:
   //! Define frame ids for odometry message

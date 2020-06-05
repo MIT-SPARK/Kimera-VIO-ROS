@@ -36,6 +36,7 @@ KimeraVioRos::KimeraVioRos()
       vio_pipeline_(nullptr),
       ros_display_(nullptr),
       ros_visualizer_(nullptr),
+      ros_loop_closure_(nullptr),
       data_provider_(nullptr),
       restart_vio_pipeline_srv_(),
       restart_vio_pipeline_(false) {
@@ -58,11 +59,14 @@ bool KimeraVioRos::runKimeraVio() {
   VLOG(1) << "Destroy Ros Display.";
   ros_display_.reset();
   ros_visualizer_.reset();
+  ros_loop_closure_.reset();
 
   VLOG(1) << "Creating Ros Display.";
   CHECK(vio_params_);
   ros_display_ = VIO::make_unique<RosDisplay>();
   ros_visualizer_ = VIO::make_unique<RosVisualizer>(*vio_params_);
+  ros_loop_closure_ =
+      VIO::make_unique<RosLoopClosure>(vio_params_->lcd_params_, false);
 
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
@@ -72,7 +76,8 @@ bool KimeraVioRos::runKimeraVio() {
   CHECK(ros_display_);
   vio_pipeline_ = VIO::make_unique<VIO::Pipeline>(*vio_params_,
                                                   std::move(ros_visualizer_),
-                                                  std::move(ros_display_));
+                                                  std::move(ros_display_),
+                                                  std::move(ros_loop_closure_));
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
 
   // Second, destroy dataset parser.
