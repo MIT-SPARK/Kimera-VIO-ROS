@@ -30,6 +30,20 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   virtual ~RosOnlineDataProvider();
 
  public:
+  // Spin needs to do nothing
+  bool spin() override {
+    CHECK(!vio_params_.parallel_run_)
+        << "This should be only running if we are in sequential mode!";
+    CHECK(imu_queue_.isEnabled());
+    // First call callbacks in our custom IMU queue.
+    imu_queue_.callAvailable(ros::WallDuration(0));
+    // Then call the rest of callbacks.
+    // which is the same as:
+    // ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0));
+    ros::spinOnce();
+    return true;
+  }
+
   // Checks the current status of reinitialization flag
   inline bool getReinitFlag() const { return reinit_flag_; }
   // Resets the current status of reinitialization flag
