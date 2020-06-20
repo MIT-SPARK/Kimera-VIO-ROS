@@ -79,6 +79,7 @@ class RosLoopClosure : public LoopClosureDetector {
   // ROS publishers
   ros::Publisher trajectory_pub_;
   ros::Publisher posegraph_pub_;
+  ros::Publisher odometry_pub_;
 
   //! Define tf broadcaster for world to base_link (IMU) and to map (PGO).
   tf::TransformBroadcaster tf_broadcaster_;

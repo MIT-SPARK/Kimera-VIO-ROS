@@ -11,6 +11,7 @@
 #include <glog/logging.h>
 
 #include <geometry_msgs/TransformStamped.h>
+#include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <ros/ros.h>
 #include <std_msgs/Float64MultiArray.h>
@@ -36,6 +37,7 @@ RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
   // Publishers
   trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
   posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1);
+  odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
 }
 
 LcdOutput::UniquePtr RosLoopClosure::spinOnce(const LcdInput& lcd_input) {
@@ -90,6 +92,31 @@ void RosLoopClosure::publishOptimizedTrajectory(
   path.header.stamp.fromNSec(ts);
   path.header.frame_id = world_frame_id_;
   trajectory_pub_.publish(path);
+
+  // publish odometry also
+  gtsam::Pose3 latest_pose = trajectory.at<gtsam::Pose3>(trajectory.size() - 1);
+  gtsam::Point3 trans = latest_pose.translation();
+  gtsam::Quaternion quat = latest_pose.rotation().toQuaternion();
+  nav_msgs::Odometry odometry_msg;
+
+  // Create header.
+  odometry_msg.header.stamp.fromNSec(ts);
+  odometry_msg.header.frame_id = world_frame_id_;
+  odometry_msg.child_frame_id = base_link_frame_id_;
+
+  // Position
+  odometry_msg.pose.pose.position.x = trans.x();
+  odometry_msg.pose.pose.position.y = trans.y();
+  odometry_msg.pose.pose.position.z = trans.z();
+
+  // Orientation
+  odometry_msg.pose.pose.orientation.w = quat.w();
+  odometry_msg.pose.pose.orientation.x = quat.x();
+  odometry_msg.pose.pose.orientation.y = quat.y();
+  odometry_msg.pose.pose.orientation.z = quat.z();
+
+  // Publish message
+  odometry_pub_.publish(odometry_msg);
 }
 
 void RosLoopClosure::updateRejectedEdges() {

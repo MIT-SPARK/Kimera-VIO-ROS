@@ -43,8 +43,9 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
       nh_(),
       nh_private_("~"),
       image_size_(vio_params.camera_params_.at(0).image_size_),
-      image_publishers_(nullptr) {
-
+      image_publishers_(nullptr), 
+      use_lcd_(true) {
+  // TODO(Yun) use_lcd_ is not correctly parsed as of now
   //! To publish 2d images
   image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
 
@@ -307,8 +308,11 @@ void RosVisualizer::publishState(const BackendOutput::ConstPtr& output) const {
 
   // Create header.
   odometry_msg.header.stamp.fromNSec(ts);
-  odometry_msg.header.frame_id = world_frame_id_;
-  odometry_msg.child_frame_id = base_link_frame_id_;
+  if (!use_lcd_) {
+    // otherwise we want optimized pose to be tf
+    odometry_msg.header.frame_id = world_frame_id_;
+    odometry_msg.child_frame_id = base_link_frame_id_;
+  }
 
   // Position
   odometry_msg.pose.pose.position.x = pose.x();

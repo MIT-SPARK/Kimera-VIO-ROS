@@ -66,7 +66,7 @@ bool KimeraVioRos::runKimeraVio() {
   ros_display_ = VIO::make_unique<RosDisplay>();
   ros_visualizer_ = VIO::make_unique<RosVisualizer>(*vio_params_);
   ros_loop_closure_ =
-      VIO::make_unique<RosLoopClosure>(vio_params_->lcd_params_, false);
+      VIO::make_unique<RosLoopClosure>(vio_params_->lcd_params_, true);
 
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
