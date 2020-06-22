@@ -216,9 +216,9 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
         rosbag_data->imu_msgs_.push_back(imu_msg);
         last_imu_timestamp = imu_data_timestamp;
       } else {
-        ROS_FATAL(
-            "IMU timestamps in rosbag are out of order: consider re-ordering "
-            "rosbag.");
+        LOG(FATAL) << "IMU timestamps in rosbag are out of order: consider "
+                      "re-ordering "
+                      "rosbag.";
       }
       start_parsing_stereo = true;
       continue;
@@ -236,12 +236,12 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
         } else if (msg_topic == right_imgs_topic_) {
           rosbag_data->right_imgs_.push_back(img_msg);
         } else {
-          ROS_WARN_STREAM("Img with unexpected topic: " << msg_topic);
+          LOG(WARNING) << "Img with unexpected topic: " << msg_topic;
         }
       } else {
-        ROS_WARN(
-            "Skipping first frame in rosbag, since IMU data not yet "
-            "available.");
+        LOG(WARNING)
+            << "Skipping first frame in rosbag, since IMU data not yet "
+               "available.";
       }
       continue;
     }
@@ -253,36 +253,33 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
       if (msg_topic == gt_odom_topic_) {
         rosbag_data->gt_odometry_.push_back(gt_odom_msg);
       } else {
-        LOG(ERROR) <<
-            "Unrecognized topic name for odometry msg. We were"
-            " expecting ground-truth odometry on this topic.";
+        LOG(ERROR) << "Unrecognized topic name for odometry msg. We were"
+                      " expecting ground-truth odometry on this topic.";
       }
     } else {
-      LOG(ERROR) <<
-          "Could not find the type of this rosbag msg from topic:\n"
-          << msg.getTopic();
+      LOG(ERROR) << "Could not find the type of this rosbag msg from topic:\n"
+                 << msg.getTopic();
     }
-    continue;
   }
   bag.close();
 
   // Sanity check:
-  ROS_ERROR_COND(rosbag_data->left_imgs_.size() == 0 ||
-                     rosbag_data->right_imgs_.size() == 0,
-                 "No images parsed from rosbag.");
-  ROS_ERROR_COND(
-      rosbag_data->left_imgs_.size() != rosbag_data->right_imgs_.size(),
-      "Unequal number of images from left and right cmaeras.");
-  ROS_ERROR_COND(
-      rosbag_data->imu_msgs_.size() <= rosbag_data->left_imgs_.size(),
-      "Less than or equal number of imu data as image data.");
-  ROS_ERROR_COND(
-      !gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() == 0,
-      "Requested to parse ground-truth odometry, but parsed 0 msgs.");
-  ROS_ERROR_COND(
-      !gt_odom_topic_.empty() &&
-          rosbag_data->gt_odometry_.size() < rosbag_data->left_imgs_.size(),
-      "Fewer ground_truth data than image data.");
+  LOG_IF(ERROR,
+         rosbag_data->left_imgs_.size() == 0 ||
+             rosbag_data->right_imgs_.size() == 0)
+      << "No images parsed from rosbag.";
+  LOG_IF(ERROR,
+         rosbag_data->left_imgs_.size() != rosbag_data->right_imgs_.size())
+      << "Unequal number of images from left and right cmaeras.";
+  LOG_IF(ERROR, rosbag_data->imu_msgs_.size() <= rosbag_data->left_imgs_.size())
+      << "Less than or equal number of imu data as image data.";
+  LOG_IF(ERROR,
+         !gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() == 0)
+      << "Requested to parse ground-truth odometry, but parsed 0 msgs.";
+  LOG_IF(WARNING,
+         !gt_odom_topic_.empty() &&
+             rosbag_data->gt_odometry_.size() < rosbag_data->left_imgs_.size())
+      << "Fewer ground_truth data than image data.";
   LOG(INFO) << "Finished parsing rosbag data.";
   return true;
 }
