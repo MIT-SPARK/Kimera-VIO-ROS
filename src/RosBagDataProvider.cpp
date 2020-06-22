@@ -253,14 +253,14 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
       if (msg_topic == gt_odom_topic_) {
         rosbag_data->gt_odometry_.push_back(gt_odom_msg);
       } else {
-        ROS_ERROR(
+        LOG(ERROR) <<
             "Unrecognized topic name for odometry msg. We were"
-            " expecting ground-truth odometry on this topic.");
+            " expecting ground-truth odometry on this topic.";
       }
     } else {
-      ROS_ERROR_STREAM(
+      LOG(ERROR) <<
           "Could not find the type of this rosbag msg from topic:\n"
-          << msg.getTopic());
+          << msg.getTopic();
     }
     continue;
   }
