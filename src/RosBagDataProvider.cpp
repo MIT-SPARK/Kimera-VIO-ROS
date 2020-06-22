@@ -289,7 +289,7 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
 
 VioNavState RosbagDataProvider::getGroundTruthVioNavState(
     const size_t& k_frame) const {
-  CHECK_LE(k_frame, rosbag_data_.gt_odometry_.size());
+  CHECK_LT(k_frame, rosbag_data_.gt_odometry_.size());
   nav_msgs::Odometry gt_odometry = *(rosbag_data_.gt_odometry_.at(k_frame));
   // World to Body rotation
   gtsam::Rot3 W_R_B =
