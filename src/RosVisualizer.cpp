@@ -506,17 +506,17 @@ void RosVisualizer::publishImuBias(const BackendOutput::ConstPtr& output) const 
 void RosVisualizer::publishTf(const BackendOutput::ConstPtr& output) {
   CHECK(output);
 
-  const Timestamp& timestamp = output->timestamp_;
-  const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
-  // const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
-  // Publish base_link TF.
-  geometry_msgs::TransformStamped odom_tf;
-  odom_tf.header.stamp.fromNSec(timestamp);
-  odom_tf.header.frame_id = world_frame_id_;
-  odom_tf.child_frame_id = base_link_frame_id_;
+  // const Timestamp& timestamp = output->timestamp_;
+  // const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
+  // // const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
+  // // Publish base_link TF.
+  // geometry_msgs::TransformStamped odom_tf;
+  // odom_tf.header.stamp.fromNSec(timestamp);
+  // odom_tf.header.frame_id = world_frame_id_;
+  // odom_tf.child_frame_id = base_link_frame_id_;
 
-  utils::poseToMsgTF(pose, &odom_tf.transform);
-  tf_broadcaster_.sendTransform(odom_tf);
+  // utils::poseToMsgTF(pose, &odom_tf.transform);
+  // tf_broadcaster_.sendTransform(odom_tf);
 }
 
 }  // namespace VIO

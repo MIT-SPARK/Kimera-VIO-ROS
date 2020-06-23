@@ -60,7 +60,7 @@ class RosLoopClosure : public LoopClosureDetector {
  private:
   void publishTf(const LcdOutput::ConstPtr& lcd_output);
 
-  void publishOptimizedTrajectory(const LcdOutput::ConstPtr& lcd_output) const;
+  void publishOptimizedTrajectory(const LcdOutput::ConstPtr& lcd_output);
 
   void publishPoseGraph(const LcdOutput::ConstPtr& lcd_output);
 

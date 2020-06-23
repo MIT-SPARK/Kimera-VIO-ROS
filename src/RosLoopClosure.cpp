@@ -31,6 +31,8 @@ RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
   // Get ROS params
   CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
   CHECK(!world_frame_id_.empty());
+  CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
+  CHECK(!base_link_frame_id_.empty());
   CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
   CHECK(!map_frame_id_.empty());
 
@@ -59,7 +61,7 @@ void RosLoopClosure::publishLcdOutput(const LcdOutput::ConstPtr& lcd_output) {
 }
 
 void RosLoopClosure::publishOptimizedTrajectory(
-    const LcdOutput::ConstPtr& lcd_output) const {
+    const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   // Get pgo-optimized trajectory
@@ -117,6 +119,14 @@ void RosLoopClosure::publishOptimizedTrajectory(
 
   // Publish message
   odometry_pub_.publish(odometry_msg);
+
+  geometry_msgs::TransformStamped odom_tf;
+  odom_tf.header.stamp.fromNSec(ts);
+  odom_tf.header.frame_id = world_frame_id_;
+  odom_tf.child_frame_id = base_link_frame_id_;
+
+  utils::poseToMsgTF(latest_pose, &odom_tf.transform);
+  tf_broadcaster_.sendTransform(odom_tf);
 }
 
 void RosLoopClosure::updateRejectedEdges() {
