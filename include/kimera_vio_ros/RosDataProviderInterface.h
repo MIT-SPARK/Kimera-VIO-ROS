@@ -15,6 +15,7 @@
 #include <image_transport/subscriber_filter.h>
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
+#include <nav_msgs/Odometry.h>
 
 #include <kimera-vio/dataprovider/DataProviderInterface.h>
 #include <kimera-vio/pipeline/Pipeline-definitions.h>
@@ -37,6 +38,7 @@ class RosDataProviderInterface : public DataProviderInterface {
     DataProviderInterface::shutdown();
     LOG(INFO) << "RosDataProviderInterface shutdown.";
   }
+
 
  protected:
   const cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;
