@@ -6,6 +6,23 @@
 
 #include "kimera_vio_ros/utils/UtilsRos.h"
 
+#include <string>
+
+#include <glog/logging.h>
+
+#include <geometry_msgs/Transform.h>
+#include <nav_msgs/Odometry.h>
+#include <ros/ros.h>
+#include <sensor_msgs/CameraInfo.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+
+#include <gtsam/geometry/Pose3.h>
+
+#include <kimera-vio/frontend/CameraParams.h>
+#include <kimera-vio/common/VioNavState.h>
+
+
 namespace VIO {
 
 namespace utils {
@@ -83,6 +100,30 @@ void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
   }
 
   msgTFtoPose(cam_tf.transform, &cam_params->body_Pose_cam_);
+}
+
+void msgGtOdomToVioNavState(const nav_msgs::Odometry& gt_odom,
+                            VioNavState* vio_navstate) {
+  CHECK_NOTNULL(vio_navstate);
+
+  // World to Body rotation
+  gtsam::Rot3 W_R_B = gtsam::Rot3::Quaternion(gt_odom.pose.pose.orientation.w,
+                                              gt_odom.pose.pose.orientation.x,
+                                              gt_odom.pose.pose.orientation.y,
+                                              gt_odom.pose.pose.orientation.z);
+  gtsam::Point3 position(gt_odom.pose.pose.position.x,
+                         gt_odom.pose.pose.position.y,
+                         gt_odom.pose.pose.position.z);
+  gtsam::Vector3 velocity(gt_odom.twist.twist.linear.x,
+                          gt_odom.twist.twist.linear.y,
+                          gt_odom.twist.twist.linear.z);
+
+  vio_navstate->pose_ = gtsam::Pose3(W_R_B, position);
+  vio_navstate->velocity_ = velocity;
+  // TODO(Toni): how can we get the ground-truth biases? For sim, ins't it 0?
+  static const gtsam::Vector3 gyro_bias(0.0, 0.0, 0.0);
+  static const gtsam::Vector3 acc_bias(0.0, 0.0, 0.0);
+  vio_navstate->imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
 }
 
 }  // namespace utils

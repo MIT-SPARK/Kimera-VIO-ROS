@@ -13,6 +13,8 @@
 
 #include <kimera-vio/pipeline/Pipeline-definitions.h>
 
+#include "kimera_vio_ros/utils/UtilsRos.h"
+
 namespace VIO {
 
 RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
@@ -291,26 +293,9 @@ VioNavState RosbagDataProvider::getGroundTruthVioNavState(
     const size_t& k_frame) const {
   CHECK_LE(k_frame, rosbag_data_.gt_odometry_.size());
   nav_msgs::Odometry gt_odometry = *(rosbag_data_.gt_odometry_.at(k_frame));
-  // World to Body rotation
-  gtsam::Rot3 W_R_B =
-      gtsam::Rot3::Quaternion(gt_odometry.pose.pose.orientation.w,
-                              gt_odometry.pose.pose.orientation.x,
-                              gt_odometry.pose.pose.orientation.y,
-                              gt_odometry.pose.pose.orientation.z);
-  gtsam::Point3 position(gt_odometry.pose.pose.position.x,
-                         gt_odometry.pose.pose.position.y,
-                         gt_odometry.pose.pose.position.z);
-  gtsam::Vector3 velocity(gt_odometry.twist.twist.linear.x,
-                          gt_odometry.twist.twist.linear.y,
-                          gt_odometry.twist.twist.linear.z);
-  VioNavState gt_init;
-  gt_init.pose_ = gtsam::Pose3(W_R_B, position);
-  gt_init.velocity_ = velocity;
-  // TODO(Toni): how can we get the ground-truth biases? For sim, ins't it 0?
-  gtsam::Vector3 gyro_bias(0.0, 0.0, 0.0);
-  gtsam::Vector3 acc_bias(0.0, 0.0, 0.0);
-  gt_init.imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
-  return gt_init;
+  VioNavState vio_nav_state;
+  utils::msgGtOdomToVioNavState(gt_odometry, &vio_nav_state);
+  return vio_nav_state;
 }
 
 void RosbagDataProvider::publishRosbagInfo(const Timestamp& timestamp) {

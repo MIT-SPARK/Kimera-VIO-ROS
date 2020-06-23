@@ -56,10 +56,10 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
                           const sensor_msgs::CameraInfoConstPtr& right_msg);
 
   // IMU callback
-  void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
+  void callbackIMU(const sensor_msgs::ImuConstPtr& imu_msg);
 
   // GT odometry callback
-  void callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& msgGtOdom);
+  void callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& gt_odom_msg);
 
   // Reinitialization callback
   void callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag);
@@ -71,11 +71,6 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   void publishStaticTf(const gtsam::Pose3& pose,
                        const std::string& parent_frame_id,
                        const std::string& child_frame_id);
-
- private:
-  // TODO(Toni): perhaps put in utils
-  void msgGtOdomToVioNavState(const nav_msgs::Odometry::ConstPtr& gt_odom,
-                              VioNavState* vio_navstate);
 
  private:
   // Define image transport for this and derived classes.
