@@ -30,7 +30,7 @@
   <arg name="left_cam_info_topic"   value="/tesse/left_cam/camera_info"/>
   <arg name="right_cam_topic"       value="/tesse/right_cam/image_raw"/>
   <arg name="right_cam_info_topic"  value="/tesse/right_cam/camera_info"/>
-  <arg name="imu_topic"             value="/tesse/imu"/>
+  <arg name="imu_topic"             value="/tesse/imu/clean/imu"/>
 
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
