@@ -39,6 +39,8 @@ RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
   // Publishers
   trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
   posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1);
+  posegraph_incremental_pub_ =
+      nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph_incremental", 1);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
 }
 
@@ -119,14 +121,6 @@ void RosLoopClosure::publishOptimizedTrajectory(
 
   // Publish message
   odometry_pub_.publish(odometry_msg);
-
-  geometry_msgs::TransformStamped odom_tf;
-  odom_tf.header.stamp.fromNSec(ts);
-  odom_tf.header.frame_id = world_frame_id_;
-  odom_tf.child_frame_id = base_link_frame_id_;
-
-  utils::poseToMsgTF(latest_pose, &odom_tf.transform);
-  tf_broadcaster_.sendTransform(odom_tf);
 }
 
 void RosLoopClosure::updateRejectedEdges() {
@@ -267,6 +261,41 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
   graph.header.stamp.fromNSec(ts);
   graph.header.frame_id = world_frame_id_;
   posegraph_pub_.publish(graph);
+
+  // Construct and publish incremental pose graph
+  // with the newest odometry and loop closure edges
+  if (odometry_edges_.size() > 0) {
+    pose_graph_tools::PoseGraph incremental_graph;
+    pose_graph_tools::PoseGraphEdge last_odom_edge =
+        odometry_edges_.at(odometry_edges_.size() - 1);
+    incremental_graph.edges.push_back(last_odom_edge);
+    incremental_graph.nodes.push_back(
+        pose_graph_nodes_.at(pose_graph_nodes_.size() - 2));
+    incremental_graph.nodes.push_back(
+        pose_graph_nodes_.at(pose_graph_nodes_.size() - 1));
+    if (lcd_output->is_loop_closure_) {
+      gtsam::Pose3 lc_transform = lcd_output->relative_pose_;
+      pose_graph_tools::PoseGraphEdge last_lc_edge;
+
+      const gtsam::Point3& translation = lc_transform.translation();
+      const gtsam::Quaternion& quaternion =
+          lc_transform.rotation().toQuaternion();
+      last_lc_edge.key_from = lcd_output->id_match_,
+      last_lc_edge.key_to = lcd_output->id_recent_;
+      last_lc_edge.pose.position.x = translation.x();
+      last_lc_edge.pose.position.y = translation.y();
+      last_lc_edge.pose.position.z = translation.z();
+      last_lc_edge.pose.orientation.x = quaternion.x();
+      last_lc_edge.pose.orientation.y = quaternion.y();
+      last_lc_edge.pose.orientation.z = quaternion.z();
+      last_lc_edge.pose.orientation.w = quaternion.w();
+
+      incremental_graph.edges.push_back(last_lc_edge);
+    }
+    incremental_graph.header.stamp.fromNSec(ts);
+    incremental_graph.header.frame_id = world_frame_id_;
+    posegraph_incremental_pub_.publish(incremental_graph);
+  }
 }
 
 void RosLoopClosure::publishTf(const LcdOutput::ConstPtr& lcd_output) {

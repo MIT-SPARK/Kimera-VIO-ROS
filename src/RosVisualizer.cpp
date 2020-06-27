@@ -43,8 +43,7 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
       nh_(),
       nh_private_("~"),
       image_size_(vio_params.camera_params_.at(0).image_size_),
-      image_publishers_(nullptr), 
-      use_lcd_(true) {
+      image_publishers_(nullptr) {
   // TODO(Yun) use_lcd_ is not correctly parsed as of now
   //! To publish 2d images
   image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
@@ -308,11 +307,8 @@ void RosVisualizer::publishState(const BackendOutput::ConstPtr& output) const {
 
   // Create header.
   odometry_msg.header.stamp.fromNSec(ts);
-  if (!use_lcd_) {
-    // otherwise we want optimized pose to be tf
-    odometry_msg.header.frame_id = world_frame_id_;
-    odometry_msg.child_frame_id = base_link_frame_id_;
-  }
+  odometry_msg.header.frame_id = world_frame_id_;
+  odometry_msg.child_frame_id = base_link_frame_id_;
 
   // Position
   odometry_msg.pose.pose.position.x = pose.x();
@@ -506,17 +502,17 @@ void RosVisualizer::publishImuBias(const BackendOutput::ConstPtr& output) const 
 void RosVisualizer::publishTf(const BackendOutput::ConstPtr& output) {
   CHECK(output);
 
-  // const Timestamp& timestamp = output->timestamp_;
-  // const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
-  // // const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
-  // // Publish base_link TF.
-  // geometry_msgs::TransformStamped odom_tf;
-  // odom_tf.header.stamp.fromNSec(timestamp);
-  // odom_tf.header.frame_id = world_frame_id_;
-  // odom_tf.child_frame_id = base_link_frame_id_;
+  const Timestamp& timestamp = output->timestamp_;
+  const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
+  // const gtsam::Quaternion& quaternion = pose.rotation().toQuaternion();
+  // Publish base_link TF.
+  geometry_msgs::TransformStamped odom_tf;
+  odom_tf.header.stamp.fromNSec(timestamp);
+  odom_tf.header.frame_id = world_frame_id_;
+  odom_tf.child_frame_id = base_link_frame_id_;
 
-  // utils::poseToMsgTF(pose, &odom_tf.transform);
-  // tf_broadcaster_.sendTransform(odom_tf);
+  utils::poseToMsgTF(pose, &odom_tf.transform);
+  tf_broadcaster_.sendTransform(odom_tf);
 }
 
 }  // namespace VIO

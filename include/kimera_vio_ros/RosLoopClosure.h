@@ -69,6 +69,8 @@ class RosLoopClosure : public LoopClosureDetector {
 
   void updateRejectedEdges();
 
+  void publishNewNodesAndEdges(const LcdOutput::ConstPtr& lcd_output);
+
   pose_graph_tools::PoseGraph getPosegraphMsg();
 
  private:
@@ -80,6 +82,7 @@ class RosLoopClosure : public LoopClosureDetector {
   ros::Publisher trajectory_pub_;
   ros::Publisher posegraph_pub_;
   ros::Publisher odometry_pub_;
+  ros::Publisher posegraph_incremental_pub_;
 
   //! Define tf broadcaster for world to base_link (IMU) and to map (PGO).
   tf::TransformBroadcaster tf_broadcaster_;
