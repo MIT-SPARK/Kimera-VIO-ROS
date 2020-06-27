@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name"   value="Tesse"/>
+  <arg name="dataset_name"   value="uHumans1"/>
   <arg name="verbosity"      default="0"/>
   <arg name="online"         default="true"/>
   <arg name="use_lcd"        default="true"/>
@@ -17,7 +17,7 @@
 
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path"
-    default="/home/tonirv/Code/ROS/tess_ws/src/TESSE_interface/ROS/tesse_ros_bridge/scripts/2019-08-28-16-57-09.bag"
+    default="/home/marcus/catkin_ws/src/tesse_ros_bridge/ROS/scripts/rosbags/sequence_1_redo/s1_00h.bag"
     unless="$(arg online)"/>
 
   <!-- Frame IDs -->

@@ -66,5 +66,5 @@
     version: master
 - git:
     local-name: image_undistort
-    uri: https://github.com:ethz-asl/image_undistort.git
+    uri: https://github.com/ethz-asl/image_undistort.git
     version: master
