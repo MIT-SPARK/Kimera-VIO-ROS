@@ -161,6 +161,7 @@ catkin run_tests --no-deps --this
 It is sometimes convenient to use the `camera_info` topics to parse the camera's parameters.
 There are currently two ways of using these topics:
  - Offline: using the launch file `launch/cam_info_yamlizer.launch` which will generate yaml files out of the topics.
+ You need to make sure that the `frame_id`s and the ROS topics are correctly set. Also, mind that the left/right cam frame ids are typically set as static tfs in a rosbag, therefore, first launch the node, and then run the rosbag (in case you see an exception bcs of a missing frame_id).
  - Online: setting the flag `use_online_cam_params` (see `launch/kimera_vio_ros.launch`) to true, and ensuring ROS topics are correctly set.
 
 ### Restart Kimera-VIO
