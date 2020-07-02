@@ -44,7 +44,7 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
       nh_private_("~"),
       image_size_(vio_params.camera_params_.at(0).image_size_),
       image_publishers_(nullptr) {
-  // TODO(Yun) use_lcd_ is not correctly parsed as of now
+
   //! To publish 2d images
   image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
 

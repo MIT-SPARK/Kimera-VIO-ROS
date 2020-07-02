@@ -98,6 +98,10 @@ void RosLoopClosure::publishOptimizedTrajectory(
   trajectory_pub_.publish(path);
 
   // publish odometry also
+  // Note however this does not update the transform
+  // between kimera base_link and world
+  // i.e. base_link is still based on unoptimized odometry
+  // TODO(Yun) add new frame for optimized base link
   gtsam::Pose3 latest_pose = trajectory.at<gtsam::Pose3>(trajectory.size() - 1);
   gtsam::Point3 trans = latest_pose.translation();
   gtsam::Quaternion quat = latest_pose.rotation().toQuaternion();
@@ -123,6 +127,8 @@ void RosLoopClosure::publishOptimizedTrajectory(
   odometry_pub_.publish(odometry_msg);
 }
 
+// Function used ultimately to visualize loop closure
+// And differentiate the inliers and the outliers
 void RosLoopClosure::updateRejectedEdges() {
   // first update the rejected edges
   for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
@@ -264,6 +270,10 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
 
   // Construct and publish incremental pose graph
   // with the newest odometry and loop closure edges
+  // Note that this means we require the lcd module to
+  // publish every frame (not just when lc found)
+  // TODO(Yun) publish keyed-odometry instead in RosVisualizer
+  // (Or create key in reciever - but need to make sure no msg drop)
   if (odometry_edges_.size() > 0) {
     pose_graph_tools::PoseGraph incremental_graph;
     pose_graph_tools::PoseGraphEdge last_odom_edge =
@@ -274,6 +284,7 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
     incremental_graph.nodes.push_back(
         pose_graph_nodes_.at(pose_graph_nodes_.size() - 1));
     if (lcd_output->is_loop_closure_) {
+      // Not directly taking the last lc_edge to bypass kimera-rpgo
       gtsam::Pose3 lc_transform = lcd_output->relative_pose_;
       pose_graph_tools::PoseGraphEdge last_lc_edge;
 
