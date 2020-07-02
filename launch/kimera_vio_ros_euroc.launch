@@ -25,19 +25,6 @@
   <arg name="rosbag_path" default="/home/tonirv/datasets/EuRoC/V1_01_easy/V1_01_easy_retimestamped.bag"
     unless="$(arg online)"/>
 
-  <!-- Convert for odometry ground truth  -->
-  <node pkg="topic_tools" type="transform" name="pose_to_odom"
-          respawn="true" output="screen"
-          args="/vicon/firefly_sbx/firefly_sbx
-                /groundtruth/odometry
-                nav_msgs/Odometry
-                'nav_msgs.msg.Odometry(header=m.header, 
-                pose=geometry_msgs.msg.PoseWithCovariance(pose = geometry_msgs.msg.Pose(
-                position = geometry_msgs.msg.Point(x = m.transform.translation.x, y = m.transform.translation.y, z = m.transform.translation.z),
-                orientation = m.transform.rotation)))' --import nav_msgs geometry_msgs">
-  </node>
-  <!-- <arg name="odometry_ground_truth_topic" value="/groundtruth/odometry"/> -->
-
   <!-- Frame IDs -->
   <arg name="base_link_frame_id" value="base_link"/>
   <arg name="left_cam_frame_id"  value="cam0"/>
