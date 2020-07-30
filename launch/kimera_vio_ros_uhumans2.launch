@@ -26,9 +26,9 @@
   <arg name="right_cam_frame_id" value="right_cam_kimera"/>
 
     <!-- Subscriber Topics -->
-  <arg name="left_cam_topic"        value="/tesse/left_cam/image_raw"/>
+  <arg name="left_cam_topic"        value="/tesse/left_cam/mono/image_raw"/>
   <arg name="left_cam_info_topic"   value="/tesse/left_cam/camera_info"/>
-  <arg name="right_cam_topic"       value="/tesse/right_cam/image_raw"/>
+  <arg name="right_cam_topic"       value="/tesse/right_cam/mono/image_raw"/>
   <arg name="right_cam_info_topic"  value="/tesse/right_cam/camera_info"/>
   <arg name="imu_topic"             value="/tesse/imu/clean/imu"/>
 
