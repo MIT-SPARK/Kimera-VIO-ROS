@@ -273,11 +273,12 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
   // Note that this means we require the lcd module to
   // publish every frame (not just when lc found)
   // TODO(Yun) publish keyed-odometry instead in RosVisualizer
-  // (Or create key in reciever - but need to make sure no msg drop)
+  // (Or create key in receiver - but need to make sure no msg drop)
   if (odometry_edges_.size() > 0) {
     pose_graph_tools::PoseGraph incremental_graph;
     pose_graph_tools::PoseGraphEdge last_odom_edge =
         odometry_edges_.at(odometry_edges_.size() - 1);
+    last_odom_edge.header.stamp.fromNSec(ts);
     incremental_graph.edges.push_back(last_odom_edge);
     incremental_graph.nodes.push_back(
         pose_graph_nodes_.at(pose_graph_nodes_.size() - 2));
@@ -300,7 +301,7 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
       last_lc_edge.pose.orientation.y = quaternion.y();
       last_lc_edge.pose.orientation.z = quaternion.z();
       last_lc_edge.pose.orientation.w = quaternion.w();
-
+      last_lc_edge.header.stamp.fromNSec(ts);
       incremental_graph.edges.push_back(last_lc_edge);
     }
     incremental_graph.header.stamp.fromNSec(ts);
