@@ -59,12 +59,13 @@ void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
   cam_params->camera_id_ = cam_info->header.frame_id;
   CHECK(!cam_params->camera_id_.empty());
 
-  cam_params->distortion_model_ = stringToDistortion(cam_info->distortion_model, "pinhole");
+  cam_params->distortion_model_ = CameraParams::stringToDistortion(cam_info->distortion_model, "pinhole");
 
   const std::vector<double>& distortion_coeffs = cam_info->D;
   CHECK_EQ(distortion_coeffs.size(), 4);
-  VIO::CameraParams::convertDistortionVectorToMatrix(
-      distortion_coeffs, &cam_params->distortion_coeff_);
+  cam_params->distortion_coeff_ = distortion_coeffs;
+  CameraParams::convertDistortionVectorToMatrix(
+      distortion_coeffs, &cam_params->distortion_coeff_mat_);
 
   cam_params->image_size_ = cv::Size(cam_info->width, cam_info->height);
 
