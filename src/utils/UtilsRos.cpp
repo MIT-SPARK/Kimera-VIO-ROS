@@ -60,9 +60,6 @@ void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
   CHECK(!cam_params->camera_id_.empty());
 
   cam_params->distortion_model_ = cam_info->distortion_model;
-  CHECK(cam_params->distortion_model_ == "radtan" ||
-        cam_params->distortion_model_ == "radial-tangential" ||
-        cam_params->distortion_model_ == "equidistant");
 
   const std::vector<double>& distortion_coeffs = cam_info->D;
   CHECK_EQ(distortion_coeffs.size(), 4);
