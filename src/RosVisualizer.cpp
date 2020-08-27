@@ -4,8 +4,6 @@
  * images at any rate (frame rate, keyframe rate,...).
  * @author Antoni Rosinol
  */
-#pragma once
-
 #include "kimera_vio_ros/RosVisualizer.h"
 
 #include <string>
