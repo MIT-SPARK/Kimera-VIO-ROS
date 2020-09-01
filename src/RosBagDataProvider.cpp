@@ -38,14 +38,20 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
       k_last_kf_(0u),
       k_last_imu_(0u),
       k_last_gt_(0u) {
-  LOG(INFO) << "Starting Kimera-VIO wrapper offline mode.";
-
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
   CHECK(nh_private_.getParam("left_cam_rosbag_topic", left_imgs_topic_));
   CHECK(nh_private_.getParam("right_cam_rosbag_topic", right_imgs_topic_));
   CHECK(nh_private_.getParam("imu_rosbag_topic", imu_topic_));
   CHECK(nh_private_.getParam("ground_truth_odometry_rosbag_topic",
                              gt_odom_topic_));
+
+  LOG(INFO) << "Constructing RosbagDataProvider from path: \n"
+            << " - Rosbag Path: " << rosbag_path_.c_str() << '\n'
+            << "With ROS topics: \n"
+            << " - Left cam: " << left_imgs_topic_.c_str() << '\n'
+            << " - Right cam: " << right_imgs_topic_.c_str() << '\n'
+            << " - IMU: " << imu_topic_.c_str() << '\n'
+            << " - GT odom: " << gt_odom_topic_.c_str();
 
   CHECK(!rosbag_path_.empty());
   CHECK(!left_imgs_topic_.empty());
@@ -71,6 +77,7 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
 bool RosbagDataProvider::spin() {
   if (k_ == 0) {
     // Initialize!
+    LOG(INFO) << "Initialize Rosbag Data Provider.";
     // Parse data from rosbag first thing:
     CHECK(parseRosbag(rosbag_path_, &rosbag_data_));
 
@@ -174,7 +181,7 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   topics.push_back(right_imgs_topic_);
   topics.push_back(imu_topic_);
   if (!gt_odom_topic_.empty()) {
-    CHECK(vio_params_.backend_params_->autoInitialize_ == 0)
+    LOG_IF(WARNING, vio_params_.backend_params_->autoInitialize_ == 0)
         << "Provided a gt_odom_topic; but autoInitialize "
            "(BackendParameters.yaml) is not set to 0,"
            " meaning no ground-truth initialization will be done... "
@@ -191,6 +198,7 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   // Query rosbag for given topics
   rosbag::View view(bag, rosbag::TopicQuery(topics));
 
+  int imu_msg_count = 0;
   // Keep track of this since we expect IMU data before an image.
   bool start_parsing_stereo = false;
   // For some datasets, we have duplicated measurements for the same time.
@@ -213,6 +221,7 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
         // Send IMU data directly to VIO at parse level for speed boost:
         CHECK(imu_single_callback_)
             << "Did you forget to register the IMU callback?";
+        VLOG(10) << "IMU msg count: " << imu_msg_count++;
         imu_single_callback_(ImuMeasurement(imu_data_timestamp, imu_accgyr));
 
         rosbag_data->imu_msgs_.push_back(imu_msg);
@@ -269,22 +278,22 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   bag.close();
 
   // Sanity check:
-  ROS_ERROR_COND(rosbag_data->left_imgs_.size() == 0 ||
-                     rosbag_data->right_imgs_.size() == 0,
-                 "No images parsed from rosbag.");
-  ROS_ERROR_COND(
-      rosbag_data->left_imgs_.size() != rosbag_data->right_imgs_.size(),
-      "Unequal number of images from left and right cmaeras.");
-  ROS_ERROR_COND(
-      rosbag_data->imu_msgs_.size() <= rosbag_data->left_imgs_.size(),
-      "Less than or equal number of imu data as image data.");
-  ROS_ERROR_COND(
-      !gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() == 0,
-      "Requested to parse ground-truth odometry, but parsed 0 msgs.");
-  ROS_ERROR_COND(
-      !gt_odom_topic_.empty() &&
-          rosbag_data->gt_odometry_.size() < rosbag_data->left_imgs_.size(),
-      "Fewer ground_truth data than image data.");
+  LOG_IF(FATAL,
+         rosbag_data->left_imgs_.size() == 0 ||
+             rosbag_data->right_imgs_.size() == 0)
+      << "No images parsed from rosbag.";
+  LOG_IF(FATAL,
+         rosbag_data->left_imgs_.size() != rosbag_data->right_imgs_.size())
+      << "Unequal number of images from left and right cameras.";
+  LOG_IF(FATAL, rosbag_data->imu_msgs_.size() <= rosbag_data->left_imgs_.size())
+      << "Less than or equal number of imu data as image data.";
+  LOG_IF(FATAL,
+         !gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() == 0)
+      << "Requested to parse ground-truth odometry, but parsed 0 msgs.";
+  LOG_IF(WARNING,
+         !gt_odom_topic_.empty() &&
+             rosbag_data->gt_odometry_.size() < rosbag_data->left_imgs_.size())
+      << "Fewer ground_truth data than image data.";
   LOG(INFO) << "Finished parsing rosbag data.";
   return true;
 }
