@@ -10,6 +10,7 @@
   <arg name="gt_topic" default=""/>
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <arg name="should_use_sim_time" default="false"/>
+  <!-- arg name="use_lcd" default="true"/-->
 
   <!-- Only used when parsing a rosbag -->
   <arg name="rosbag_path" default="/home/yunchang/data/kitti_2011_09_26_drive_0005_unsynced.bag"
