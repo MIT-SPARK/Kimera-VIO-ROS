@@ -17,7 +17,7 @@
 
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path"
-    default="/home/marcus/catkin_ws/src/tesse_ros_bridge/ROS/scripts/rosbags/sequence_1_redo/s1_00h.bag"
+    default="/home/tonirv/datasets/uHumans2/apartment_scene/uHumans2_apartment_s1_00h.bag"
     unless="$(arg online)"/>
 
   <!-- Frame IDs -->
@@ -25,10 +25,10 @@
   <arg name="left_cam_frame_id"  value="left_cam_kimera"/>
   <arg name="right_cam_frame_id" value="right_cam_kimera"/>
 
-    <!-- Subscriber Topics -->
-  <arg name="left_cam_topic"        value="/tesse/left_cam/image_raw"/>
+  <!-- Subscriber Topics -->
+  <arg name="left_cam_topic"        value="/tesse/left_cam/mono/image_raw"/>
   <arg name="left_cam_info_topic"   value="/tesse/left_cam/camera_info"/>
-  <arg name="right_cam_topic"       value="/tesse/right_cam/image_raw"/>
+  <arg name="right_cam_topic"       value="/tesse/right_cam/mono/image_raw"/>
   <arg name="right_cam_info_topic"  value="/tesse/right_cam/camera_info"/>
   <arg name="imu_topic"             value="/tesse/imu/clean/imu"/>
 
