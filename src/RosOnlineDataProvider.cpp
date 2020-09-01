@@ -205,14 +205,6 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   // This async spinner will process the regular Global callback queue of ROS.
   static constexpr size_t kGlobalSpinnerThreads = 2u;
   async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
-
-  // Start async spinners to get input data.
-  if (!shutdown_) {
-    CHECK(imu_async_spinner_);
-    imu_async_spinner_->start();
-    CHECK(async_spinner_);
-    async_spinner_->start();
-  }
 }
 
 RosOnlineDataProvider::~RosOnlineDataProvider() {
@@ -226,6 +218,25 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
   async_spinner_->stop();
 
   LOG(INFO) << "RosOnlineDataProvider successfully shutdown.";
+}
+
+bool RosOnlineDataProvider::spin() {
+  if (!shutdown_) {
+    // Start async spinners to get input data.
+    if (!started_async_spinners_) {
+      VLOG(10) << "Starting Async spinners.";
+      CHECK(imu_async_spinner_);
+      imu_async_spinner_->start();
+      CHECK(async_spinner_);
+      async_spinner_->start();
+      started_async_spinners_ = true;
+    } else {
+      VLOG(10) << "Async spinners already started.";
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 // TODO(marcus): with the readRosImage, this is a slow callback. Might be too
@@ -264,10 +275,14 @@ void RosOnlineDataProvider::callbackCameraInfo(
   CHECK_GE(vio_params_.camera_params_.size(), 2u);
 
   // Initialize CameraParams for pipeline.
-  utils::msgCamInfoToCameraParams(
-      left_msg, base_link_frame_id_, left_cam_frame_id_, &vio_params_.camera_params_.at(0));
-  utils::msgCamInfoToCameraParams(
-      right_msg, base_link_frame_id_, right_cam_frame_id_, &vio_params_.camera_params_.at(1));
+  utils::msgCamInfoToCameraParams(left_msg,
+                                  base_link_frame_id_,
+                                  left_cam_frame_id_,
+                                  &vio_params_.camera_params_.at(0));
+  utils::msgCamInfoToCameraParams(right_msg,
+                                  base_link_frame_id_,
+                                  right_cam_frame_id_,
+                                  &vio_params_.camera_params_.at(1));
 
   vio_params_.camera_params_.at(0).print();
   vio_params_.camera_params_.at(1).print();
@@ -367,6 +382,5 @@ void RosOnlineDataProvider::publishStaticTf(const gtsam::Pose3& pose,
   utils::poseToMsgTF(pose, &static_transform_stamped.transform);
   static_broadcaster.sendTransform(static_transform_stamped);
 }
-
 
 }  // namespace VIO

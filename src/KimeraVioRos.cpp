@@ -100,6 +100,12 @@ bool KimeraVioRos::spin() {
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (vio_params_->parallel_run_) {
+    // TODO(Toni): Technically, we can spare a thread with online dataprovider
+    // since we can simply call .start() on the async spinners at the ctor level
+    std::future<bool> data_provider_handle =
+        std::async(std::launch::async,
+                   &VIO::RosDataProviderInterface::spin,
+                   data_provider_.get());
     std::future<bool> vio_viz_handle =
         std::async(std::launch::async,
                    &VIO::Pipeline::spinViz,
@@ -126,6 +132,9 @@ bool KimeraVioRos::spin() {
     LOG(INFO) << "Joining Kimera-VIO thread.";
     vio_pipeline_handle.get();
     LOG(INFO) << "Kimera-VIO thread joined successfully.";
+    LOG(INFO) << "Joining Ros Data Provider thread.";
+    data_provider_handle.get();
+    LOG(INFO) << "Ros Data Provider thread joined successfully.";
     LOG(INFO) << "Joining RosDisplay thread.";
     is_pipeline_successful = !vio_viz_handle.get();
     LOG(INFO) << "RosDisplay thread joined successfully.";

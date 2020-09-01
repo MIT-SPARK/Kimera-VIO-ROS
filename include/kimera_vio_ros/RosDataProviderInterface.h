@@ -34,6 +34,8 @@ class RosDataProviderInterface : public DataProviderInterface {
   virtual ~RosDataProviderInterface();
 
  public:
+  // virtual bool spin();
+
   void shutdown() override {
     DataProviderInterface::shutdown();
     LOG(INFO) << "RosDataProviderInterface shutdown.";

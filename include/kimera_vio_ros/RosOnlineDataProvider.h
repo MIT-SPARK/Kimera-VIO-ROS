@@ -35,6 +35,15 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Resets the current status of reinitialization flag
   inline void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
 
+  /**
+   * @brief spin Runs the ros online data provider. Online only works in
+   * parallel mode.
+   * Parallel mode: starts async spinners, and returns true unless shutdown.
+   * Then, it simply keeps returning true unless shutdown.
+   * @return True if nominal spin, false on shutdown.
+   */
+  bool spin() override;
+
  private:
   ros::CallbackQueue imu_queue_;
   std::unique_ptr<ros::AsyncSpinner> imu_async_spinner_;
@@ -111,6 +120,9 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Ground-truth initialization pose received flag
   bool gt_init_pose_received_ = false;
   bool camera_info_received_ = false;
+
+  // Have the async spinners start?
+  bool started_async_spinners_ = false;
 
   // Frame ids
   std::string base_link_frame_id_;
