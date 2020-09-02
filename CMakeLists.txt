@@ -19,6 +19,7 @@ cs_add_library(${PROJECT_NAME}
   # Include files are just here for IDEs
   include/kimera_vio_ros/KimeraVioRos.h
   include/kimera_vio_ros/RosBagDataProvider.h
+  include/kimera_vio_ros/RosDataProviderInterface.h
   include/kimera_vio_ros/RosDisplay.h
   include/kimera_vio_ros/RosOnlineDataProvider.h
   include/kimera_vio_ros/RosPublishers.h

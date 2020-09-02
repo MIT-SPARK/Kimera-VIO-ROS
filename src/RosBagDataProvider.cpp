@@ -92,9 +92,6 @@ bool RosbagDataProvider::spin() {
   // We break the while loop (but increase k_!) if we run in sequential mode.
   while (k_ < rosbag_data_.left_imgs_.size()) {
     if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
-      // Main spin of the data provider: Interpolates IMU data
-      // and builds StereoImuSyncPacket
-      // (Think of this as the spin of the other parser/data-providers)
       const Timestamp& timestamp_frame_k = rosbag_data_.timestamps_.at(k_);
 
       static const CameraParams& left_cam_info =
@@ -124,7 +121,7 @@ bool RosbagDataProvider::spin() {
             right_cam_info,
             readRosImage(rosbag_data_.right_imgs_.at(k_))));
 
-        VLOG(10) << "Finished VIO processing for frame k = " << k_;
+        VLOG(10) << "Sent left/right images to VIO for frame k = " << k_;
 
         // Publish VIO output if any.
         // TODO(Toni) this could go faster if running in another thread or
@@ -157,8 +154,9 @@ bool RosbagDataProvider::spin() {
     k_++;
     if (!vio_params_.parallel_run_) {
       // Break while loop (but keep increasing k_!) if we run in sequential
-      // mode.
-      break;
+      // mode. We actually return instead of break, to avoid re-printing that
+      // the rosbag processing has finished.
+      return true;
     }
   }  // End of for loop over rosbag images.
   LOG(INFO) << "Rosbag processing finished.";
@@ -320,36 +318,37 @@ void RosbagDataProvider::publishClock(const Timestamp& timestamp) const {
 
 void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
   // Publish all imu messages to ROS:
-  if (rosbag_data_.imu_msgs_.size() > k_last_imu_) {
+  if (k_last_imu_ < rosbag_data_.imu_msgs_.size()) {
     while (timestamp_last_imu_ < timestamp_kf &&
            k_last_imu_ < rosbag_data_.imu_msgs_.size()) {
       imu_pub_.publish(rosbag_data_.imu_msgs_.at(k_last_imu_));
-      k_last_imu_++;
       timestamp_last_imu_ =
           rosbag_data_.imu_msgs_.at(k_last_imu_)->header.stamp.toNSec();
+      k_last_imu_++;
     }
   }
 
   // Publish ground-truth data if available:
-  if (rosbag_data_.gt_odometry_.size() > k_last_gt_) {
+  if (k_last_gt_ < rosbag_data_.gt_odometry_.size()) {
     while (timestamp_last_gt_ < timestamp_kf &&
            k_last_gt_ < rosbag_data_.gt_odometry_.size()) {
       gt_odometry_pub_.publish(rosbag_data_.gt_odometry_.at(k_last_gt_));
-      k_last_gt_++;
       timestamp_last_gt_ =
           rosbag_data_.gt_odometry_.at(k_last_gt_)->header.stamp.toNSec();
+      k_last_gt_++;
     }
   }
 
   // Publish left and right images:
-  if (rosbag_data_.left_imgs_.size() > k_last_kf_ &&
-      rosbag_data_.right_imgs_.size() > k_last_kf_) {
+  if (k_last_kf_ < rosbag_data_.left_imgs_.size() &&
+      k_last_kf_ < rosbag_data_.right_imgs_.size()) {
     while (timestamp_last_kf_ < timestamp_kf &&
-           k_last_kf_ < rosbag_data_.left_imgs_.size()) {
+           k_last_kf_ < rosbag_data_.left_imgs_.size() &&
+           k_last_kf_ < rosbag_data_.right_imgs_.size()) {
       left_img_pub_.publish(rosbag_data_.left_imgs_.at(k_last_kf_));
       right_img_pub_.publish(rosbag_data_.right_imgs_.at(k_last_kf_));
-      k_last_kf_++;
       timestamp_last_kf_ = rosbag_data_.timestamps_.at(k_last_kf_);
+      k_last_kf_++;
     }
   }
 }
