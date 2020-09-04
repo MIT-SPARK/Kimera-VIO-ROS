@@ -67,6 +67,16 @@ bool KimeraVioRos::runKimeraVio() {
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
 
+  // Second, destroy dataset parser.
+  VLOG(1) << "Destroy Data Provider.";
+  data_provider_.reset();
+
+  // Then, create dataset parser. This must be before vio pipeline bcs
+  // the data provider may modify the init gt pose.
+  VLOG(1) << "Creating Data Provider.";
+  data_provider_ = createDataProvider(*vio_params_);
+  CHECK(data_provider_) << "Data provider construction failed.";
+
   // Then, create Kimera-VIO from scratch.
   VLOG(1) << "Creating Kimera-VIO.";
   CHECK(ros_display_);
@@ -75,14 +85,6 @@ bool KimeraVioRos::runKimeraVio() {
                                                   std::move(ros_display_));
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
 
-  // Second, destroy dataset parser.
-  VLOG(1) << "Destroy Data Provider.";
-  data_provider_.reset();
-
-  // Then, create dataset parser.
-  VLOG(1) << "Creating Data Provider.";
-  data_provider_ = createDataProvider(*vio_params_);
-  CHECK(data_provider_) << "Data provider construction failed.";
 
   // Finally, connect data_provider and vio_pipeline
   VLOG(1) << "Connecting Vio Pipeline and Data Provider.";
@@ -116,8 +118,10 @@ bool KimeraVioRos::spin() {
     // Ideally make a thread that shutdowns pipeline if ros is not ok.
     ros::Rate rate(20);  // Check pipeline status at 20Hz
     while (ros::ok() && !restart_vio_pipeline_) {
-      // Print stats at 10hz
-      LOG_EVERY_N(INFO, 10) << vio_pipeline_->printStatistics();
+      // Print stats at 1hz
+      // LOG_EVERY_N(INFO, 20) << vio_pipeline_->printStatistics();
+      // Once vio finishes, shutdown both VIO and ros.
+      if (vio_pipeline_->shutdownWhenFinished(0, false)) ros::shutdown();
       rate.sleep();
     }
     if (!restart_vio_pipeline_) {
@@ -128,7 +132,7 @@ bool KimeraVioRos::spin() {
     }
     // TODO(Toni): right now vio shutsdown data provider, maybe we should
     // explicitly shutdown data provider: data_provider_->shutdown();
-    vio_pipeline_->shutdown();
+    if (!vio_pipeline_->isShutdown()) vio_pipeline_->shutdown();
     LOG(INFO) << "Joining Kimera-VIO thread.";
     vio_pipeline_handle.get();
     LOG(INFO) << "Kimera-VIO thread joined successfully.";
@@ -173,9 +177,10 @@ KimeraVioRos::createDataProvider(const VioParams& vio_params) {
     return VIO::make_unique<RosOnlineDataProvider>(vio_params);
   } else {
     // Parse rosbag.
-    return VIO::make_unique<RosbagDataProvider>(vio_params);
+    auto rosbag_data_provider = VIO::make_unique<RosbagDataProvider>(vio_params);
+    rosbag_data_provider->initialize();
+    return rosbag_data_provider;
   }
-  return nullptr;
 }
 
 void KimeraVioRos::connectVIO() {

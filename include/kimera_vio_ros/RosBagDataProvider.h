@@ -47,6 +47,13 @@ class RosbagDataProvider : public RosDataProviderInterface {
   RosbagDataProvider(const VioParams& vio_params);
   virtual ~RosbagDataProvider() = default;
 
+  /**
+   * @brief initialize The Rosbag data provider: it will parse the Rosbag and
+   * call the VIO IMU callback (so you need to register the imu cb before), and
+   * it will parse the gt odom for initialization if requested.
+   */
+  void initialize();
+
   // Returns true if the whole rosbag was successfully played, false if ROS was
   // shutdown before the rosbag finished.
   bool spin() override;
@@ -58,6 +65,8 @@ class RosbagDataProvider : public RosDataProviderInterface {
   // Optionally, send a ground-truth odometry topic if available in the rosbag.
   // If gt_odom_topic is empty (""), it will be ignored.
   bool parseRosbag(const std::string& bag_path, RosbagData* rosbag_data);
+
+  void sendImuDataToVio();
 
   // Get ground-truth nav state for VIO initialization.
   // It uses odometry messages inside of the rosbag as ground-truth (indexed

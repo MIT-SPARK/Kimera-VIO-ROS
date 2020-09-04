@@ -73,7 +73,7 @@ VisualizerOutput::UniquePtr RosVisualizer::spinOnce(
     const VisualizerInput& viz_input) {
   publishBackendOutput(viz_input.backend_output_);
   publishFrontendOutput(viz_input.frontend_output_);
-  publishMesherOutput(viz_input.mesher_output_);
+  if (viz_input.mesher_output_) publishMesherOutput(viz_input.mesher_output_);
   // publishLcdOutput(viz_input->lcd_output_); // missing this one...
   // Return empty output, since in ROS, we only publish, not display...
   return VIO::make_unique<VisualizerOutput>();
