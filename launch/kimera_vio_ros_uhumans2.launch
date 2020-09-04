@@ -1,0 +1,40 @@
+<launch>
+  <arg name="dataset_name"   default="uHumans2"/>
+  <arg name="verbosity"      default="0"/>
+  <arg name="online"         default="true"/>
+  <arg name="use_lcd"        default="true"/>
+
+  <param name="use_sim_time" value="true"/>
+
+  <arg name="log_output" default="true"/>
+  <arg name="log_output_path"
+       default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
+       if="$(arg log_output)"/>
+  <arg name="log_gt_data" default="true"/>
+  <arg name="gt_topic"    default="/tesse/odom"/>
+
+  <arg name="use_online_cam_params" default="false"/>
+
+  <!-- Change rosbag path if online argument is false -->
+  <arg name="rosbag_path" default="" unless="$(arg online)"/>
+
+  <!-- Frame IDs -->
+  <arg name="base_link_frame_id" default="base_link_kimera"/>
+  <arg name="left_cam_frame_id"  default="left_cam_kimera"/>
+  <arg name="right_cam_frame_id" default="right_cam_kimera"/>
+
+  <!-- Subscriber Topics -->
+  <arg name="left_cam_topic"        default="/tesse/left_cam/mono/image_raw"/>
+  <arg name="left_cam_info_topic"   default="/tesse/left_cam/camera_info"/>
+  <arg name="right_cam_topic"       default="/tesse/right_cam/mono/image_raw"/>
+  <arg name="right_cam_info_topic"  default="/tesse/right_cam/camera_info"/>
+  <arg name="imu_topic"             default="/tesse/imu/clean/imu"/>
+
+  <!-- Empty string ("") means no ground-truth available. Used for init if
+   requested to do ground-truth initialization. -->
+  <arg name="odometry_ground_truth_topic" default="$(arg gt_topic)"/>
+
+  <!-- Launch actual pipeline -->
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros_uhumans1.launch"
+    pass_all_args="true"/>
+</launch>
