@@ -279,6 +279,7 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
     pose_graph_tools::PoseGraphEdge last_odom_edge =
         odometry_edges_.at(odometry_edges_.size() - 1);
     last_odom_edge.header.stamp.fromNSec(ts);
+    last_odom_edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
     incremental_graph.edges.push_back(last_odom_edge);
     incremental_graph.nodes.push_back(
         pose_graph_nodes_.at(pose_graph_nodes_.size() - 2));
@@ -302,6 +303,7 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
       last_lc_edge.pose.orientation.z = quaternion.z();
       last_lc_edge.pose.orientation.w = quaternion.w();
       last_lc_edge.header.stamp.fromNSec(ts);
+      last_lc_edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
       incremental_graph.edges.push_back(last_lc_edge);
     }
     incremental_graph.header.stamp.fromNSec(ts);
