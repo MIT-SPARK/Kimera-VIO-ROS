@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 
+import os
+
 import rosbag
-import re
 from cv_bridge import CvBridge
-import cv2
-import numpy as np
-import pandas as pd
 import tf2_msgs.msg
+import pandas as pd
 import geometry_msgs.msg
 import rospy
-from nav_msgs.msg import Odometry
 
 def transform_msg_from_csv(path_to_csv, child_frame_id, frame_id):
     tfs = pd.read_csv(path_to_csv)
@@ -36,23 +34,25 @@ def add_tf_to_rosbag(input_rosbag_path, csv_path, output_rosbag_path, body_frame
     """
     """
     tf_array = transform_msg_from_csv(csv_path, body_frame_id, world_frame_id)
-    pose_msg = tf_array[tf_array_idx]
-    pose_timestamp = pose_msg.transforms[0].header.stamp
-
-
     # We write the pose msgs in order wrt its timestamp
     try:
-        with rosbag.Bag(input_rosbag_path, 'w') as outbag:
-            for topic, msg, msg_timestamp in rosbag.Bag(output_rosbag_path, 'r').read_messages():
-                while(tf_array_idx < len(tf_array) and pose_timestamp <= msg_timestamp):
-                    # Write our tf messages
-                    outbag.write(tf_topic, pose_msg, pose_timestamp)
-                    # print "Interjected IMU message with t: {}".format(tf_array[tf_array_idx].header.stamp)
-
-                    # Go to next pose message
-                    tf_array_idx = tf_array_idx + 1
+        assert(tf_array_idx >= 0)
+        assert(tf_array_idx < len(tf_array))
+        with rosbag.Bag(output_rosbag_path, 'w') as outbag:
+            for topic, msg, msg_timestamp in rosbag.Bag(input_rosbag_path, 'r').read_messages():
+                while(tf_array_idx < len(tf_array) and
+                      tf_array[tf_array_idx].transforms[0].header.stamp <= msg_timestamp):
                     pose_msg = tf_array[tf_array_idx]
                     pose_timestamp = pose_msg.transforms[0].header.stamp
+
+                    # Write our tf messages as long as they have an earlier timestamp
+                    # than the timestamp of the current rosbag msg
+                    outbag.write(tf_topic, pose_msg, pose_timestamp)
+
+                    # Get next pose message
+                    tf_array_idx = tf_array_idx + 1
+
+
 
                 # Re-write the already present messages
                 # TODO(Toni): is this really necessary?
@@ -61,23 +61,27 @@ def add_tf_to_rosbag(input_rosbag_path, csv_path, output_rosbag_path, body_frame
 
             # Write the left-over pose messages
             while(tf_array_idx < len(tf_array)):
+                pose_msg = tf_array[tf_array_idx]
+                pose_timestamp = pose_msg.transforms[0].header.stamp
+
                 outbag.write(tf_topic, pose_msg, pose_timestamp)
 
                 # Go to next pose message
                 tf_array_idx = tf_array_idx + 1
-                pose_msg = tf_array[tf_array_idx]
-                pose_timestamp = pose_msg.transforms[0].header.stamp
+
     except IOError as error:
         print("Error loading input rosbag: %s" % input_rosbag_path)
         print("Or Error loading output rosbag: %s" % output_rosbag_path)
         print(error)
 
 def run(args):
-    in_place_write = True
+    in_place_write = False
     if in_place_write:
         add_tf_to_rosbag(args.input_rosbag_path, args.csv_path, args.input_rosbag_path, "left_cam_dvio", "world", "/tf", 0)
     else:
         add_tf_to_rosbag(args.input_rosbag_path, args.csv_path, args.output_rosbag_path, "left_cam_dvio", "world", "/tf", 0)
+
+    return True
 
 def parser():
     import argparse
