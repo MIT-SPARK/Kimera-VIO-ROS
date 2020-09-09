@@ -13,7 +13,6 @@
 #include "kimera_vio_ros/RosDataProviderInterface.h"
 #include "kimera_vio_ros/RosDisplay.h"
 #include "kimera_vio_ros/RosVisualizer.h"
-#include "kimera_vio_ros/RosLoopClosure.h"
 
 namespace VIO {
 
@@ -57,7 +56,6 @@ class KimeraVioRos {
   RosDataProviderInterface::UniquePtr data_provider_;
   RosDisplay::UniquePtr ros_display_;
   RosVisualizer::UniquePtr ros_visualizer_;
-  RosLoopClosure::UniquePtr ros_loop_closure_;
 
   //! ROS Services
   ros::ServiceServer restart_vio_pipeline_srv_;

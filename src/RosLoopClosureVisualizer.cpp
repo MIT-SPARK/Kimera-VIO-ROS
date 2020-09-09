@@ -1,10 +1,10 @@
 /**
- * @file   RosLoopClosure.cpp
+ * @file   RosLoopClosureVisualizer.cpp
  * @brief  Ros interface for the loop closure module
  * @author Yun Chang
  */
 
-#include "kimera_vio_ros/RosLoopClosure.h"
+#include "kimera_vio_ros/RosLoopClosureVisualizer.h"
 
 #include <string>
 
@@ -25,9 +25,7 @@
 
 namespace VIO {
 
-RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
-                               bool log_output)
-    : LoopClosureDetector(lcd_params, log_output), nh_(), nh_private_("~") {
+RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
   // Get ROS params
   CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
   CHECK(!world_frame_id_.empty());
@@ -44,13 +42,8 @@ RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
 }
 
-LcdOutput::UniquePtr RosLoopClosure::spinOnce(const LcdInput& lcd_input) {
-  LcdOutput::UniquePtr output = LoopClosureDetector::spinOnce(lcd_input);
-  publishLcdOutput(std::move(output));
-  return output;
-}
-
-void RosLoopClosure::publishLcdOutput(const LcdOutput::ConstPtr& lcd_output) {
+void RosLoopClosureVisualizer::publishLcdOutput(
+    const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   publishTf(lcd_output);
@@ -62,12 +55,12 @@ void RosLoopClosure::publishLcdOutput(const LcdOutput::ConstPtr& lcd_output) {
   }
 }
 
-void RosLoopClosure::publishOptimizedTrajectory(
+void RosLoopClosureVisualizer::publishOptimizedTrajectory(
     const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   // Get pgo-optimized trajectory
-  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const Timestamp& ts = lcd_output->timestamp_;
   const gtsam::Values& trajectory = lcd_output->states_;
   // Create message type
   nav_msgs::Path path;
@@ -129,7 +122,7 @@ void RosLoopClosure::publishOptimizedTrajectory(
 
 // Function used ultimately to visualize loop closure
 // And differentiate the inliers and the outliers
-void RosLoopClosure::updateRejectedEdges() {
+void RosLoopClosureVisualizer::updateRejectedEdges() {
   // first update the rejected edges
   for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
        loop_closure_edges_) {
@@ -166,8 +159,9 @@ void RosLoopClosure::updateRejectedEdges() {
   }
 }
 
-void RosLoopClosure::updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
-                                         const gtsam::Values& values) {
+void RosLoopClosureVisualizer::updateNodesAndEdges(
+    const gtsam::NonlinearFactorGraph& nfg,
+    const gtsam::Values& values) {
   inlier_edges_.clear();
   odometry_edges_.clear();
   // first store the factors as edges
@@ -241,7 +235,7 @@ void RosLoopClosure::updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
   return;
 }
 
-pose_graph_tools::PoseGraph RosLoopClosure::getPosegraphMsg() {
+pose_graph_tools::PoseGraph RosLoopClosureVisualizer::getPosegraphMsg() {
   // pose graph getter
   pose_graph_tools::PoseGraph pose_graph;
   pose_graph.edges = odometry_edges_;  // add odometry edges to pg
@@ -255,11 +249,12 @@ pose_graph_tools::PoseGraph RosLoopClosure::getPosegraphMsg() {
   return pose_graph;
 }
 
-void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
+void RosLoopClosureVisualizer::publishPoseGraph(
+    const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   // Get the factor graph
-  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const Timestamp& ts = lcd_output->timestamp_;
   const gtsam::NonlinearFactorGraph& nfg = lcd_output->nfg_;
   const gtsam::Values& values = lcd_output->states_;
   updateNodesAndEdges(nfg, values);
@@ -310,10 +305,11 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
   }
 }
 
-void RosLoopClosure::publishTf(const LcdOutput::ConstPtr& lcd_output) {
+void RosLoopClosureVisualizer::publishTf(
+    const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
-  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const Timestamp& ts = lcd_output->timestamp_;
   const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
   const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
   // Publish map TF.

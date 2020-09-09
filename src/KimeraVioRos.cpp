@@ -36,7 +36,6 @@ KimeraVioRos::KimeraVioRos()
       vio_pipeline_(nullptr),
       ros_display_(nullptr),
       ros_visualizer_(nullptr),
-      ros_loop_closure_(nullptr),
       data_provider_(nullptr),
       restart_vio_pipeline_srv_(),
       restart_vio_pipeline_(false) {
@@ -59,14 +58,11 @@ bool KimeraVioRos::runKimeraVio() {
   VLOG(1) << "Destroy Ros Display.";
   ros_display_.reset();
   ros_visualizer_.reset();
-  ros_loop_closure_.reset();
 
   VLOG(1) << "Creating Ros Display.";
   CHECK(vio_params_);
   ros_display_ = VIO::make_unique<RosDisplay>();
   ros_visualizer_ = VIO::make_unique<RosVisualizer>(*vio_params_);
-  ros_loop_closure_ =
-      VIO::make_unique<RosLoopClosure>(vio_params_->lcd_params_, true);
 
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
@@ -84,12 +80,9 @@ bool KimeraVioRos::runKimeraVio() {
   // Then, create Kimera-VIO from scratch.
   VLOG(1) << "Creating Kimera-VIO.";
   CHECK(ros_display_);
-  vio_pipeline_ = VIO::make_unique<VIO::Pipeline>(*vio_params_,
-                                                  std::move(ros_visualizer_),
-                                                  std::move(ros_display_),
-                                                  std::move(ros_loop_closure_));
+  vio_pipeline_ = VIO::make_unique<VIO::Pipeline>(
+      *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
-
 
   // Finally, connect data_provider and vio_pipeline
   VLOG(1) << "Connecting Vio Pipeline and Data Provider.";
@@ -113,10 +106,8 @@ bool KimeraVioRos::spin() {
         std::async(std::launch::async,
                    &VIO::RosDataProviderInterface::spin,
                    data_provider_.get());
-    std::future<bool> vio_viz_handle =
-        std::async(std::launch::async,
-                   &VIO::Pipeline::spinViz,
-                   vio_pipeline_.get());
+    std::future<bool> vio_viz_handle = std::async(
+        std::launch::async, &VIO::Pipeline::spinViz, vio_pipeline_.get());
     std::future<bool> vio_pipeline_handle = std::async(
         std::launch::async, &VIO::Pipeline::spin, vio_pipeline_.get());
     // Run while ROS is ok and vio pipeline is not shutdown.
@@ -173,8 +164,8 @@ bool KimeraVioRos::spin() {
   return is_pipeline_successful;
 }
 
-RosDataProviderInterface::UniquePtr
-KimeraVioRos::createDataProvider(const VioParams& vio_params) {
+RosDataProviderInterface::UniquePtr KimeraVioRos::createDataProvider(
+    const VioParams& vio_params) {
   bool online_run = false;
   CHECK(nh_private_.getParam("online_run", online_run));
   if (online_run) {
@@ -182,7 +173,8 @@ KimeraVioRos::createDataProvider(const VioParams& vio_params) {
     return VIO::make_unique<RosOnlineDataProvider>(vio_params);
   } else {
     // Parse rosbag.
-    auto rosbag_data_provider = VIO::make_unique<RosbagDataProvider>(vio_params);
+    auto rosbag_data_provider =
+        VIO::make_unique<RosbagDataProvider>(vio_params);
     rosbag_data_provider->initialize();
     return rosbag_data_provider;
   }
