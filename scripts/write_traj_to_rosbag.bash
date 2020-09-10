@@ -1,7 +1,10 @@
-# You need to run a roscore before running this script. o
+# You need to run a roscore before running this script.
 # Otw, the roslaunch command will not return...
+# To kill this script: 1. Ctrl+Z 2. kill %%
+KIMERA_VIO_ROS_PATH="$HOME/Code/ROS/kimera_ws/src/Kimera-VIO-ROS/"
+DATASET_PATH="$HOME/datasets/uHumans2/"
+CSV_PATH="$HOME/Documents/uHumans2_VIO/"
 
-DATASET_PATH="/home/tonirv/datasets/uHumans2/"
 ROSBAGS=(
   "apartment_scene/uHumans2_apartment_s1_00h"
   #"apartment_scene/uHumans2_apartment_s1_01h"
@@ -16,7 +19,6 @@ ROSBAGS=(
   # "neighborhood_scene/uHumans2_neighborhood_s1_24h"
   # "neighborhood_scene/uHumans2_neighborhood_s1_36h"
 )
-CSV_PATH="/home/tonirv/Documents/uHumans2_VIO/"
 PARAMS=(#'5pt'
         #'2pt'
         'DVIO'
@@ -25,11 +27,23 @@ PARAMS=(#'5pt'
 for ROSBAG in "${ROSBAGS[@]}"
 do
   ROSBAG_PATH="${DATASET_PATH}${ROSBAG}.bag"
-  echo "RUNNING EVAL for rosbag path: $ROSBAG_PATH"
+  echo "RUNNING tf writer for rosbag path: $ROSBAG_PATH"
   for PARAM in "${PARAMS[@]}"
   do
-    echo "RUNNING EVAL for params: $PARAM"
+    echo "RUNNING tf writer for params: $PARAM"
+
+    echo "Writing VIO tf."
     DVIO_TRAJ_CSV="${CSV_PATH}/${ROSBAG}/$PARAM/traj_vio.csv"
-    python /home/tonirv/Code/ROS/kimera_ws/src/Kimera-VIO-ROS/scripts/write_tfs_in_rosbag.py "$ROSBAG_PATH" "$DVIO_TRAJ_CSV" "${DATASET_PATH}${ROSBAG}.dvio.bag"
+    python $KIMERA_VIO_ROS_PATH/scripts/write_tfs_in_rosbag.py "$ROSBAG_PATH" "$DVIO_TRAJ_CSV" --base_link_frame_id "base_link_${PARAM}"
+    echo "Done writing VIO tf."
+
+    echo "Writing PGO tf."
+    PGO_TRAJ_CSV="${CSV_PATH}/${ROSBAG}/$PARAM/traj_pgo.csv"
+    python $KIMERA_VIO_ROS_PATH/scripts/write_tfs_in_rosbag.py "$ROSBAG_PATH" "$PGO_TRAJ_CSV" --base_link_frame_id "base_link_${PARAM}_pgo"
+    echo "Done writing PGO tf."
+
   done
+  echo "Done writing all tfs in rosbag."
+
 done
+echo "Done."
