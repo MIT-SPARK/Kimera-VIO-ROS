@@ -3,13 +3,30 @@
 import os
 
 import rosbag
+import time
 from cv_bridge import CvBridge
 import tf2_msgs.msg
 import pandas as pd
 import geometry_msgs.msg
 import rospy
+import yaml
+
+import subprocess
 
 import shutil as sh
+
+def status(length, percent):
+    sys.stdout.write('\x1B[2K') # Erase entire current line
+    sys.stdout.write('\x1B[0E') # Move to the beginning of the current line
+    progress = "Progress: ["
+    for i in range(0, length):
+        if i < length * percent:
+            progress += '='
+        else:
+            progress += ' '
+    progress += "] " + str(round(percent * 100.0, 2)) + "%"
+    sys.stdout.write(progress)
+    sys.stdout.flush()
 
 def transform_msg_from_csv(path_to_csv, child_frame_id, frame_id):
     tfs = pd.read_csv(path_to_csv)
@@ -32,6 +49,10 @@ def transform_msg_from_csv(path_to_csv, child_frame_id, frame_id):
     return tf_array
 
 
+def get_rosbag_info(rosbag_path):
+    return yaml.load(subprocess.Popen(['rosbag', 'info', '--yaml', rosbag_path], stdout=subprocess.PIPE).communicate()[0], Loader=yaml.FullLoader)
+
+
 def add_tf_to_rosbag(input_rosbag_path, csv_path, output_rosbag_path, body_frame_id, world_frame_id = 'world', tf_topic = '/tf', tf_array_idx = 0):
     """
     """
@@ -51,12 +72,20 @@ def add_tf_to_rosbag(input_rosbag_path, csv_path, output_rosbag_path, body_frame
         # We copy it since we only add new messages
         sh.copy(input_rosbag_path, output_rosbag_path)
 
+    # This is for logging progress
+    info_dict = get_rosbag_info(original_rosbag_path)
+    duration = info_dict['duration']
+    start_time = info_dict['start']
+
     # We write the pose msgs in order wrt its timestamp
     try:
         assert(tf_array_idx >= 0)
         assert(tf_array_idx < len(tf_array))
-        with rosbag.Bag(output_rosbag_path, 'w') as outbag:
-            for topic, msg, msg_timestamp in rosbag.Bag(original_rosbag_path, 'r').read_messages():
+        # USE APPEND mode, since we copy-pasted it before!
+        with rosbag.Bag(output_rosbag_path, 'a') as outbag:
+            last_time = time.clock() # This is just to log progress
+            inbag = rosbag.Bag(original_rosbag_path, 'r')
+            for topic, msg, msg_timestamp in inbag.read_messages():
                 while(tf_array_idx < len(tf_array) and
                       tf_array[tf_array_idx].transforms[0].header.stamp <= msg_timestamp):
                     pose_msg = tf_array[tf_array_idx]
@@ -69,10 +98,18 @@ def add_tf_to_rosbag(input_rosbag_path, csv_path, output_rosbag_path, body_frame
                     # Get next pose message
                     tf_array_idx = tf_array_idx + 1
 
+                if time.clock() - last_time > .1:
+                    # Log current progress
+                    percent = (msg_timestamp.to_sec() - start_time) / duration
+                    status(40, percent)
+                    last_time = time.clock()
+
+
                 # Re-write the already present messages
                 # TODO(Toni): is this really necessary?
                 # outbag.write(topic, msg, msg_timestamp)
                 # print "Wrote message with t: {}".format(t)
+            status(40, 1)
 
             # Write the left-over pose messages
             while(tf_array_idx < len(tf_array)):
@@ -83,7 +120,6 @@ def add_tf_to_rosbag(input_rosbag_path, csv_path, output_rosbag_path, body_frame
 
                 # Go to next pose message
                 tf_array_idx = tf_array_idx + 1
-
     except IOError as error:
         print("Error loading input rosbag: %s" % original_rosbag_path)
         print("Or Error loading output rosbag: %s" % output_rosbag_path)

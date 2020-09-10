@@ -32,6 +32,7 @@ do
   do
     echo "RUNNING tf writer for params: $PARAM"
 
+    # TODO(Toni): do this in batch... read multiple csvs, and log them all to the rosbag
     echo "Writing VIO tf."
     DVIO_TRAJ_CSV="${CSV_PATH}/${ROSBAG}/$PARAM/traj_vio.csv"
     python $KIMERA_VIO_ROS_PATH/scripts/write_tfs_in_rosbag.py "$ROSBAG_PATH" "$DVIO_TRAJ_CSV" --base_link_frame_id "base_link_${PARAM}"
