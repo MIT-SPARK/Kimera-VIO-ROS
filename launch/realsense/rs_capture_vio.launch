@@ -1,0 +1,28 @@
+<launch>
+  <arg name="serial_no_camera1"    			default="843112070268"/> 			<!-- Note: Replace with actual serial number -->
+  <arg name="camera1"              			default="vio_camera"/>		<!-- Note: Replace with camera name -->
+  <arg name="tf_prefix_camera1"         default="$(arg camera1)"/>
+  <arg name="initial_reset"             default="TRUE"/>
+
+  <arg name="infra_fps"           default="30"/>
+  <arg name="gyro_fps"            default="400"/>
+  <arg name="accel_fps"           default="250"/>
+
+  <group ns="$(arg camera1)">
+    <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
+      <arg name="serial_no"             value="$(arg serial_no_camera1)"/>
+      <arg name="tf_prefix"         		value="$(arg tf_prefix_camera1)"/>
+      <arg name="initial_reset"         value="$(arg initial_reset)"/>
+      <!-- Data stream settings -->
+      <arg name="unite_imu_method"         value="linear_interpolation"/>
+      <arg name="enable_color"         value="false"/>
+      <arg name="enable_depth"         value="false"/>
+      <arg name="enable_infra1"         value="true"/>
+      <arg name="enable_infra2"         value="true"/>
+      <!-- Data rates -->
+      <arg name="infra_fps"                value="$(arg infra_fps)"/>
+      <arg name="gyro_fps"                 value="$(arg gyro_fps)"/>
+      <arg name="accel_fps"                value="$(arg accel_fps)"/>
+    </include>
+  </group>
+</launch>
