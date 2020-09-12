@@ -78,6 +78,9 @@ class RosLoopClosure : public LoopClosureDetector {
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
 
+  // Unique ID of this robot
+  uint16_t robot_id_;
+
   // ROS publishers
   ros::Publisher trajectory_pub_;
   ros::Publisher posegraph_pub_;

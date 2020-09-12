@@ -35,6 +35,10 @@ RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
   CHECK(!base_link_frame_id_.empty());
   CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
   CHECK(!map_frame_id_.empty());
+  int robot_id_in_;
+  CHECK(nh_private_.getParam("robot_id", robot_id_in_));
+  CHECK(robot_id_in_ >= 0); 
+  robot_id_ = robot_id_in_;
 
   // Publishers
   trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
