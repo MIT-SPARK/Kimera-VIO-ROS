@@ -1,4 +1,6 @@
 <launch>
+  <!-- Unique integer id of this robot. -->
+  <arg name="robot_id" default="0"/>
   <!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
   file and include this one to launch KimeraVIO on the dataset of your choice -->
   <arg name="dataset_name" default="Euroc"/>
@@ -81,6 +83,8 @@
               --output_path=$(arg log_output_path)
               --viz_type=$(arg viz_type)
               --visualize=$(arg visualize)">
+    <param name="robot_id" value="$(arg robot_id)" />
+
     <param name="params_folder_path"    value="$(arg params_folder)"/>
 
     <param name="online_run"            value="$(arg online)"/>
