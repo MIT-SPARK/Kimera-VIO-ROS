@@ -71,6 +71,9 @@ class RosLoopClosure : public LoopClosureDetector {
 
   void publishNewNodesAndEdges(const LcdOutput::ConstPtr& lcd_output);
 
+  // Publish bag-of-word vector associated to latest frame
+  void publishBowQuery();
+
   pose_graph_tools::PoseGraph getPosegraphMsg();
 
  private:
@@ -86,6 +89,7 @@ class RosLoopClosure : public LoopClosureDetector {
   ros::Publisher posegraph_pub_;
   ros::Publisher odometry_pub_;
   ros::Publisher posegraph_incremental_pub_;
+  ros::Publisher bow_query_pub_;
 
   //! Define tf broadcaster for world to base_link (IMU) and to map (PGO).
   tf::TransformBroadcaster tf_broadcaster_;
@@ -101,6 +105,10 @@ class RosLoopClosure : public LoopClosureDetector {
   std::string world_frame_id_;
   std::string base_link_frame_id_;
   std::string map_frame_id_;
+
+
+  // ID of next frame to publish Bow query
+  uint32_t next_pose_id_;
 };
 
 }  // namespace VIO

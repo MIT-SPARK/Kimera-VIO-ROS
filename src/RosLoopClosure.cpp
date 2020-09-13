@@ -23,11 +23,13 @@
 
 #include "kimera_vio_ros/utils/UtilsRos.h"
 
+#include "kimera_distributed/utils.h"
+
 namespace VIO {
 
 RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
                                bool log_output)
-    : LoopClosureDetector(lcd_params, log_output), nh_(), nh_private_("~") {
+    : LoopClosureDetector(lcd_params, log_output), nh_(), nh_private_("~"), next_pose_id_(0) {
   // Get ROS params
   CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
   CHECK(!world_frame_id_.empty());
@@ -46,11 +48,13 @@ RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
   posegraph_incremental_pub_ =
       nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph_incremental", 1);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
+  bow_query_pub_ = nh_.advertise<kimera_distributed::BowQuery>("bow_query", 1);
 }
 
 LcdOutput::UniquePtr RosLoopClosure::spinOnce(const LcdInput& lcd_input) {
   LcdOutput::UniquePtr output = LoopClosureDetector::spinOnce(lcd_input);
   publishLcdOutput(std::move(output));
+  publishBowQuery();
   return output;
 }
 
@@ -64,6 +68,29 @@ void RosLoopClosure::publishLcdOutput(const LcdOutput::ConstPtr& lcd_output) {
   if (posegraph_pub_.getNumSubscribers() > 0) {
     publishPoseGraph(lcd_output);
   }
+}
+
+void RosLoopClosure::publishBowQuery(){
+  const OrbDatabase* db_BoW_ptr = getBoWDatabase();
+  DCHECK(db_BoW_ptr);
+  const std::vector<LCDFrame>* db_frames_ptr = getFrameDatabasePtr();
+  LCDFrame frame = db_frames_ptr->back();
+  CHECK(frame.id_ == next_pose_id_);
+
+  DBoW2::BowVector bow_vec;
+  db_BoW_ptr->getVocabulary()->transform(frame.descriptors_vec_, bow_vec);
+
+  kimera_distributed::BowVector bow_vec_msg;
+  kimera_distributed::BowVectorToMsg(bow_vec, &bow_vec_msg);
+
+  kimera_distributed::BowQuery msg;
+  msg.robot_id = robot_id_;
+  msg.pose_id = frame.id_;
+  msg.bow_vector = bow_vec_msg;
+
+  bow_query_pub_.publish(msg);
+
+  next_pose_id_++;
 }
 
 void RosLoopClosure::publishOptimizedTrajectory(

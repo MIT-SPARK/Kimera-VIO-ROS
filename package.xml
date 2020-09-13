@@ -17,6 +17,7 @@
   <depend>opencv3_catkin</depend>
   <depend>eigen_catkin</depend>
   <depend>kimera_vio</depend>
+  <depend>kimera_distributed</depend>
 
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
