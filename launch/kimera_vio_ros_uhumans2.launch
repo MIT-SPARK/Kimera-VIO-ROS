@@ -31,6 +31,7 @@
   <arg name="right_cam_topic"       value="/tesse/right_cam/mono/image_raw"/>
   <arg name="right_cam_info_topic"  value="/tesse/right_cam/camera_info"/>
   <arg name="imu_topic"             value="/tesse/imu/clean/imu"/>
+  <arg name="robot_id"              default="0"/>
 
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->

@@ -35,6 +35,7 @@ RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
   CHECK(!base_link_frame_id_.empty());
   CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
   CHECK(!map_frame_id_.empty());
+  CHECK(nh_private_.getParam("robot_id", robot_id_));
 
   // Publishers
   trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
@@ -184,6 +185,8 @@ void RosLoopClosure::updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
       edge.header.frame_id = world_frame_id_;
       edge.key_from = factor.front();
       edge.key_to = factor.back();
+      edge.robot_from = robot_id_;
+      edge.robot_to = robot_id_;
       if (edge.key_to == edge.key_from + 1) {  // check if odom
         edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
       } else {
@@ -220,6 +223,7 @@ void RosLoopClosure::updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
   for (size_t i = 0; i < key_list.size(); i++) {
     pose_graph_tools::PoseGraphNode node;
     node.key = key_list[i];
+    node.robot_id = robot_id_;
 
     const gtsam::Pose3& value = values.at<gtsam::Pose3>(i);
     const gtsam::Point3& translation = value.translation();
@@ -280,6 +284,8 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
         odometry_edges_.at(odometry_edges_.size() - 1);
     last_odom_edge.header.stamp.fromNSec(ts);
     last_odom_edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
+    last_odom_edge.robot_from = robot_id_;
+    last_odom_edge.robot_to = robot_id_;
     incremental_graph.edges.push_back(last_odom_edge);
     incremental_graph.nodes.push_back(
         pose_graph_nodes_.at(pose_graph_nodes_.size() - 2));
@@ -295,6 +301,8 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
           lc_transform.rotation().toQuaternion();
       last_lc_edge.key_from = lcd_output->id_match_,
       last_lc_edge.key_to = lcd_output->id_recent_;
+      last_lc_edge.robot_from = robot_id_;
+      last_lc_edge.robot_to = robot_id_;
       last_lc_edge.pose.position.x = translation.x();
       last_lc_edge.pose.position.y = translation.y();
       last_lc_edge.pose.position.z = translation.z();

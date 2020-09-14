@@ -59,6 +59,7 @@
   <arg name="visualize"    default="true" />
   <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
   <arg name="viz_type"     default="0" />
+  <arg name="robot_id"     default="0" />
 
   <!-- Only here for convenience -->
   <arg name="run_stereo_dense"     default="false"/>
@@ -86,6 +87,7 @@
     <param name="online_run"            value="$(arg online)"/>
     <param name="use_lcd"               value="$(arg use_lcd)"/>
     <param name="use_online_cam_params" value="$(arg use_online_cam_params)"/>
+    <param name="robot_id"              value="$(arg robot_id)"/>
 
     <!-- Frame IDs for Odometry -->
     <param name="world_frame_id"     value="$(arg world_frame_id)"/>

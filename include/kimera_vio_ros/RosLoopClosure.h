@@ -87,6 +87,8 @@ class RosLoopClosure : public LoopClosureDetector {
   //! Define tf broadcaster for world to base_link (IMU) and to map (PGO).
   tf::TransformBroadcaster tf_broadcaster_;
 
+  int robot_id_;
+
   //! Stored pose graph related objects
   std::vector<pose_graph_tools::PoseGraphEdge> loop_closure_edges_;
   std::vector<pose_graph_tools::PoseGraphEdge> odometry_edges_;
