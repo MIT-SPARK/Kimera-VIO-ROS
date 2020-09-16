@@ -23,8 +23,6 @@
 
 #include "kimera_vio_ros/utils/UtilsRos.h"
 
-#include "kimera_distributed/utils.h"
-
 namespace VIO {
 
 RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
@@ -49,6 +47,9 @@ RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
       nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph_incremental", 1);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
   bow_query_pub_ = nh_.advertise<kimera_distributed::BowQuery>("bow_query", 1);
+
+  // Service
+  vlc_frame_server_ = nh_.advertiseService("vlc_frame_query", &RosLoopClosure::VLCFrameQueryCallback, this);
 }
 
 LcdOutput::UniquePtr RosLoopClosure::spinOnce(const LcdInput& lcd_input) {
@@ -72,7 +73,7 @@ void RosLoopClosure::publishLcdOutput(const LcdOutput::ConstPtr& lcd_output) {
 
 void RosLoopClosure::publishBowQuery(){
   const OrbDatabase* db_BoW_ptr = getBoWDatabase();
-  DCHECK(db_BoW_ptr);
+  CHECK(db_BoW_ptr);
   const std::vector<LCDFrame>* db_frames_ptr = getFrameDatabasePtr();
   LCDFrame frame = db_frames_ptr->back();
   CHECK(frame.id_ == next_pose_id_);
@@ -91,6 +92,26 @@ void RosLoopClosure::publishBowQuery(){
   bow_query_pub_.publish(msg);
 
   next_pose_id_++;
+}
+
+bool RosLoopClosure::VLCFrameQueryCallback(kimera_distributed::VLCFrameQuery::Request& request, 
+                                           kimera_distributed::VLCFrameQuery::Response& response)
+{
+  CHECK(request.robot_id == robot_id_);
+  const std::vector<LCDFrame>* db_frames_ptr = getFrameDatabasePtr();
+  CHECK(request.pose_id < db_frames_ptr->size());
+
+  LCDFrame lcd_frame = db_frames_ptr->at(request.pose_id);
+  CHECK(lcd_frame.id_ == request.pose_id);
+
+  kimera_distributed::VLCFrame frame(request.robot_id, 
+                                     request.pose_id, 
+                                     lcd_frame.keypoints_3d_, 
+                                     lcd_frame.descriptors_mat_);
+
+  kimera_distributed::VLCFrameToMsg(frame, &(response.frame));
+
+  return true;
 }
 
 void RosLoopClosure::publishOptimizedTrajectory(
