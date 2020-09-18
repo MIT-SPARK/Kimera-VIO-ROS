@@ -4,7 +4,6 @@
  * images at any rate (frame rate, keyframe rate,...).
  * @author Antoni Rosinol
  */
-#pragma once
 
 #include "kimera_vio_ros/RosDisplay.h"
 
@@ -12,8 +11,8 @@
 
 #include <glog/logging.h>
 
-#include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
+#include <ros/ros.h>
 #include <std_msgs/Header.h>
 
 #include <kimera-vio/visualizer/Display.h>
