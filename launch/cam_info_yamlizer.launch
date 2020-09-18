@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" default="test"/>
+  <arg name="dataset_name" default="uHumans2"/>
 
   <!-- Frame IDs -->
   <arg name="base_link_frame_id" value="base_link_gt"/>
@@ -19,6 +19,6 @@
     <param name="left_cam_info_topic"  value="$(arg left_cam_info_topic)"/>
     <param name="right_cam_info_topic" value="$(arg right_cam_info_topic)"/>
     <param name="output_dir"
-           value="$(find kimera_vio_ros)/param/$(arg dataset_name)"/>
+           value="$(find kimera_vio)/params/$(arg dataset_name)"/>
   </node>
 </launch>
