@@ -121,7 +121,9 @@ bool KimeraVioRos::spin() {
       // Print stats at 1hz
       // LOG_EVERY_N(INFO, 20) << vio_pipeline_->printStatistics();
       // Once vio finishes, shutdown both VIO and ros.
-      if (vio_pipeline_->shutdownWhenFinished(0, false)) ros::shutdown();
+      if (vio_pipeline_->shutdownWhenFinished(500, false)) {
+         ros::shutdown();
+      }
       rate.sleep();
     }
     if (!restart_vio_pipeline_) {
