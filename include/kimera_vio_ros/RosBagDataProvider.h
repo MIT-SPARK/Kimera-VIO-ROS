@@ -59,8 +59,6 @@ class RosbagDataProvider : public RosDataProviderInterface {
   // shutdown before the rosbag finished.
   bool spin() override;
 
-  // bool spinOnce();
-
  private:
   // Parse rosbag data
   // Optionally, send a ground-truth odometry topic if available in the rosbag.

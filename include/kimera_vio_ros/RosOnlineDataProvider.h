@@ -30,33 +30,35 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   virtual ~RosOnlineDataProvider();
 
  public:
-  // Spin needs to do nothing
-  bool spin() override {
-    CHECK(!vio_params_.parallel_run_)
-        << "This should be only running if we are in sequential mode!";
-    CHECK(imu_queue_.isEnabled());
-    // First call callbacks in our custom IMU queue.
-    imu_queue_.callAvailable(ros::WallDuration(0));
-    // Then call the rest of callbacks.
-    // which is the same as:
-    // ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0));
-    ros::spinOnce();
-    return true;
-  }
+  /**
+   * @brief spin Runs the ros online data provider.
+   * Parallel mode: starts async spinners, and returns true unless shutdown.
+   * Sequential mode: calls ros::spinOnce
+   * Then, both keep returning true unless shutdown.
+   * @return True if nominal spin, false on shutdown.
+   */
+  bool spin() override;
 
   // Checks the current status of reinitialization flag
   inline bool getReinitFlag() const { return reinit_flag_; }
   // Resets the current status of reinitialization flag
   inline void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
 
+ protected:
   /**
-   * @brief spin Runs the ros online data provider. Online only works in
-   * parallel mode.
-   * Parallel mode: starts async spinners, and returns true unless shutdown.
-   * Then, it simply keeps returning true unless shutdown.
-   * @return True if nominal spin, false on shutdown.
+   * @brief parallelSpin Runs the dataprovider in parallel mode. It just
+   * starts the asynchronous spinners and then returns true all the time.
+   * @return True all the time.
    */
-  bool spin() override;
+  bool parallelSpin();
+
+  /**
+   * @brief sequentialSpin Runs the dataprovider in sequential mode.
+   * It calls the callbacks in the dedicated IMU queue and the rest of callbacks
+   * (images) by using ros::spinOnce.
+   * @return True all the time.
+   */
+  bool sequentialSpin();
 
  private:
   ros::CallbackQueue imu_queue_;

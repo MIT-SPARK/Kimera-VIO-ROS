@@ -211,14 +211,6 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
     // This async spinner will process the regular Global callback queue of ROS.
     static constexpr size_t kGlobalSpinnerThreads = 2u;
     async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
-
-    // Start async spinners to get input data.
-    if (!shutdown_) {
-      CHECK(imu_async_spinner_);
-      imu_async_spinner_->start();
-      CHECK(async_spinner_);
-      async_spinner_->start();
-    }
   } else {
     LOG(INFO) << "RosOnlineDataProvider running in sequential mode.";
   }
@@ -228,29 +220,55 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
   VLOG(1) << "RosOnlineDataProvider destructor called.";
   imu_queue_.disable();
 
-  if(imu_async_spinner_) imu_async_spinner_->stop();
-  if(async_spinner_) async_spinner_->stop();
+  if (imu_async_spinner_) imu_async_spinner_->stop();
+  if (async_spinner_) async_spinner_->stop();
 
   LOG(INFO) << "RosOnlineDataProvider successfully shutdown.";
 }
 
 bool RosOnlineDataProvider::spin() {
   if (!shutdown_) {
-    // Start async spinners to get input data.
-    if (!started_async_spinners_) {
-      VLOG(10) << "Starting Async spinners.";
-      CHECK(imu_async_spinner_);
-      imu_async_spinner_->start();
-      CHECK(async_spinner_);
-      async_spinner_->start();
-      started_async_spinners_ = true;
+    if (vio_params_.parallel_run_) {
+      return parallelSpin();
     } else {
-      VLOG(10) << "Async spinners already started.";
+      return sequentialSpin();
     }
-    return true;
   } else {
     return false;
   }
+}
+
+bool RosOnlineDataProvider::parallelSpin() {
+  CHECK(vio_params_.parallel_run_);
+  // Start async spinners to get input data (only once!).
+  if (!started_async_spinners_) {
+    VLOG(10) << "Starting Async spinners.";
+    CHECK(imu_async_spinner_);
+    imu_async_spinner_->start();
+    CHECK(async_spinner_);
+    async_spinner_->start();
+    started_async_spinners_ = true;
+  } else {
+    VLOG(10) << "Async spinners already started.";
+  }
+  return true;
+}
+
+bool RosOnlineDataProvider::sequentialSpin() {
+  CHECK(!vio_params_.parallel_run_)
+      << "This should be only running if we are in sequential mode!";
+  CHECK(!imu_async_spinner_) << "There should not be an IMU async spinner "
+                                "constructed if in sequential mode.";
+  CHECK(!async_spinner_) << "There should not be a general async spinner "
+                            "constructed if in sequential mode.";
+  CHECK(imu_queue_.isEnabled());
+  // First call callbacks in our custom IMU queue.
+  imu_queue_.callAvailable(ros::WallDuration(0.1));
+  // Then call the rest of callbacks.
+  // which is the same as:
+  // ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0));
+  ros::spinOnce();
+  return true;
 }
 
 // TODO(marcus): with the readRosImage, this is a slow callback. Might be too
