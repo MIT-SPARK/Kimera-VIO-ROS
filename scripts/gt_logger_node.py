@@ -14,7 +14,7 @@ class GTLoggerNode:
         self.output_dir = rospy.get_param("~output_dir")
         self.output_csv_file = os.path.join(self.output_dir, "traj_gt.csv")
 
-        # rospy.Subscriber(self.gt_topic, TransformStamped, self.gt_cb_tsf)
+        # rospy.Subscriber(self.gt_topic, TransformStamped, self.gt_cb_tfs)
         rospy.Subscriber(self.gt_topic, Odometry, self.gt_cb_odom, queue_size=20)
         self.setup_gt_file()
 
