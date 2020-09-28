@@ -70,7 +70,10 @@ echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
 
 # Clone repo
 cd ~/catkin_ws/src
+# For ssh:
 git clone git@github.com:MIT-SPARK/Kimera-VIO-ROS.git
+# For https:
+# git clone https://github.com/MIT-SPARK/Kimera-VIO-ROS.git
 
 # Install dependencies from rosinstall file using wstool
 wstool init # Use unless wstool is already initialized
@@ -130,20 +133,6 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
   roslaunch kimera_vio_ros kimera_vio_ros_euroc.launch online:=false rosbag_path:="PATH/TO/ROSBAG"
   ```
 
-## Other datasets
-The launch file and parameters can also be configured for other datasets. For example, here we provide a [kitti rosbag for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, in one terminal, launch the Kimera ROS wrapper with the launch file we configured for kitti:
-```
-roslaunch kimera_vio_ros kimera_vio_ros_kitti.launch
-```
-  - In another terminal, launch a Kitti rosbag:
-```
-rosbag play --clock /PATH/TO/KITTI_ROSBAG
-```
-  - In rviz, you can use the provided config file provided at rviz/kimera_vio_kitti.rviz
-  ```bash
-  rviz -d $(rospack find kimera_vio_ros)/rviz/kimera_vio_ros_kitti.rviz
-  ```
-
 ## Running Unit tests
 
 To run unit tests using catkin for this package alone, build the package, source the workspace, then invoke:
@@ -166,6 +155,7 @@ gdb ../../devel/lib/kimera_vio_ros/testKimeraVioRos
 It is sometimes convenient to use the `camera_info` topics to parse the camera's parameters.
 There are currently two ways of using these topics:
  - Offline: using the launch file `launch/cam_info_yamlizer.launch` which will generate yaml files out of the topics.
+ You need to make sure that the `frame_id`s and the ROS topics are correctly set. Also, mind that the left/right cam frame ids are typically set as static tfs in a rosbag, therefore, first launch the node, and then run the rosbag (in case you see an exception bcs of a missing frame_id).
  - Online: setting the flag `use_online_cam_params` (see `launch/kimera_vio_ros.launch`) to true, and ensuring ROS topics are correctly set.
 
 ### Restart Kimera-VIO

@@ -6,9 +6,12 @@
 
 #pragma once
 
+#include <string>
+
 #include <glog/logging.h>
 
 #include <geometry_msgs/Transform.h>
+#include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <tf2_ros/static_transform_broadcaster.h>
@@ -17,6 +20,7 @@
 #include <gtsam/geometry/Pose3.h>
 
 #include <kimera-vio/frontend/CameraParams.h>
+#include <kimera-vio/common/VioNavState.h>
 
 namespace VIO {
 
@@ -30,6 +34,9 @@ void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
                               const std::string& base_link_frame_id,
                               const std::string& cam_frame_id,
                               CameraParams* cam_params);
+
+void msgGtOdomToVioNavState(const nav_msgs::Odometry& gt_odom,
+                            VioNavState* vio_navstate);
 
 }  // namespace utils
 
