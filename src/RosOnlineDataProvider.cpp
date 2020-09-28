@@ -135,6 +135,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
         << " - Right cam info topic: " << right_cam_info_subscriber_.getTopic();
   }
 
+  //! IMU Subscription
   // Create a dedicated queue for the Imu callback so that we can use an async
   // spinner on it to process the data lighting fast.
   static constexpr size_t kMaxImuQueueSize = 1000u;
@@ -150,12 +151,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   // Start IMU subscriber
   imu_subscriber_ = nh_.subscribe(imu_subscriber_options);
 
-  // Imu Async Spinner: will process the imu queue only, instead of ROS' global
-  // queue. A value of 0 means to use the number of processor cores.
-  static constexpr size_t kImuSpinnerThreads = 2u;
-  imu_async_spinner_ =
-      VIO::make_unique<ros::AsyncSpinner>(kImuSpinnerThreads, &imu_queue_);
-
+  //! Vision Subscription
   // Subscribe to stereo images. Approx time sync, should be exact though...
   // We set the queue to only 1, since we prefer to drop messages to reach
   // real-time than to be delayed...
@@ -202,16 +198,21 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
                   base_link_frame_id_,
                   right_cam_frame_id_);
 
-  // This async spinner will process the regular Global callback queue of ROS.
-  static constexpr size_t kGlobalSpinnerThreads = 2u;
-  async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
+  //! IMU Spinner
+  if (vio_params_.parallel_run_) {
+    // Imu Async Spinner: will process the imu queue only, instead of ROS'
+    // global
+    // queue. A value of 0 means to use the number of processor cores.
+    static constexpr size_t kImuSpinnerThreads = 2u;
+    imu_async_spinner_ =
+        VIO::make_unique<ros::AsyncSpinner>(kImuSpinnerThreads, &imu_queue_);
 
-  // Start async spinners to get input data.
-  if (!shutdown_) {
-    CHECK(imu_async_spinner_);
-    imu_async_spinner_->start();
-    CHECK(async_spinner_);
-    async_spinner_->start();
+    //! Vision Spinner
+    // This async spinner will process the regular Global callback queue of ROS.
+    static constexpr size_t kGlobalSpinnerThreads = 2u;
+    async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
+  } else {
+    LOG(INFO) << "RosOnlineDataProvider running in sequential mode.";
   }
 }
 
@@ -219,13 +220,55 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
   VLOG(1) << "RosOnlineDataProvider destructor called.";
   imu_queue_.disable();
 
-  LOG(INFO) << "Shutting down queues ROS Async Spinner.";
-  CHECK(imu_async_spinner_);
-  imu_async_spinner_->stop();
-  CHECK(async_spinner_);
-  async_spinner_->stop();
+  if (imu_async_spinner_) imu_async_spinner_->stop();
+  if (async_spinner_) async_spinner_->stop();
 
   LOG(INFO) << "RosOnlineDataProvider successfully shutdown.";
+}
+
+bool RosOnlineDataProvider::spin() {
+  if (!shutdown_) {
+    if (vio_params_.parallel_run_) {
+      return parallelSpin();
+    } else {
+      return sequentialSpin();
+    }
+  } else {
+    return false;
+  }
+}
+
+bool RosOnlineDataProvider::parallelSpin() {
+  CHECK(vio_params_.parallel_run_);
+  // Start async spinners to get input data (only once!).
+  if (!started_async_spinners_) {
+    VLOG(10) << "Starting Async spinners.";
+    CHECK(imu_async_spinner_);
+    imu_async_spinner_->start();
+    CHECK(async_spinner_);
+    async_spinner_->start();
+    started_async_spinners_ = true;
+  } else {
+    VLOG(10) << "Async spinners already started.";
+  }
+  return true;
+}
+
+bool RosOnlineDataProvider::sequentialSpin() {
+  CHECK(!vio_params_.parallel_run_)
+      << "This should be only running if we are in sequential mode!";
+  CHECK(!imu_async_spinner_) << "There should not be an IMU async spinner "
+                                "constructed if in sequential mode.";
+  CHECK(!async_spinner_) << "There should not be a general async spinner "
+                            "constructed if in sequential mode.";
+  CHECK(imu_queue_.isEnabled());
+  // First call callbacks in our custom IMU queue.
+  imu_queue_.callAvailable(ros::WallDuration(0.1));
+  // Then call the rest of callbacks.
+  // which is the same as:
+  // ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0));
+  ros::spinOnce();
+  return true;
 }
 
 // TODO(marcus): with the readRosImage, this is a slow callback. Might be too
@@ -264,10 +307,14 @@ void RosOnlineDataProvider::callbackCameraInfo(
   CHECK_GE(vio_params_.camera_params_.size(), 2u);
 
   // Initialize CameraParams for pipeline.
-  utils::msgCamInfoToCameraParams(
-      left_msg, base_link_frame_id_, left_cam_frame_id_, &vio_params_.camera_params_.at(0));
-  utils::msgCamInfoToCameraParams(
-      right_msg, base_link_frame_id_, right_cam_frame_id_, &vio_params_.camera_params_.at(1));
+  utils::msgCamInfoToCameraParams(left_msg,
+                                  base_link_frame_id_,
+                                  left_cam_frame_id_,
+                                  &vio_params_.camera_params_.at(0));
+  utils::msgCamInfoToCameraParams(right_msg,
+                                  base_link_frame_id_,
+                                  right_cam_frame_id_,
+                                  &vio_params_.camera_params_.at(1));
 
   vio_params_.camera_params_.at(0).print();
   vio_params_.camera_params_.at(1).print();
@@ -367,6 +414,5 @@ void RosOnlineDataProvider::publishStaticTf(const gtsam::Pose3& pose,
   utils::poseToMsgTF(pose, &static_transform_stamped.transform);
   static_broadcaster.sendTransform(static_transform_stamped);
 }
-
 
 }  // namespace VIO
