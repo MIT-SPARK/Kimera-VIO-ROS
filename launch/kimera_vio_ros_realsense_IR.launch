@@ -12,7 +12,7 @@
   <arg name="should_use_sim_time" default="false"/>
 
   <!-- Only used when parsing a rosbag -->
-  <arg name="rosbag_path" default="/home/yunchang/data/kitti_2011_09_26_drive_0005_unsynced.bag"
+  <arg name="rosbag_path" default="default.bag"
        unless="$(arg online)"/>"/>
 
   <!-- Frame IDs. These DO NOT match frame id's on the video streams, as the 
