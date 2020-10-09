@@ -36,7 +36,9 @@ def transform_msg_from_csv(path_to_csv, child_frame_id, frame_id):
         tf_stamped = geometry_msgs.msg.TransformStamped()
         tf_stamped.header.frame_id = frame_id
         tf_stamped.child_frame_id = child_frame_id
-        tf_stamped.header.stamp = rospy.Time.from_sec(tf['#timestamp']*1e-9) # ns to sec
+        # tf_stamped.header.stamp = rospy.Time.from_sec(tf["#timestamp"]*1e-9) # ns to sec
+        # Assumes timestamps are in the first column
+        tf_stamped.header.stamp = rospy.Time.from_sec(tf[0]*1e-9) # ns to sec
         tf_stamped.transform.translation.x = tf['x']
         tf_stamped.transform.translation.y = tf['y']
         tf_stamped.transform.translation.z = tf['z']
