@@ -27,6 +27,7 @@
 #include <kimera-vio/backend/VioBackEnd-definitions.h>
 #include <kimera-vio/frontend/StereoVisionFrontEnd-definitions.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
+#include <kimera-vio/mesh/Mesh.h>
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>
 #include <kimera-vio/visualizer/Visualizer3D.h>
@@ -94,7 +95,7 @@ void RosVisualizer::publishBackendOutput(const BackendOutput::ConstPtr& output) 
 }
 
 void RosVisualizer::publishFrontendOutput(
-    const FrontendOutput::ConstPtr& output) const {
+    const StereoFrontendOutput::ConstPtr& output) const {
   CHECK(output);
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
@@ -234,7 +235,7 @@ void RosVisualizer::publishPerFrameMesh3D(
     // Returns indices of points in the 3D mesh corresponding to the
     // vertices
     // in the 2D mesh.
-    int p0_id, p1_id, p2_id;
+    Mesh3D::VertexId p0_id, p1_id, p2_id;
     Mesh3D::VertexType vtx0, vtx1, vtx2;
     if (mesh_3d.getVertex(lmk0_id, &vtx0, &p0_id) &&
         mesh_3d.getVertex(lmk1_id, &vtx1, &p1_id) &&
@@ -379,7 +380,7 @@ void RosVisualizer::publishState(const BackendOutput::ConstPtr& output) const {
 }
 
 void RosVisualizer::publishFrontendStats(
-    const FrontendOutput::ConstPtr& output) const {
+    const StereoFrontendOutput::ConstPtr& output) const {
   CHECK(output);
 
   // Get frontend data for resiliency output
@@ -415,7 +416,7 @@ void RosVisualizer::publishFrontendStats(
 }
 
 void RosVisualizer::publishResiliency(
-    const FrontendOutput::ConstPtr& frontend_output,
+    const StereoFrontendOutput::ConstPtr& frontend_output,
     const BackendOutput::ConstPtr& backend_output) const {
   CHECK(frontend_output);
   CHECK(backend_output);

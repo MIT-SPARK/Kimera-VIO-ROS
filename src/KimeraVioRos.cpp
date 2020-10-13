@@ -19,8 +19,6 @@
 #include <std_srvs/TriggerResponse.h>
 
 // Dependencies from VIO
-#include <kimera-vio/pipeline/Pipeline-definitions.h>
-#include <kimera-vio/pipeline/Pipeline.h>
 #include <kimera-vio/utils/Timer.h>
 
 // Dependencies from this repository
@@ -80,7 +78,7 @@ bool KimeraVioRos::runKimeraVio() {
   // Then, create Kimera-VIO from scratch.
   VLOG(1) << "Creating Kimera-VIO.";
   CHECK(ros_display_);
-  vio_pipeline_ = VIO::make_unique<VIO::Pipeline>(
+  vio_pipeline_ = VIO::make_unique<VIO::StereoPipeline>(
       *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
 
@@ -107,9 +105,9 @@ bool KimeraVioRos::spin() {
                    &VIO::RosDataProviderInterface::spin,
                    data_provider_.get());
     std::future<bool> vio_viz_handle = std::async(
-        std::launch::async, &VIO::Pipeline::spinViz, vio_pipeline_.get());
+        std::launch::async, &VIO::StereoPipeline::spinViz, vio_pipeline_.get());
     std::future<bool> vio_pipeline_handle = std::async(
-        std::launch::async, &VIO::Pipeline::spin, vio_pipeline_.get());
+        std::launch::async, &VIO::StereoPipeline::spin, vio_pipeline_.get());
     // Run while ROS is ok and vio pipeline is not shutdown.
     ros::Rate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {
@@ -191,22 +189,22 @@ void KimeraVioRos::connectVIO() {
 
   // Register Data Provider callbacks
   data_provider_->registerImuSingleCallback(
-      std::bind(&VIO::Pipeline::fillSingleImuQueue,
+      std::bind(&VIO::StereoPipeline::fillSingleImuQueue,
                 std::ref(*vio_pipeline_),
                 std::placeholders::_1));
 
   data_provider_->registerImuMultiCallback(
-      std::bind(&VIO::Pipeline::fillMultiImuQueue,
+      std::bind(&VIO::StereoPipeline::fillMultiImuQueue,
                 std::ref(*vio_pipeline_),
                 std::placeholders::_1));
 
   data_provider_->registerLeftFrameCallback(
-      std::bind(&VIO::Pipeline::fillLeftFrameQueue,
+      std::bind(&VIO::StereoPipeline::fillLeftFrameQueue,
                 std::ref(*vio_pipeline_),
                 std::placeholders::_1));
 
   data_provider_->registerRightFrameCallback(
-      std::bind(&VIO::Pipeline::fillRightFrameQueue,
+      std::bind(&VIO::StereoPipeline::fillRightFrameQueue,
                 std::ref(*vio_pipeline_),
                 std::placeholders::_1));
 }

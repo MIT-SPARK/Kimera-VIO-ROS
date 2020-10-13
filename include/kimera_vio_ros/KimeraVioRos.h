@@ -7,7 +7,7 @@
 #include <std_srvs/Trigger.h>
 
 #include <kimera-vio/pipeline/Pipeline-definitions.h>
-#include <kimera-vio/pipeline/Pipeline.h>
+#include <kimera-vio/pipeline/StereoPipeline.h>
 #include <kimera-vio/utils/Macros.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
@@ -50,7 +50,7 @@ class KimeraVioRos {
 
   //! VIO
   VioParams::Ptr vio_params_;
-  Pipeline::UniquePtr vio_pipeline_;
+  StereoPipeline::UniquePtr vio_pipeline_;
 
   //! Data provider
   RosDataProviderInterface::UniquePtr data_provider_;
