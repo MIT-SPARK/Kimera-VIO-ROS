@@ -38,7 +38,9 @@ namespace VIO {
 
 RosVisualizer::RosVisualizer(const VioParams& vio_params)
     // I'm not sure we use this flag in ROS?
-    : Visualizer3D(VisualizationType::kMesh2dTo3dSparse),
+    : Visualizer3D(vio_params.frontend_type_ == FrontendType::kMonoImu
+                   ? VisualizationType::kNone
+                   : VisualizationType::kMesh2dTo3dSparse),
       nh_(),
       nh_private_("~"),
       image_size_(vio_params.camera_params_.at(0).image_size_),
@@ -95,7 +97,7 @@ void RosVisualizer::publishBackendOutput(const BackendOutput::ConstPtr& output) 
 }
 
 void RosVisualizer::publishFrontendOutput(
-    const StereoFrontendOutput::ConstPtr& output) const {
+    const FrontendOutputPacketBase::ConstPtr& output) const {
   CHECK(output);
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
@@ -380,7 +382,7 @@ void RosVisualizer::publishState(const BackendOutput::ConstPtr& output) const {
 }
 
 void RosVisualizer::publishFrontendStats(
-    const StereoFrontendOutput::ConstPtr& output) const {
+    const FrontendOutputPacketBase::ConstPtr& output) const {
   CHECK(output);
 
   // Get frontend data for resiliency output
@@ -416,7 +418,7 @@ void RosVisualizer::publishFrontendStats(
 }
 
 void RosVisualizer::publishResiliency(
-    const StereoFrontendOutput::ConstPtr& frontend_output,
+    const FrontendOutputPacketBase::ConstPtr& frontend_output,
     const BackendOutput::ConstPtr& backend_output) const {
   CHECK(frontend_output);
   CHECK(backend_output);

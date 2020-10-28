@@ -26,7 +26,7 @@
 #include <pose_graph_tools/PoseGraphNode.h>
 
 #include <kimera-vio/backend/VioBackEnd-definitions.h>
-#include <kimera-vio/frontend/StereoVisionFrontEnd-definitions.h>
+#include <kimera-vio/frontend/FrontendOutputPacketBase.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/visualizer/Visualizer3D.h>
@@ -68,7 +68,7 @@ class RosVisualizer : public Visualizer3D {
   // Publish VIO outputs.
   virtual void publishBackendOutput(const BackendOutput::ConstPtr& output);
 
-  virtual void publishFrontendOutput(const StereoFrontendOutput::ConstPtr& output) const;
+  virtual void publishFrontendOutput(const FrontendOutputPacketBase::ConstPtr& output) const;
 
   virtual void publishMesherOutput(const MesherOutput::ConstPtr& output) const;
 
@@ -85,9 +85,9 @@ class RosVisualizer : public Visualizer3D {
 
   void publishState(const BackendOutput::ConstPtr& output) const;
 
-  void publishFrontendStats(const StereoFrontendOutput::ConstPtr& output) const;
+  void publishFrontendStats(const FrontendOutputPacketBase::ConstPtr& output) const;
 
-  void publishResiliency(const StereoFrontendOutput::ConstPtr& frontend_output,
+  void publishResiliency(const FrontendOutputPacketBase::ConstPtr& frontend_output,
                          const BackendOutput::ConstPtr& backend_output) const;
 
   void publishImuBias(const BackendOutput::ConstPtr& output) const;
