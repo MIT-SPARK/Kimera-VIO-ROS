@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name"   value="uHumans2"/>
+  <arg name="dataset_name"   default="uHumans2"/>
   <arg name="verbosity"      default="0"/>
   <arg name="online"         default="true"/>
   <arg name="use_lcd"        default="true"/>
@@ -16,14 +16,12 @@
   <arg name="use_online_cam_params" default="false"/>
 
   <!-- Change rosbag path if online argument is false -->
-  <arg name="rosbag_path"
-    default="/home/marcus/catkin_ws/src/tesse_ros_bridge/ROS/scripts/rosbags/sequence_1_redo/s1_00h.bag"
-    unless="$(arg online)"/>
+  <arg name="rosbag_path" default="" unless="$(arg online)"/>
 
   <!-- Frame IDs -->
-  <arg name="base_link_frame_id" value="base_link_kimera"/>
-  <arg name="left_cam_frame_id"  value="left_cam_kimera"/>
-  <arg name="right_cam_frame_id" value="right_cam_kimera"/>
+  <arg name="base_link_frame_id" default="base_link_kimera"/>
+  <arg name="left_cam_frame_id"  default="left_cam_kimera"/>
+  <arg name="right_cam_frame_id" default="right_cam_kimera"/>
 
     <!-- Subscriber Topics -->
   <arg name="left_cam_topic"        value="/tesse/left_cam/mono/image_raw"/>
@@ -35,29 +33,9 @@
 
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
-  <arg name="odometry_ground_truth_topic" value="$(arg gt_topic)"/>
-
-  <!-- Perform stereo dense reconstruction? -->
-  <arg name="run_stereo_dense"     default="false"/>
-  <group ns="stereo_gray" if="$(arg run_stereo_dense)">
-    <!-- StereoBM -->
-    <node name="stereo_image_proc" pkg="stereo_image_proc"
-      type="stereo_image_proc" clear_params="true" output="screen">
-      <!-- Input -->
-      <remap from="left/image_raw"          to="$(arg left_cam_topic)"/>
-      <remap from="right/image_raw"         to="$(arg right_cam_topic)"/>
-
-      <remap from="left/camera_info"        to="$(arg left_cam_info_topic)"/>
-      <remap from="right/camera_info"       to="$(arg right_cam_info_topic)"/>
-      <!-- Output -->
-      <remap from="/stereo_gray/points2"    to="/stereo_gray/points2"/>
-      <remap from="/stereo_gray/disparity"  to="/stereo_gray/disparity"/>
-      <!-- Params -->
-      <param name="approximate_sync" value="true" />
-    </node>
-  </group>
+  <arg name="odometry_ground_truth_topic" default="$(arg gt_topic)"/>
 
   <!-- Launch actual pipeline -->
-  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros_uhumans1.launch"
     pass_all_args="true"/>
 </launch>

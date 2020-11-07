@@ -13,6 +13,8 @@
 
 #include <kimera-vio/pipeline/Pipeline-definitions.h>
 
+#include "kimera_vio_ros/utils/UtilsRos.h"
+
 namespace VIO {
 
 RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
@@ -35,15 +37,25 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
       k_(0u),
       k_last_kf_(0u),
       k_last_imu_(0u),
-      k_last_gt_(0u) {
-  LOG(INFO) << "Starting Kimera-VIO wrapper offline mode.";
-
+      k_last_gt_(0u),
+      log_gt_data_(false),
+      is_header_written_poses_vio_(false),
+      output_gt_poses_csv_("traj_gt.csv") {
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
   CHECK(nh_private_.getParam("left_cam_rosbag_topic", left_imgs_topic_));
   CHECK(nh_private_.getParam("right_cam_rosbag_topic", right_imgs_topic_));
   CHECK(nh_private_.getParam("imu_rosbag_topic", imu_topic_));
   CHECK(nh_private_.getParam("ground_truth_odometry_rosbag_topic",
                              gt_odom_topic_));
+  CHECK(nh_private_.getParam("log_gt_data", log_gt_data_));
+
+  LOG(INFO) << "Constructing RosbagDataProvider from path: \n"
+            << " - Rosbag Path: " << rosbag_path_.c_str() << '\n'
+            << "With ROS topics: \n"
+            << " - Left cam: " << left_imgs_topic_.c_str() << '\n'
+            << " - Right cam: " << right_imgs_topic_.c_str() << '\n'
+            << " - IMU: " << imu_topic_.c_str() << '\n'
+            << " - GT odom: " << gt_odom_topic_.c_str();
 
   CHECK(!rosbag_path_.empty());
   CHECK(!left_imgs_topic_.empty());
@@ -66,26 +78,46 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
   }
 }
 
-bool RosbagDataProvider::spin() {
-  if (k_ == 0) {
-    // Initialize!
-    // Parse data from rosbag first thing:
-    CHECK(parseRosbag(rosbag_path_, &rosbag_data_));
+void RosbagDataProvider::initialize() {
+  CHECK_EQ(k_, 0u);
+  LOG(INFO) << "Initialize Rosbag Data Provider.";
+  // Parse data from rosbag first thing:
+  CHECK(parseRosbag(rosbag_path_, &rosbag_data_));
 
-    // Autoinitialize if necessary:
-    if (vio_params_.backend_params_->autoInitialize_ == 0) {
-      LOG(WARNING) << "Using initial ground-truth state for initialization.";
-      vio_params_.backend_params_->initial_ground_truth_state_ =
-          getGroundTruthVioNavState(0u);  // Send first gt state.
-    }
+  // Autoinitialize if necessary: this changes the values for anyone
+  // holding vio_params (such as the VIO), since backend params are a ptr.
+  if (vio_params_.backend_params_->autoInitialize_ == 0) {
+    vio_params_.backend_params_->initial_ground_truth_state_ =
+        getGroundTruthVioNavState(0u);  // Send first gt state.
+    LOG(WARNING) << "Using initial ground-truth state for initialization:";
+    vio_params_.backend_params_->initial_ground_truth_state_.print();
+  }
+}
+
+void RosbagDataProvider::sendImuDataToVio() {
+  CHECK(imu_single_callback_) << "Did you forget to register the IMU callback?";
+  for (const sensor_msgs::ImuConstPtr& imu_msg : rosbag_data_.imu_msgs_) {
+    const ImuStamp& imu_data_timestamp = imu_msg->header.stamp.toNSec();
+    ImuAccGyr imu_accgyr;
+    imu_accgyr(0) = imu_msg->linear_acceleration.x;
+    imu_accgyr(1) = imu_msg->linear_acceleration.y;
+    imu_accgyr(2) = imu_msg->linear_acceleration.z;
+    imu_accgyr(3) = imu_msg->angular_velocity.x;
+    imu_accgyr(4) = imu_msg->angular_velocity.y;
+    imu_accgyr(5) = imu_msg->angular_velocity.z;
+    imu_single_callback_(ImuMeasurement(imu_data_timestamp, imu_accgyr));
+  }
+}
+
+bool RosbagDataProvider::spin() {
+  if (k_ == 0u) {
+    // Send IMU data directly to VIO for speed boost
+    sendImuDataToVio();
   }
 
   // We break the while loop (but increase k_!) if we run in sequential mode.
   while (k_ < rosbag_data_.left_imgs_.size()) {
     if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
-      // Main spin of the data provider: Interpolates IMU data
-      // and builds StereoImuSyncPacket
-      // (Think of this as the spin of the other parser/data-providers)
       const Timestamp& timestamp_frame_k = rosbag_data_.timestamps_.at(k_);
 
       static const CameraParams& left_cam_info =
@@ -115,7 +147,7 @@ bool RosbagDataProvider::spin() {
             right_cam_info,
             readRosImage(rosbag_data_.right_imgs_.at(k_))));
 
-        VLOG(10) << "Finished VIO processing for frame k = " << k_;
+        VLOG(10) << "Sent left/right images to VIO for frame k = " << k_;
 
         // Publish VIO output if any.
         // TODO(Toni) this could go faster if running in another thread or
@@ -148,8 +180,9 @@ bool RosbagDataProvider::spin() {
     k_++;
     if (!vio_params_.parallel_run_) {
       // Break while loop (but keep increasing k_!) if we run in sequential
-      // mode.
-      break;
+      // mode. We actually return instead of break, to avoid re-printing that
+      // the rosbag processing has finished.
+      return true;
     }
   }  // End of for loop over rosbag images.
   LOG(INFO) << "Rosbag processing finished.";
@@ -172,7 +205,7 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   topics.push_back(right_imgs_topic_);
   topics.push_back(imu_topic_);
   if (!gt_odom_topic_.empty()) {
-    CHECK(vio_params_.backend_params_->autoInitialize_ == 0)
+    LOG_IF(WARNING, vio_params_.backend_params_->autoInitialize_ != 0)
         << "Provided a gt_odom_topic; but autoInitialize "
            "(BackendParameters.yaml) is not set to 0,"
            " meaning no ground-truth initialization will be done... "
@@ -189,6 +222,7 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   // Query rosbag for given topics
   rosbag::View view(bag, rosbag::TopicQuery(topics));
 
+  int imu_msg_count = 0;
   // Keep track of this since we expect IMU data before an image.
   bool start_parsing_stereo = false;
   // For some datasets, we have duplicated measurements for the same time.
@@ -199,26 +233,14 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
     // Check if msg is an IMU measurement.
     sensor_msgs::ImuConstPtr imu_msg = msg.instantiate<sensor_msgs::Imu>();
     if (imu_msg != nullptr && msg_topic == imu_topic_) {
-      ImuAccGyr imu_accgyr;
-      imu_accgyr(0) = imu_msg->linear_acceleration.x;
-      imu_accgyr(1) = imu_msg->linear_acceleration.y;
-      imu_accgyr(2) = imu_msg->linear_acceleration.z;
-      imu_accgyr(3) = imu_msg->angular_velocity.x;
-      imu_accgyr(4) = imu_msg->angular_velocity.y;
-      imu_accgyr(5) = imu_msg->angular_velocity.z;
       const ImuStamp& imu_data_timestamp = imu_msg->header.stamp.toNSec();
       if (imu_data_timestamp > last_imu_timestamp) {
-        // Send IMU data directly to VIO at parse level for speed boost:
-        CHECK(imu_single_callback_)
-            << "Did you forget to register the IMU callback?";
-        imu_single_callback_(ImuMeasurement(imu_data_timestamp, imu_accgyr));
-
+        VLOG(10) << "IMU msg count: " << imu_msg_count++;
         rosbag_data->imu_msgs_.push_back(imu_msg);
         last_imu_timestamp = imu_data_timestamp;
       } else {
-        ROS_FATAL(
-            "IMU timestamps in rosbag are out of order: consider re-ordering "
-            "rosbag.");
+        LOG(FATAL) << "IMU timestamps in rosbag are out of order: consider "
+                      "re-ordering rosbag.";
       }
       start_parsing_stereo = true;
       continue;
@@ -236,12 +258,11 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
         } else if (msg_topic == right_imgs_topic_) {
           rosbag_data->right_imgs_.push_back(img_msg);
         } else {
-          ROS_WARN_STREAM("Img with unexpected topic: " << msg_topic);
+          LOG(WARNING) << "Img with unexpected topic: " << msg_topic;
         }
       } else {
-        ROS_WARN(
-            "Skipping first frame in rosbag, since IMU data not yet "
-            "available.");
+        LOG(WARNING) << "Skipping first frame in rosbag, since IMU data not "
+                        "yet available.";
       }
       continue;
     }
@@ -252,65 +273,82 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
     if (gt_odom_msg != nullptr) {
       if (msg_topic == gt_odom_topic_) {
         rosbag_data->gt_odometry_.push_back(gt_odom_msg);
+        if (log_gt_data_) {
+          logGtData(gt_odom_msg);
+        }
       } else {
-        ROS_ERROR(
-            "Unrecognized topic name for odometry msg. We were"
-            " expecting ground-truth odometry on this topic.");
+        LOG(ERROR) << "Unrecognized topic name for odometry msg. We were"
+                      " expecting ground-truth odometry on this topic: "
+                   << msg_topic;
       }
     } else {
-      ROS_ERROR_STREAM(
-          "Could not find the type of this rosbag msg from topic:\n"
-          << msg.getTopic());
+      LOG(ERROR) << "Could not find the type of this rosbag msg from topic:\n"
+                 << msg_topic;
     }
-    continue;
   }
   bag.close();
 
   // Sanity check:
-  ROS_ERROR_COND(rosbag_data->left_imgs_.size() == 0 ||
-                     rosbag_data->right_imgs_.size() == 0,
-                 "No images parsed from rosbag.");
-  ROS_ERROR_COND(
-      rosbag_data->left_imgs_.size() != rosbag_data->right_imgs_.size(),
-      "Unequal number of images from left and right cmaeras.");
-  ROS_ERROR_COND(
-      rosbag_data->imu_msgs_.size() <= rosbag_data->left_imgs_.size(),
-      "Less than or equal number of imu data as image data.");
-  ROS_ERROR_COND(
-      !gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() == 0,
-      "Requested to parse ground-truth odometry, but parsed 0 msgs.");
-  ROS_ERROR_COND(
-      !gt_odom_topic_.empty() &&
-          rosbag_data->gt_odometry_.size() < rosbag_data->left_imgs_.size(),
-      "Fewer ground_truth data than image data.");
+  LOG_IF(FATAL,
+         rosbag_data->left_imgs_.size() == 0 ||
+             rosbag_data->right_imgs_.size() == 0)
+      << "No images parsed from rosbag.";
+  LOG_IF(FATAL,
+         rosbag_data->left_imgs_.size() != rosbag_data->right_imgs_.size())
+      << "Unequal number of images from left and right cameras.";
+  LOG_IF(FATAL, rosbag_data->imu_msgs_.size() <= rosbag_data->left_imgs_.size())
+      << "Less than or equal number of imu data as image data.";
+  LOG_IF(FATAL,
+         !gt_odom_topic_.empty() && rosbag_data->gt_odometry_.size() == 0)
+      << "Requested to parse ground-truth odometry, but parsed 0 msgs.";
+  LOG_IF(WARNING,
+         !gt_odom_topic_.empty() &&
+             rosbag_data->gt_odometry_.size() < rosbag_data->left_imgs_.size())
+      << "Fewer ground_truth data than image data.";
   LOG(INFO) << "Finished parsing rosbag data.";
   return true;
 }
 
+void RosbagDataProvider::logGtData(const nav_msgs::OdometryConstPtr& odometry) {
+  CHECK(odometry);
+  // We log the poses in csv format for later alignement and analysis.
+  std::ofstream& output_stream = output_gt_poses_csv_.ofstream_;
+  bool& is_header_written = is_header_written_poses_vio_;
+
+  // First, write header, but only once.
+  if (!is_header_written) {
+    output_stream << "#timestamp,x,y,z,qw,qx,qy,qz,vx,vy,vz,"
+                  << "bgx,bgy,bgz,bax,bay,baz" << std::endl;
+    is_header_written = true;
+  }
+  output_stream << odometry->header.stamp.toNSec()   << ","  //
+                << odometry->pose.pose.position.x    << ","    //
+                << odometry->pose.pose.position.y    << ","    //
+                << odometry->pose.pose.position.z    << ","    //
+                << odometry->pose.pose.orientation.w << ","
+                << odometry->pose.pose.orientation.x << ","
+                << odometry->pose.pose.orientation.y << ","
+                << odometry->pose.pose.orientation.z << ","
+                << odometry->twist.twist.linear.x    << ","
+                << odometry->twist.twist.linear.y    << ","
+                << odometry->twist.twist.linear.z    << ","
+                << 0.0 << ","         //
+                << 0.0 << ","         //
+                << 0.0 << ","         //
+                << 0.0 << ","          //
+                << 0.0 << ","          //
+                << 0.0                 //
+                << std::endl;
+
+}
+
 VioNavState RosbagDataProvider::getGroundTruthVioNavState(
     const size_t& k_frame) const {
-  CHECK_LE(k_frame, rosbag_data_.gt_odometry_.size());
+  CHECK_LT(k_frame, rosbag_data_.gt_odometry_.size());
   nav_msgs::Odometry gt_odometry = *(rosbag_data_.gt_odometry_.at(k_frame));
-  // World to Body rotation
-  gtsam::Rot3 W_R_B =
-      gtsam::Rot3::Quaternion(gt_odometry.pose.pose.orientation.w,
-                              gt_odometry.pose.pose.orientation.x,
-                              gt_odometry.pose.pose.orientation.y,
-                              gt_odometry.pose.pose.orientation.z);
-  gtsam::Point3 position(gt_odometry.pose.pose.position.x,
-                         gt_odometry.pose.pose.position.y,
-                         gt_odometry.pose.pose.position.z);
-  gtsam::Vector3 velocity(gt_odometry.twist.twist.linear.x,
-                          gt_odometry.twist.twist.linear.y,
-                          gt_odometry.twist.twist.linear.z);
-  VioNavState gt_init;
-  gt_init.pose_ = gtsam::Pose3(W_R_B, position);
-  gt_init.velocity_ = velocity;
-  // TODO(Toni): how can we get the ground-truth biases? For sim, ins't it 0?
-  gtsam::Vector3 gyro_bias(0.0, 0.0, 0.0);
-  gtsam::Vector3 acc_bias(0.0, 0.0, 0.0);
-  gt_init.imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
-  return gt_init;
+  VioNavState vio_nav_state;
+  utils::msgGtOdomToVioNavState(gt_odometry, &vio_nav_state);
+  return vio_nav_state;
 }
 
 void RosbagDataProvider::publishRosbagInfo(const Timestamp& timestamp) {
@@ -326,36 +364,37 @@ void RosbagDataProvider::publishClock(const Timestamp& timestamp) const {
 
 void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
   // Publish all imu messages to ROS:
-  if (rosbag_data_.imu_msgs_.size() > k_last_imu_) {
+  if (k_last_imu_ < rosbag_data_.imu_msgs_.size()) {
     while (timestamp_last_imu_ < timestamp_kf &&
            k_last_imu_ < rosbag_data_.imu_msgs_.size()) {
       imu_pub_.publish(rosbag_data_.imu_msgs_.at(k_last_imu_));
-      k_last_imu_++;
       timestamp_last_imu_ =
           rosbag_data_.imu_msgs_.at(k_last_imu_)->header.stamp.toNSec();
+      k_last_imu_++;
     }
   }
 
   // Publish ground-truth data if available:
-  if (rosbag_data_.gt_odometry_.size() > k_last_gt_) {
+  if (k_last_gt_ < rosbag_data_.gt_odometry_.size()) {
     while (timestamp_last_gt_ < timestamp_kf &&
            k_last_gt_ < rosbag_data_.gt_odometry_.size()) {
       gt_odometry_pub_.publish(rosbag_data_.gt_odometry_.at(k_last_gt_));
-      k_last_gt_++;
       timestamp_last_gt_ =
           rosbag_data_.gt_odometry_.at(k_last_gt_)->header.stamp.toNSec();
+      k_last_gt_++;
     }
   }
 
   // Publish left and right images:
-  if (rosbag_data_.left_imgs_.size() > k_last_kf_ &&
-      rosbag_data_.right_imgs_.size() > k_last_kf_) {
+  if (k_last_kf_ < rosbag_data_.left_imgs_.size() &&
+      k_last_kf_ < rosbag_data_.right_imgs_.size()) {
     while (timestamp_last_kf_ < timestamp_kf &&
-           k_last_kf_ < rosbag_data_.left_imgs_.size()) {
+           k_last_kf_ < rosbag_data_.left_imgs_.size() &&
+           k_last_kf_ < rosbag_data_.right_imgs_.size()) {
       left_img_pub_.publish(rosbag_data_.left_imgs_.at(k_last_kf_));
       right_img_pub_.publish(rosbag_data_.right_imgs_.at(k_last_kf_));
-      k_last_kf_++;
       timestamp_last_kf_ = rosbag_data_.timestamps_.at(k_last_kf_);
+      k_last_kf_++;
     }
   }
 }

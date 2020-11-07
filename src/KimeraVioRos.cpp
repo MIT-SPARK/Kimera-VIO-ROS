@@ -71,6 +71,16 @@ bool KimeraVioRos::runKimeraVio() {
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
 
+  // Second, destroy dataset parser.
+  VLOG(1) << "Destroy Data Provider.";
+  data_provider_.reset();
+
+  // Then, create dataset parser. This must be before vio pipeline bcs
+  // the data provider may modify the init gt pose.
+  VLOG(1) << "Creating Data Provider.";
+  data_provider_ = createDataProvider(*vio_params_);
+  CHECK(data_provider_) << "Data provider construction failed.";
+
   // Then, create Kimera-VIO from scratch.
   VLOG(1) << "Creating Kimera-VIO.";
   CHECK(ros_display_);
@@ -79,15 +89,6 @@ bool KimeraVioRos::runKimeraVio() {
                                                   std::move(ros_display_),
                                                   std::move(ros_loop_closure_));
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
-
-  // Second, destroy dataset parser.
-  VLOG(1) << "Destroy Data Provider.";
-  data_provider_.reset();
-
-  // Then, create dataset parser.
-  VLOG(1) << "Creating Data Provider.";
-  data_provider_ = createDataProvider(*vio_params_);
-  CHECK(data_provider_) << "Data provider construction failed.";
 
   // Finally, connect data_provider and vio_pipeline
   VLOG(1) << "Connecting Vio Pipeline and Data Provider.";
@@ -105,20 +106,26 @@ bool KimeraVioRos::spin() {
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (vio_params_->parallel_run_) {
-    std::future<bool> vio_viz_handle =
+    // TODO(Toni): Technically, we can spare a thread with online dataprovider
+    // since we can simply call .start() on the async spinners at the ctor level
+    std::future<bool> data_provider_handle =
         std::async(std::launch::async,
-                   &VIO::Pipeline::spinViz,
-                   vio_pipeline_.get());
+                   &VIO::RosDataProviderInterface::spin,
+                   data_provider_.get());
+    std::future<bool> vio_viz_handle = std::async(
+        std::launch::async, &VIO::Pipeline::spinViz, vio_pipeline_.get());
     std::future<bool> vio_pipeline_handle = std::async(
         std::launch::async, &VIO::Pipeline::spin, vio_pipeline_.get());
     // Run while ROS is ok and vio pipeline is not shutdown.
-    // Ideally make a thread that shutdowns pipeline if ros is not ok.
-    ros::Rate rate(20);  // Check pipeline status at 20Hz
+    ros::Rate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {
-      // Print stats at 10hz
-      LOG_EVERY_N(INFO, 10) << vio_pipeline_->printStatistics();
+      // Print stats at 1hz
+      LOG_EVERY_N(INFO, 20) << vio_pipeline_->printStatistics();
+      // Mind that if ROS is using sim_time, this will block if /clock
+      // is not published (i.e. when pausing the rosbag).
       rate.sleep();
     }
+
     if (!restart_vio_pipeline_) {
       LOG(INFO) << "Shutting down ROS and Kimera-VIO.";
       ros::shutdown();
@@ -127,10 +134,13 @@ bool KimeraVioRos::spin() {
     }
     // TODO(Toni): right now vio shutsdown data provider, maybe we should
     // explicitly shutdown data provider: data_provider_->shutdown();
-    vio_pipeline_->shutdown();
+    if (!vio_pipeline_->isShutdown()) vio_pipeline_->shutdown();
     LOG(INFO) << "Joining Kimera-VIO thread.";
     vio_pipeline_handle.get();
     LOG(INFO) << "Kimera-VIO thread joined successfully.";
+    LOG(INFO) << "Joining Ros Data Provider thread.";
+    data_provider_handle.get();
+    LOG(INFO) << "Ros Data Provider thread joined successfully.";
     LOG(INFO) << "Joining RosDisplay thread.";
     is_pipeline_successful = !vio_viz_handle.get();
     LOG(INFO) << "RosDisplay thread joined successfully.";
@@ -160,8 +170,8 @@ bool KimeraVioRos::spin() {
   return is_pipeline_successful;
 }
 
-RosDataProviderInterface::UniquePtr
-KimeraVioRos::createDataProvider(const VioParams& vio_params) {
+RosDataProviderInterface::UniquePtr KimeraVioRos::createDataProvider(
+    const VioParams& vio_params) {
   bool online_run = false;
   CHECK(nh_private_.getParam("online_run", online_run));
   if (online_run) {
@@ -169,9 +179,11 @@ KimeraVioRos::createDataProvider(const VioParams& vio_params) {
     return VIO::make_unique<RosOnlineDataProvider>(vio_params);
   } else {
     // Parse rosbag.
-    return VIO::make_unique<RosbagDataProvider>(vio_params);
+    auto rosbag_data_provider =
+        VIO::make_unique<RosbagDataProvider>(vio_params);
+    rosbag_data_provider->initialize();
+    return rosbag_data_provider;
   }
-  return nullptr;
 }
 
 void KimeraVioRos::connectVIO() {

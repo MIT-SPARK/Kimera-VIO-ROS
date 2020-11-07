@@ -132,20 +132,6 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
   roslaunch kimera_vio_ros kimera_vio_ros_euroc.launch online:=false rosbag_path:="PATH/TO/ROSBAG"
   ```
 
-## Other datasets
-The launch file and parameters can also be configured for other datasets. For example, here we provide a [kitti rosbag for testing](https://drive.google.com/drive/folders/1mPdc1XFa5y1NrZtffYTkrkGaxj5wvX0T?usp=sharing). To run, in one terminal, launch the Kimera ROS wrapper with the launch file we configured for kitti:
-```
-roslaunch kimera_vio_ros kimera_vio_ros_kitti.launch
-```
-  - In another terminal, launch a Kitti rosbag:
-```
-rosbag play --clock /PATH/TO/KITTI_ROSBAG
-```
-  - In rviz, you can use the provided config file provided at rviz/kimera_vio_kitti.rviz
-  ```bash
-  rviz -d $(rospack find kimera_vio_ros)/rviz/kimera_vio_ros_kitti.rviz
-  ```
-
 ## Running Unit tests
 
 To run unit tests using catkin for this specific package, call (after building the package and sourcing the workspace):

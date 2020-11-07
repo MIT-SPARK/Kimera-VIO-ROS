@@ -30,10 +30,35 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   virtual ~RosOnlineDataProvider();
 
  public:
+  /**
+   * @brief spin Runs the ros online data provider.
+   * Parallel mode: starts async spinners, and returns true unless shutdown.
+   * Sequential mode: calls ros::spinOnce
+   * Then, both keep returning true unless shutdown.
+   * @return True if nominal spin, false on shutdown.
+   */
+  bool spin() override;
+
   // Checks the current status of reinitialization flag
   inline bool getReinitFlag() const { return reinit_flag_; }
   // Resets the current status of reinitialization flag
   inline void resetReinitFlag() { reinit_packet_.resetReinitFlag(); }
+
+ protected:
+  /**
+   * @brief parallelSpin Runs the dataprovider in parallel mode. It just
+   * starts the asynchronous spinners and then returns true all the time.
+   * @return True all the time.
+   */
+  bool parallelSpin();
+
+  /**
+   * @brief sequentialSpin Runs the dataprovider in sequential mode.
+   * It calls the callbacks in the dedicated IMU queue and the rest of callbacks
+   * (images) by using ros::spinOnce.
+   * @return True all the time.
+   */
+  bool sequentialSpin();
 
  private:
   ros::CallbackQueue imu_queue_;
@@ -56,10 +81,10 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
                           const sensor_msgs::CameraInfoConstPtr& right_msg);
 
   // IMU callback
-  void callbackIMU(const sensor_msgs::ImuConstPtr& msgIMU);
+  void callbackIMU(const sensor_msgs::ImuConstPtr& imu_msg);
 
   // GT odometry callback
-  void callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& msgGtOdom);
+  void callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& gt_odom_msg);
 
   // Reinitialization callback
   void callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag);
@@ -71,11 +96,6 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   void publishStaticTf(const gtsam::Pose3& pose,
                        const std::string& parent_frame_id,
                        const std::string& child_frame_id);
-
- private:
-  // TODO(Toni): perhaps put in utils
-  void msgGtOdomToVioNavState(const nav_msgs::Odometry::ConstPtr& gt_odom,
-                              VioNavState* vio_navstate);
 
  private:
   // Define image transport for this and derived classes.
@@ -116,6 +136,9 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Ground-truth initialization pose received flag
   bool gt_init_pose_received_ = false;
   bool camera_info_received_ = false;
+
+  // Have the async spinners start?
+  bool started_async_spinners_ = false;
 
   // Frame ids
   std::string base_link_frame_id_;
