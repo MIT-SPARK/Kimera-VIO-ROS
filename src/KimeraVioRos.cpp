@@ -111,15 +111,15 @@ bool KimeraVioRos::spin() {
     std::future<bool> vio_pipeline_handle = std::async(
         std::launch::async, &VIO::Pipeline::spin, vio_pipeline_.get());
     // Run while ROS is ok and vio pipeline is not shutdown.
-    // Ideally make a thread that shutdowns pipeline if ros is not ok.
-    ros::Rate rate(20);  // Check pipeline status at 20Hz
+    ros::Rate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {
       // Print stats at 1hz
-      // LOG_EVERY_N(INFO, 20) << vio_pipeline_->printStatistics();
-      // Once vio finishes, shutdown both VIO and ros.
-      if (vio_pipeline_->shutdownWhenFinished(0, false)) ros::shutdown();
+      LOG_EVERY_N(INFO, 20) << vio_pipeline_->printStatistics();
+      // Mind that if ROS is using sim_time, this will block if /clock
+      // is not published (i.e. when pausing the rosbag).
       rate.sleep();
     }
+
     if (!restart_vio_pipeline_) {
       LOG(INFO) << "Shutting down ROS and Kimera-VIO.";
       ros::shutdown();

@@ -284,12 +284,10 @@ void RosVisualizer::publishPerFrameMesh3D(
   msg->cloud.header.stamp = msg->header.stamp;
   msg->cloud.header.frame_id = msg->header.frame_id;
 
-  if (msg->polygons.size() > 0) {
+  if (msg->polygons.size() > 0u) {
     mesh_3d_frame_pub_.publish(msg);
   }
-
-  return;
-}  // namespace VIO
+}
 
 void RosVisualizer::publishState(const BackendOutput::ConstPtr& output) const {
   CHECK(output);
