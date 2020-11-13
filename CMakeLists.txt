@@ -30,6 +30,7 @@ cs_add_library(${PROJECT_NAME}
   src/RosOnlineDataProvider.cpp
   src/RosDisplay.cpp
   src/RosVisualizer.cpp
+  src/RosLoopClosureVisualizer.cpp
   src/utils/UtilsRos.cpp
 )
 target_link_libraries(${PROJECT_NAME} kimera_vio)

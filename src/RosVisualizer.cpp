@@ -42,7 +42,6 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
       nh_private_("~"),
       image_size_(vio_params.camera_params_.at(0).image_size_),
       image_publishers_(nullptr) {
-
   //! To publish 2d images
   image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
 
@@ -54,16 +53,12 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
   CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
   CHECK(!map_frame_id_.empty());
 
-  nh_private_.getParam("use_lcd", use_lcd_);
-
   // Publishers
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("odometry", 1, true);
   frontend_stats_pub_ =
       nh_.advertise<std_msgs::Float64MultiArray>("frontend_stats", 1);
   resiliency_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("resiliency", 1);
   imu_bias_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("imu_bias", 1);
-  trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
-  posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1);
   pointcloud_pub_ =
       nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 1, true);
   mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 1, true);
@@ -74,12 +69,14 @@ VisualizerOutput::UniquePtr RosVisualizer::spinOnce(
   publishBackendOutput(viz_input.backend_output_);
   publishFrontendOutput(viz_input.frontend_output_);
   if (viz_input.mesher_output_) publishMesherOutput(viz_input.mesher_output_);
-  // publishLcdOutput(viz_input->lcd_output_); // missing this one...
+  if (viz_input.lcd_output_)
+    lcd_visualizer_.publishLcdOutput(viz_input.lcd_output_);
   // Return empty output, since in ROS, we only publish, not display...
   return VIO::make_unique<VisualizerOutput>();
 }
 
-void RosVisualizer::publishBackendOutput(const BackendOutput::ConstPtr& output) {
+void RosVisualizer::publishBackendOutput(
+    const BackendOutput::ConstPtr& output) {
   CHECK(output);
   publishTf(output);
   if (odometry_pub_.getNumSubscribers() > 0) {
@@ -101,25 +98,13 @@ void RosVisualizer::publishFrontendOutput(
   }
 }
 
-void RosVisualizer::publishMesherOutput(const MesherOutput::ConstPtr& output) const {
+void RosVisualizer::publishMesherOutput(
+    const MesherOutput::ConstPtr& output) const {
   CHECK(output);
   if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
     publishPerFrameMesh3D(output);
   }
 }
-
-void RosVisualizer::publishLcdOutput(const LcdOutput::ConstPtr& lcd_output) {
-  CHECK(lcd_output);
-
-  publishTf(lcd_output);
-  if (trajectory_pub_.getNumSubscribers() > 0) {
-    publishOptimizedTrajectory(lcd_output);
-  }
-  if (posegraph_pub_.getNumSubscribers() > 0) {
-    publishPoseGraph(lcd_output);
-  }
-}
-
 
 void RosVisualizer::publishTimeHorizonPointCloud(
     const BackendOutput::ConstPtr& output) const {
@@ -484,7 +469,8 @@ void RosVisualizer::publishResiliency(
   resiliency_pub_.publish(resiliency_msg);
 }
 
-void RosVisualizer::publishImuBias(const BackendOutput::ConstPtr& output) const {
+void RosVisualizer::publishImuBias(
+    const BackendOutput::ConstPtr& output) const {
   CHECK(output);
 
   // Get imu bias to output
@@ -512,197 +498,6 @@ void RosVisualizer::publishImuBias(const BackendOutput::ConstPtr& output) const 
 
   // Publish Message
   imu_bias_pub_.publish(imu_bias_msg);
-}
-
-void RosVisualizer::publishOptimizedTrajectory(
-    const LcdOutput::ConstPtr& lcd_output) const {
-  CHECK(lcd_output);
-
-  // Get pgo-optimized trajectory
-  const Timestamp& ts = lcd_output->timestamp_kf_;
-  const gtsam::Values& trajectory = lcd_output->states_;
-  // Create message type
-  nav_msgs::Path path;
-
-  // Fill path poses
-  path.poses.reserve(trajectory.size());
-  for (size_t i = 0; i < trajectory.size(); i++) {
-    gtsam::Pose3 pose = trajectory.at<gtsam::Pose3>(i);
-    gtsam::Point3 trans = pose.translation();
-    gtsam::Quaternion quat = pose.rotation().toQuaternion();
-
-    geometry_msgs::PoseStamped ps_msg;
-    ps_msg.header.frame_id = world_frame_id_;
-    ps_msg.pose.position.x = trans.x();
-    ps_msg.pose.position.y = trans.y();
-    ps_msg.pose.position.z = trans.z();
-    ps_msg.pose.orientation.x = quat.x();
-    ps_msg.pose.orientation.y = quat.y();
-    ps_msg.pose.orientation.z = quat.z();
-    ps_msg.pose.orientation.w = quat.w();
-
-    path.poses.push_back(ps_msg);
-  }
-
-  // Publish path message
-  path.header.stamp.fromNSec(ts);
-  path.header.frame_id = world_frame_id_;
-  trajectory_pub_.publish(path);
-}
-
-void RosVisualizer::updateRejectedEdges() {
-  // first update the rejected edges
-  for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
-       loop_closure_edges_) {
-    bool is_inlier = false;
-    for (pose_graph_tools::PoseGraphEdge& inlier_edge : inlier_edges_) {
-      if (loop_closure_edge.key_from == inlier_edge.key_from &&
-          loop_closure_edge.key_to == inlier_edge.key_to) {
-        is_inlier = true;
-        continue;
-      }
-    }
-    if (!is_inlier) {
-      // set as rejected loop closure
-      loop_closure_edge.type =
-          pose_graph_tools::PoseGraphEdge::REJECTED_LOOPCLOSE;
-    }
-  }
-
-  // Then update the loop edges
-  for (pose_graph_tools::PoseGraphEdge& inlier_edge : inlier_edges_) {
-    bool previously_stored = false;
-    for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
-         loop_closure_edges_) {
-      if (inlier_edge.key_from == loop_closure_edge.key_from &&
-          inlier_edge.key_to == loop_closure_edge.key_to) {
-        previously_stored = true;
-        continue;
-      }
-    }
-    if (!previously_stored) {
-      // add to the vector of all loop clousres
-      loop_closure_edges_.push_back(inlier_edge);
-    }
-  }
-}
-
-void RosVisualizer::updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
-                                        const gtsam::Values& values) {
-  inlier_edges_.clear();
-  odometry_edges_.clear();
-  // first store the factors as edges
-  for (size_t i = 0; i < nfg.size(); i++) {
-    // check if between factor
-    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
-            nfg[i])) {
-      // convert to between factor
-      const gtsam::BetweenFactor<gtsam::Pose3>& factor =
-          *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
-              nfg[i]);
-      // convert between factor to PoseGraphEdge type
-      pose_graph_tools::PoseGraphEdge edge;
-      edge.header.frame_id = world_frame_id_;
-      edge.key_from = factor.front();
-      edge.key_to = factor.back();
-      if (edge.key_to == edge.key_from + 1) {  // check if odom
-        edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
-      } else {
-        edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
-      }
-      // transforms - translation
-      const gtsam::Point3& translation = factor.measured().translation();
-      edge.pose.position.x = translation.x();
-      edge.pose.position.y = translation.y();
-      edge.pose.position.z = translation.z();
-      // transforms - rotation (to quaternion)
-      const gtsam::Quaternion& quaternion =
-          factor.measured().rotation().toQuaternion();
-      edge.pose.orientation.x = quaternion.x();
-      edge.pose.orientation.y = quaternion.y();
-      edge.pose.orientation.z = quaternion.z();
-      edge.pose.orientation.w = quaternion.w();
-
-      // TODO: add covariance
-      if (edge.type == pose_graph_tools::PoseGraphEdge::ODOM) {
-        odometry_edges_.push_back(edge);
-      } else {
-        inlier_edges_.push_back(edge);
-      }
-    }
-  }
-
-  // update inliers and rejected closures
-  updateRejectedEdges();
-
-  pose_graph_nodes_.clear();
-  // Then store the values as nodes
-  gtsam::KeyVector key_list = values.keys();
-  for (size_t i = 0; i < key_list.size(); i++) {
-    pose_graph_tools::PoseGraphNode node;
-    node.key = key_list[i];
-
-    const gtsam::Pose3& value = values.at<gtsam::Pose3>(i);
-    const gtsam::Point3& translation = value.translation();
-    const gtsam::Quaternion& quaternion = value.rotation().toQuaternion();
-
-    // pose - translation
-    node.pose.position.x = translation.x();
-    node.pose.position.y = translation.y();
-    node.pose.position.z = translation.z();
-    // pose - rotation (to quaternion)
-    node.pose.orientation.x = quaternion.x();
-    node.pose.orientation.y = quaternion.y();
-    node.pose.orientation.z = quaternion.z();
-    node.pose.orientation.w = quaternion.w();
-
-    pose_graph_nodes_.push_back(node);
-  }
-
-  return;
-}
-
-pose_graph_tools::PoseGraph RosVisualizer::getPosegraphMsg() {
-  // pose graph getter
-  pose_graph_tools::PoseGraph pose_graph;
-  pose_graph.edges = odometry_edges_;  // add odometry edges to pg
-  // then add loop closure edges to pg
-  pose_graph.edges.insert(pose_graph.edges.end(),
-                          loop_closure_edges_.begin(),
-                          loop_closure_edges_.end());
-  // then add the nodes
-  pose_graph.nodes = pose_graph_nodes_;
-
-  return pose_graph;
-}
-
-void RosVisualizer::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
-  CHECK(lcd_output);
-
-  // Get the factor graph
-  const Timestamp& ts = lcd_output->timestamp_kf_;
-  const gtsam::NonlinearFactorGraph& nfg = lcd_output->nfg_;
-  const gtsam::Values& values = lcd_output->states_;
-  updateNodesAndEdges(nfg, values);
-  pose_graph_tools::PoseGraph graph = getPosegraphMsg();
-  graph.header.stamp.fromNSec(ts);
-  graph.header.frame_id = world_frame_id_;
-  posegraph_pub_.publish(graph);
-}
-
-void RosVisualizer::publishTf(const LcdOutput::ConstPtr& lcd_output) {
-  CHECK(lcd_output);
-
-  const Timestamp& ts = lcd_output->timestamp_kf_;
-  const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
-  const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
-  // Publish map TF.
-  geometry_msgs::TransformStamped map_tf;
-  map_tf.header.stamp.fromNSec(ts);
-  map_tf.header.frame_id = world_frame_id_;
-  map_tf.child_frame_id = map_frame_id_;
-  utils::poseToMsgTF(w_Pose_map, &map_tf.transform);
-  tf_broadcaster_.sendTransform(map_tf);
 }
 
 void RosVisualizer::publishTf(const BackendOutput::ConstPtr& output) {
