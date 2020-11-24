@@ -1,0 +1,44 @@
+<launch>
+  <arg name="dataset_name" value="RealSenseIR"/>
+  <arg name="online" default="True" />
+
+  <arg name="log_output" default="false"/>
+  <arg name="log_output_path"
+       default="$(find kimera_vio_ros)/output_logs/"
+       if="$(arg log_output)"/>
+  <arg name="log_gt_data" default="false"/>
+  <arg name="gt_topic" default=""/>
+  <!-- Set use_sim_time to true if you use rosbag with clock argument -->
+  <arg name="should_use_sim_time" default="false"/>
+  <!-- arg name="use_lcd" default="true"/-->
+
+  <!-- Only used when parsing a rosbag -->
+  <arg name="rosbag_path" default="/home/yunchang/data/kitti_2011_09_26_drive_0005_unsynced.bag"
+       unless="$(arg online)"/>"/>
+
+  <arg name="use_lcd"   default="true"/>
+
+  <!-- Frame IDs. These DO NOT match frame id's on the video streams, as the 
+	RealSense and Kimera publish conflicting Tf's -->
+  <arg name="world_frame_id"     value="world"/>
+  <arg name="base_link_frame_id" value="base_link"/>
+  <arg name="map_frame_id"       value="map"/>
+  <arg name="left_cam_frame_id"  value="left_cam"/>
+  <arg name="right_cam_frame_id" value="right_cam"/>
+
+  <!-- Subscribed Topics -->
+  <arg name="left_cam_topic"  value="/vio_camera/infra1/image_rect_raw"/>
+  <arg name="right_cam_topic" value="/vio_camera/infra2/image_rect_raw"/>
+  <arg name="imu_topic"       value="/vio_camera/imu"/>
+
+  <!-- Launch actual pipeline -->
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
+           pass_all_args="true"/>
+
+ <!-- Launch static TF node from base_link to velo_link -->
+ <node pkg="tf" type="static_transform_publisher" name="velo_link_broadcaster"
+   args="0 0 0 0 0 0 1 base_link velo_link 100"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="inter_cam_tf" args="0.075 0 -0.065 0 0.7071 0 0.7071  left_cam depth_cam  100"/>
+
+</launch>
