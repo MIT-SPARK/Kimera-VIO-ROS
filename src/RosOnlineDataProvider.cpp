@@ -364,7 +364,9 @@ void RosOnlineDataProvider::callbackGtOdomOnce(
   LOG(WARNING) << "Using initial ground-truth state for initialization.";
   CHECK(gt_odom_msg);
   utils::msgGtOdomToVioNavState(
-      *gt_odom_msg, &vio_params_.backend_params_->initial_ground_truth_state_);
+      *gt_odom_msg,
+      nh_private_,
+      &vio_params_.backend_params_->initial_ground_truth_state_);
 
   // Signal receptance of ground-truth pose.
   gt_init_pose_received_ = true;

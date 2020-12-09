@@ -101,6 +101,7 @@ void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
 }
 
 void msgGtOdomToVioNavState(const nav_msgs::Odometry& gt_odom,
+                            const ros::NodeHandle& node_handle,
                             VioNavState* vio_navstate) {
   CHECK_NOTNULL(vio_navstate);
 
@@ -118,9 +119,22 @@ void msgGtOdomToVioNavState(const nav_msgs::Odometry& gt_odom,
 
   vio_navstate->pose_ = gtsam::Pose3(W_R_B, position);
   vio_navstate->velocity_ = velocity;
+  // Get acceleration and gyro biases. Default is 0.
+  std::vector<double> parsed_gyro_bias;
+  std::vector<double> parsed_accel_bias;
+  node_handle.param<std::vector<double> >(
+      "/gt_gyro_bias", parsed_gyro_bias, std::vector<double>{0, 0, 0});
+  node_handle.param<std::vector<double> >(
+      "/gt_accel_bias", parsed_accel_bias, std::vector<double>{0, 0, 0});
+
+  CHECK_EQ(parsed_gyro_bias.size(), 3);
+  CHECK_EQ(parsed_accel_bias.size(), 3);
+
   // TODO(Toni): how can we get the ground-truth biases? For sim, ins't it 0?
-  static const gtsam::Vector3 gyro_bias(0.0, 0.0, 0.0);
-  static const gtsam::Vector3 acc_bias(0.0, 0.0, 0.0);
+  static const gtsam::Vector3 gyro_bias(
+      parsed_gyro_bias[0], parsed_gyro_bias[1], parsed_gyro_bias[2]);
+  static const gtsam::Vector3 acc_bias(
+      parsed_accel_bias[0], parsed_accel_bias[1], parsed_accel_bias[2]);
   vio_navstate->imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
 }
 
