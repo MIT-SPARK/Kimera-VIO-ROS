@@ -1,3 +1,6 @@
+# iOS things
+.DS_Store
+
 # Qt things
 *.user*
 

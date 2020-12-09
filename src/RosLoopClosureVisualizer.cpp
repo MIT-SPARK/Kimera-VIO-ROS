@@ -1,10 +1,10 @@
 /**
- * @file   RosLoopClosure.cpp
+ * @file   RosLoopClosureVisualizer.cpp
  * @brief  Ros interface for the loop closure module
  * @author Yun Chang
  */
 
-#include "kimera_vio_ros/RosLoopClosure.h"
+#include "kimera_vio_ros/RosLoopClosureVisualizer.h"
 
 #include <string>
 
@@ -25,9 +25,7 @@
 
 namespace VIO {
 
-RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
-                               bool log_output)
-    : LoopClosureDetector(lcd_params, log_output), nh_(), nh_private_("~"), next_pose_id_(0) {
+RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
   // Get ROS params
   CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
   CHECK(!world_frame_id_.empty());
@@ -37,7 +35,7 @@ RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
   CHECK(!map_frame_id_.empty());
   int robot_id_in_;
   CHECK(nh_private_.getParam("robot_id", robot_id_in_));
-  CHECK(robot_id_in_ >= 0); 
+  CHECK(robot_id_in_ >= 0);
   robot_id_ = robot_id_in_;
 
   // Publishers
@@ -46,20 +44,10 @@ RosLoopClosure::RosLoopClosure(const LoopClosureDetectorParams& lcd_params,
   posegraph_incremental_pub_ =
       nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph_incremental", 1);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
-  bow_query_pub_ = nh_.advertise<kimera_distributed::BowQuery>("bow_query", 1);
-
-  // Service
-  vlc_frame_server_ = nh_.advertiseService("vlc_frame_query", &RosLoopClosure::VLCFrameQueryCallback, this);
 }
 
-LcdOutput::UniquePtr RosLoopClosure::spinOnce(const LcdInput& lcd_input) {
-  LcdOutput::UniquePtr output = LoopClosureDetector::spinOnce(lcd_input);
-  publishLcdOutput(std::move(output));
-  publishBowQuery();
-  return output;
-}
-
-void RosLoopClosure::publishLcdOutput(const LcdOutput::ConstPtr& lcd_output) {
+void RosLoopClosureVisualizer::publishLcdOutput(
+    const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   publishTf(lcd_output);
@@ -71,55 +59,12 @@ void RosLoopClosure::publishLcdOutput(const LcdOutput::ConstPtr& lcd_output) {
   }
 }
 
-void RosLoopClosure::publishBowQuery(){
-  const OrbDatabase* db_BoW_ptr = getBoWDatabase();
-  CHECK(db_BoW_ptr);
-  const std::vector<LCDFrame>* db_frames_ptr = getFrameDatabasePtr();
-  LCDFrame frame = db_frames_ptr->back();
-  CHECK(frame.id_ == next_pose_id_);
-
-  DBoW2::BowVector bow_vec;
-  db_BoW_ptr->getVocabulary()->transform(frame.descriptors_vec_, bow_vec);
-
-  kimera_distributed::BowVector bow_vec_msg;
-  kimera_distributed::BowVectorToMsg(bow_vec, &bow_vec_msg);
-
-  kimera_distributed::BowQuery msg;
-  msg.robot_id = robot_id_;
-  msg.pose_id = frame.id_;
-  msg.bow_vector = bow_vec_msg;
-
-  bow_query_pub_.publish(msg);
-
-  next_pose_id_++;
-}
-
-bool RosLoopClosure::VLCFrameQueryCallback(kimera_distributed::VLCFrameQuery::Request& request, 
-                                           kimera_distributed::VLCFrameQuery::Response& response)
-{
-  CHECK(request.robot_id == robot_id_);
-  const std::vector<LCDFrame>* db_frames_ptr = getFrameDatabasePtr();
-  CHECK(request.pose_id < db_frames_ptr->size());
-
-  LCDFrame lcd_frame = db_frames_ptr->at(request.pose_id);
-  CHECK(lcd_frame.id_ == request.pose_id);
-
-  kimera_distributed::VLCFrame frame(request.robot_id, 
-                                     request.pose_id, 
-                                     lcd_frame.keypoints_3d_, 
-                                     lcd_frame.descriptors_mat_);
-
-  kimera_distributed::VLCFrameToMsg(frame, &(response.frame));
-
-  return true;
-}
-
-void RosLoopClosure::publishOptimizedTrajectory(
+void RosLoopClosureVisualizer::publishOptimizedTrajectory(
     const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   // Get pgo-optimized trajectory
-  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const Timestamp& ts = lcd_output->timestamp_;
   const gtsam::Values& trajectory = lcd_output->states_;
   // Create message type
   nav_msgs::Path path;
@@ -181,7 +126,7 @@ void RosLoopClosure::publishOptimizedTrajectory(
 
 // Function used ultimately to visualize loop closure
 // And differentiate the inliers and the outliers
-void RosLoopClosure::updateRejectedEdges() {
+void RosLoopClosureVisualizer::updateRejectedEdges() {
   // first update the rejected edges
   for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
        loop_closure_edges_) {
@@ -218,8 +163,9 @@ void RosLoopClosure::updateRejectedEdges() {
   }
 }
 
-void RosLoopClosure::updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
-                                         const gtsam::Values& values) {
+void RosLoopClosureVisualizer::updateNodesAndEdges(
+    const gtsam::NonlinearFactorGraph& nfg,
+    const gtsam::Values& values) {
   inlier_edges_.clear();
   odometry_edges_.clear();
   // first store the factors as edges
@@ -296,7 +242,7 @@ void RosLoopClosure::updateNodesAndEdges(const gtsam::NonlinearFactorGraph& nfg,
   return;
 }
 
-pose_graph_tools::PoseGraph RosLoopClosure::getPosegraphMsg() {
+pose_graph_tools::PoseGraph RosLoopClosureVisualizer::getPosegraphMsg() {
   // pose graph getter
   pose_graph_tools::PoseGraph pose_graph;
   pose_graph.edges = odometry_edges_;  // add odometry edges to pg
@@ -310,11 +256,12 @@ pose_graph_tools::PoseGraph RosLoopClosure::getPosegraphMsg() {
   return pose_graph;
 }
 
-void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
+void RosLoopClosureVisualizer::publishPoseGraph(
+    const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   // Get the factor graph
-  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const Timestamp& ts = lcd_output->timestamp_;
   const gtsam::NonlinearFactorGraph& nfg = lcd_output->nfg_;
   const gtsam::Values& values = lcd_output->states_;
   updateNodesAndEdges(nfg, values);
@@ -364,6 +311,7 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
       last_lc_edge.header.stamp.fromNSec(ts);
       last_lc_edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
       incremental_graph.edges.push_back(last_lc_edge);
+      loop_closure_edges_.push_back(last_lc_edge);
     }
     incremental_graph.header.stamp.fromNSec(ts);
     incremental_graph.header.frame_id = world_frame_id_;
@@ -371,10 +319,11 @@ void RosLoopClosure::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
   }
 }
 
-void RosLoopClosure::publishTf(const LcdOutput::ConstPtr& lcd_output) {
+void RosLoopClosureVisualizer::publishTf(
+    const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
-  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const Timestamp& ts = lcd_output->timestamp_;
   const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
   const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
   // Publish map TF.

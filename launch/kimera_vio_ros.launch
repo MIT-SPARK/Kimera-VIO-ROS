@@ -32,7 +32,7 @@
   <!-- Parameters -->
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
-  <arg name="params_folder" value="$(find kimera_vio)/params/$(arg dataset_name)"/>
+  <arg name="params_folder" default="$(find kimera_vio)/params/$(arg dataset_name)"/>
 
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->

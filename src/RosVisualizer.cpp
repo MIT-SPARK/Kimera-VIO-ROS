@@ -42,7 +42,6 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
       nh_private_("~"),
       image_size_(vio_params.camera_params_.at(0).image_size_),
       image_publishers_(nullptr) {
-
   //! To publish 2d images
   image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
 
@@ -70,12 +69,14 @@ VisualizerOutput::UniquePtr RosVisualizer::spinOnce(
   publishBackendOutput(viz_input.backend_output_);
   publishFrontendOutput(viz_input.frontend_output_);
   if (viz_input.mesher_output_) publishMesherOutput(viz_input.mesher_output_);
-  // publishLcdOutput(viz_input->lcd_output_); // missing this one...
+  if (viz_input.lcd_output_)
+    lcd_visualizer_.publishLcdOutput(viz_input.lcd_output_);
   // Return empty output, since in ROS, we only publish, not display...
   return VIO::make_unique<VisualizerOutput>();
 }
 
-void RosVisualizer::publishBackendOutput(const BackendOutput::ConstPtr& output) {
+void RosVisualizer::publishBackendOutput(
+    const BackendOutput::ConstPtr& output) {
   CHECK(output);
   publishTf(output);
   if (odometry_pub_.getNumSubscribers() > 0) {
@@ -97,7 +98,8 @@ void RosVisualizer::publishFrontendOutput(
   }
 }
 
-void RosVisualizer::publishMesherOutput(const MesherOutput::ConstPtr& output) const {
+void RosVisualizer::publishMesherOutput(
+    const MesherOutput::ConstPtr& output) const {
   CHECK(output);
   if (mesh_3d_frame_pub_.getNumSubscribers() > 0) {
     publishPerFrameMesh3D(output);
@@ -467,7 +469,8 @@ void RosVisualizer::publishResiliency(
   resiliency_pub_.publish(resiliency_msg);
 }
 
-void RosVisualizer::publishImuBias(const BackendOutput::ConstPtr& output) const {
+void RosVisualizer::publishImuBias(
+    const BackendOutput::ConstPtr& output) const {
   CHECK(output);
 
   // Get imu bias to output

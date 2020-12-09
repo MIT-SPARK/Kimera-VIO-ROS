@@ -1,7 +1,6 @@
 /**
- * @file   RosLoopClosure.h
- * @brief  Equivalent Kimera Loop Closure Detector but in ROS. Publishes Loop
- * closure and pose graph data to ROS.
+ * @file   RosLoopClosureVisualizer.h
+ * @brief  Publishes Loop closure and pose graph data to ROS.
  * @author Yun Chang
  */
 
@@ -39,26 +38,16 @@
 
 namespace VIO {
 
-class RosLoopClosure : public LoopClosureDetector {
+class RosLoopClosureVisualizer {
  public:
-  KIMERA_POINTER_TYPEDEFS(RosLoopClosure);
-  KIMERA_DELETE_COPY_CONSTRUCTORS(RosLoopClosure);
+  KIMERA_POINTER_TYPEDEFS(RosLoopClosureVisualizer);
+  KIMERA_DELETE_COPY_CONSTRUCTORS(RosLoopClosureVisualizer);
 
  public:
-  RosLoopClosure(const LoopClosureDetectorParams& lcd_params, bool log_output);
-  virtual ~RosLoopClosure() = default;
+  RosLoopClosureVisualizer();
+  ~RosLoopClosureVisualizer() = default;
 
- public:
-  /**
-   * @brief spinOnce
-   * Spins the display once to render the visualizer output.
-   * @param viz_input
-   */
-  LcdOutput::UniquePtr spinOnce(const LcdInput& lcd_input) override;
-
- protected:
-  // Publish all outputs for LCD
-  virtual void publishLcdOutput(const LcdOutput::ConstPtr& lcd_output);
+  void publishLcdOutput(const LcdOutput::ConstPtr& lcd_output);
 
  private:
   void publishTf(const LcdOutput::ConstPtr& lcd_output);

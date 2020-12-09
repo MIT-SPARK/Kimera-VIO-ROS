@@ -31,6 +31,7 @@
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/visualizer/Visualizer3D.h>
 
+#include "kimera_vio_ros/RosLoopClosureVisualizer.h"
 #include "kimera_vio_ros/RosPublishers.h"
 
 namespace VIO {
@@ -68,12 +69,14 @@ class RosVisualizer : public Visualizer3D {
   // Publish VIO outputs.
   virtual void publishBackendOutput(const BackendOutput::ConstPtr& output);
 
-  virtual void publishFrontendOutput(const FrontendOutput::ConstPtr& output) const;
+  virtual void publishFrontendOutput(
+      const FrontendOutput::ConstPtr& output) const;
 
   virtual void publishMesherOutput(const MesherOutput::ConstPtr& output) const;
 
  private:
-  void publishTimeHorizonPointCloud(const BackendOutput::ConstPtr& output) const;
+  void publishTimeHorizonPointCloud(
+      const BackendOutput::ConstPtr& output) const;
 
   void publishPerFrameMesh3D(const MesherOutput::ConstPtr& output) const;
 
@@ -121,8 +124,7 @@ class RosVisualizer : public Visualizer3D {
   //! Define image publishers manager
   std::unique_ptr<ImagePublishers> image_publishers_;
 
-  //! Whether we publish lcd things or not. (TODO:(Toni) Not used, implement...)
-  bool use_lcd_;
+  RosLoopClosureVisualizer lcd_visualizer_;
 
  private:
   // Typedefs
