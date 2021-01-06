@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /PointCloud Time Horizon1
+        - /Debug Img1
         - /PoseGraph1
       Splitter Ratio: 0.5
     Tree Height: 493
@@ -38,26 +39,13 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        base_link:
-          Value: true
-        cam0:
-          Value: true
-        cam1:
-          Value: true
-        world:
-          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        world:
-          base_link:
-            cam0:
-              {}
-            cam1:
-              {}
+        {}
       Update Interval: 0
       Value: true
     - Alpha: 1

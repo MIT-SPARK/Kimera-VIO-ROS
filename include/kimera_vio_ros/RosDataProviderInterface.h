@@ -59,6 +59,9 @@ class RosDataProviderInterface : public DataProviderInterface {
   // Pipeline params
   VioParams vio_params_;
 
+  // Constants
+  static constexpr size_t kTfLookupTimeout = 5u;
+
  private:
   void printParsedParams() const;
 };
