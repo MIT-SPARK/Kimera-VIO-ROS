@@ -1,6 +1,6 @@
 Panels:
   - Class: rviz/Displays
-    Help Height: 70
+    Help Height: 75
     Name: Displays
     Property Tree Widget:
       Expanded:
@@ -8,7 +8,7 @@ Panels:
         - /PointCloud Time Horizon1
         - /PoseGraph1
       Splitter Ratio: 0.5
-    Tree Height: 371
+    Tree Height: 493
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -17,19 +17,17 @@ Panels:
       - /2D Nav Goal1
       - /Publish Point1
     Name: Tool Properties
-    Splitter Ratio: 0.5886790156364441
+    Splitter Ratio: 0.588679016
   - Class: rviz/Views
     Expanded:
       - /Current View1
     Name: Views
-    Splitter Ratio: 0.7583643198013306
+    Splitter Ratio: 0.75836432
   - Class: rviz/Time
     Experimental: false
     Name: Time
     SyncMode: 0
     SyncSource: PointCloud Time Horizon
-Preferences:
-  PromptSaveOnExit: true
 Toolbars:
   toolButtonStyle: 2
 Visualization Manager:
@@ -85,7 +83,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.019999999552965164
+      Size (m): 0.0199999996
       Style: Spheres
       Topic: /kimera_vio_ros/time_horizon_pointcloud
       Unreliable: false
@@ -93,7 +91,7 @@ Visualization Manager:
       Use rainbow: true
       Value: true
     - Class: rviz/Image
-      Enabled: false
+      Enabled: true
       Image Topic: /cam0/image_raw
       Max Value: 1
       Median window: 5
@@ -103,10 +101,10 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: false
+      Value: true
     - Class: rviz/Image
-      Enabled: false
-      Image Topic: /kimera_vio_ros/debug_mesh_img/image_raw
+      Enabled: true
+      Image Topic: /kimera_vio_ros/kimera_vio_ros_node/feature_tracks
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -115,11 +113,11 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: false
+      Value: true
     - Class: mesh_rviz_plugins/TexturedMesh
       Enabled: true
       Name: 3D Mesh Textured
-      Normal Size: 0.05000000074505806
+      Normal Size: 0.0500000007
       Phong Shading: true
       Point Size: 1
       Polygon Mode: SOLID
@@ -129,9 +127,9 @@ Visualization Manager:
       Shader Program: TEXTURE
       Show Normals: false
       Texture Transport Hint: raw
-      Texture topic: /kimera_vio_ros/debug_mesh_img/image_raw
+      Texture topic: /kimera_vio_ros/kimera_vio_ros_node/feature_tracks
       Value: true
-    - Angle Tolerance: 0.10000000149011612
+    - Angle Tolerance: 0.100000001
       Class: rviz/Odometry
       Covariance:
         Orientation:
@@ -143,7 +141,7 @@ Visualization Manager:
           Scale: 1
           Value: true
         Position:
-          Alpha: 0.30000001192092896
+          Alpha: 0.300000012
           Color: 204; 51; 204
           Scale: 1
           Value: true
@@ -151,16 +149,16 @@ Visualization Manager:
       Enabled: true
       Keep: 1
       Name: Odometry
-      Position Tolerance: 0.10000000149011612
+      Position Tolerance: 0.100000001
       Shape:
         Alpha: 1
-        Axes Length: 0.30000001192092896
-        Axes Radius: 0.009999999776482582
+        Axes Length: 0.300000012
+        Axes Radius: 0.00999999978
         Color: 255; 25; 0
-        Head Length: 0.30000001192092896
-        Head Radius: 0.10000000149011612
+        Head Length: 0.300000012
+        Head Radius: 0.100000001
         Shaft Length: 1
-        Shaft Radius: 0.05000000074505806
+        Shaft Radius: 0.0500000007
         Value: Axes
       Topic: /kimera_vio_ros/odometry
       Unreliable: false
@@ -204,11 +202,11 @@ Visualization Manager:
           Class: rviz/Path
           Color: 25; 255; 0
           Enabled: false
-          Head Diameter: 0.30000001192092896
-          Head Length: 0.20000000298023224
-          Length: 0.30000001192092896
+          Head Diameter: 0.300000012
+          Head Length: 0.200000003
+          Length: 0.300000012
           Line Style: Lines
-          Line Width: 0.029999999329447746
+          Line Width: 0.0299999993
           Name: PGO Trajectory
           Offset:
             X: 0
@@ -216,9 +214,9 @@ Visualization Manager:
             Z: 0
           Pose Color: 255; 85; 255
           Pose Style: None
-          Radius: 0.029999999329447746
-          Shaft Diameter: 0.10000000149011612
-          Shaft Length: 0.10000000149011612
+          Radius: 0.0299999993
+          Shaft Diameter: 0.100000001
+          Shaft Length: 0.100000001
           Topic: /kimera_vio_ros/optimized_trajectory
           Unreliable: false
           Value: false
@@ -239,10 +237,7 @@ Visualization Manager:
     - Class: rviz/FocusCamera
     - Class: rviz/Measure
     - Class: rviz/SetInitialPose
-      Theta std deviation: 0.2617993950843811
       Topic: /initialpose
-      X std deviation: 0.5
-      Y std deviation: 0.5
     - Class: rviz/SetGoal
       Topic: /move_base_simple/goal
     - Class: rviz/PublishPoint
@@ -252,30 +247,30 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 5.401379585266113
+      Distance: 17.9643116
       Enable Stereo Rendering:
-        Stereo Eye Separation: 0.05999999865889549
+        Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.21715283393859863
-        Y: 0.6974797248840332
-        Z: 4.143006208323641e-6
+        X: 0.217152834
+        Y: 0.697479725
+        Z: 4.14300621e-06
       Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
+      Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
-      Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4647972583770752
+      Near Clip Distance: 0.00999999978
+      Pitch: 0.52479744
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz)
-      Yaw: 3.018671751022339
+      Yaw: 2.69867611
     Saved:
       - Class: rviz/ThirdPersonFollower
-        Distance: 6.814720153808594
+        Distance: 6.81472015
         Enable Stereo Rendering:
-          Stereo Eye Separation: 0.05999999865889549
+          Stereo Eye Separation: 0.0599999987
           Stereo Focal Distance: 1
           Swap Stereo Eyes: false
           Value: false
@@ -284,25 +279,25 @@ Visualization Manager:
           Y: 0
           Z: 0
         Focal Shape Fixed Size: true
-        Focal Shape Size: 0.05000000074505806
+        Focal Shape Size: 0.0500000007
         Invert Z Axis: false
         Name: ThirdPersonFollower
-        Near Clip Distance: 0.009999999776482582
-        Pitch: 0.4953984022140503
+        Near Clip Distance: 0.00999999978
+        Pitch: 0.495398402
         Target Frame: base_link
         Value: ThirdPersonFollower (rviz)
-        Yaw: 3.0454001426696777
+        Yaw: 3.04540014
 Window Geometry:
   Debug Img:
-    collapsed: true
+    collapsed: false
   Displays:
-    collapsed: true
-  Height: 1543
-  Hide Left Dock: true
+    collapsed: false
+  Height: 2082
+  Hide Left Dock: false
   Hide Right Dock: true
   Left Img:
-    collapsed: true
-  QMainWindow State: 000000ff00000000fd0000000400000000000002660000056bfc020000000cfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000003d0000029f000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000016004c006500660074002000430061006d0065007200610000000222000001490000000000000000fb00000010004c00650066007400200049006d006700000002e2000002030000001600fffffffb000000120044006500620075006700200049006d006700000004eb000000bd0000001600fffffffb0000000e003200440020004d00650073006800000004350000009f0000000000000000000000010000019000000569fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d00000569000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000075f0000003efc0100000002fb0000000800540069006d006501000000000000075f000002eb00fffffffb0000000800540069006d006501000000000000045000000000000000000000075f0000056900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+    collapsed: false
+  QMainWindow State: 000000ff00000000fd0000000400000000000002660000074ffc020000000cfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000007100fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000029f000000fd00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000016004c006500660074002000430061006d0065007200610000000222000001490000000000000000fb00000010004c00650066007400200049006d006701000002e7000002260000002600fffffffb000000120044006500620075006700200049006d00670100000518000002740000002600fffffffb0000000e003200440020004d00650073006800000004350000009f0000000000000000000000010000019000000569fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d00000569000000e900fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007540000005cfc0100000002fb0000000800540069006d00650100000000000007540000059600fffffffb0000000800540069006d00650100000000000004500000000000000000000004e30000074f00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -311,6 +306,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: true
-  Width: 1887
-  X: 1953
-  Y: 27
+  Width: 1876
+  X: 1964
+  Y: 36
