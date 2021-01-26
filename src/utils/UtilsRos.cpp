@@ -119,22 +119,24 @@ void msgGtOdomToVioNavState(const nav_msgs::Odometry& gt_odom,
 
   vio_navstate->pose_ = gtsam::Pose3(W_R_B, position);
   vio_navstate->velocity_ = velocity;
+
   // Get acceleration and gyro biases. Default is 0.
-  std::vector<double> parsed_gyro_bias;
-  std::vector<double> parsed_accel_bias;
+  std::vector<double> parsed_acc_bias = {0.0, 0.0, 0.0};
   node_handle.param<std::vector<double> >(
-      "/gt_gyro_bias", parsed_gyro_bias, std::vector<double>{0, 0, 0});
+      "gt_accel_bias", parsed_acc_bias, parsed_acc_bias);
+  CHECK_EQ(parsed_acc_bias.size(), 3u);
+
+  std::vector<double> parsed_gyr_bias = {0.0, 0.0, 0.0};
   node_handle.param<std::vector<double> >(
-      "/gt_accel_bias", parsed_accel_bias, std::vector<double>{0, 0, 0});
+      "gt_gyro_bias", parsed_gyr_bias, parsed_gyr_bias);
+  CHECK_EQ(parsed_gyr_bias.size(), 3u);
 
-  CHECK_EQ(parsed_gyro_bias.size(), 3);
-  CHECK_EQ(parsed_accel_bias.size(), 3);
-
-  gtsam::Vector3 gyro_bias(
-      parsed_gyro_bias[0], parsed_gyro_bias[1], parsed_gyro_bias[2]);
   gtsam::Vector3 acc_bias(
-      parsed_accel_bias[0], parsed_accel_bias[1], parsed_accel_bias[2]);
-  vio_navstate->imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyro_bias);
+      parsed_acc_bias[0], parsed_acc_bias[1], parsed_acc_bias[2]);
+  gtsam::Vector3 gyr_bias(
+      parsed_gyr_bias[0], parsed_gyr_bias[1], parsed_gyr_bias[2]);
+
+  vio_navstate->imu_bias_ = gtsam::imuBias::ConstantBias(acc_bias, gyr_bias);
 }
 
 }  // namespace utils
