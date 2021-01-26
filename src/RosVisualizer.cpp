@@ -413,7 +413,7 @@ void RosVisualizer::publishResiliency(
   const gtsam::Matrix3& vel_cov =
       gtsam::sub(backend_output->state_covariance_lkf_, 6, 9, 6, 9);
 
-  // Create message type for quality of SparkVIO
+  // Create message type for quality of KimeraVIO
   std_msgs::Float64MultiArray resiliency_msg;
 
   // Publishing extra information:

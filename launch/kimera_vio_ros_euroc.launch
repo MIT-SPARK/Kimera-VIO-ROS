@@ -6,7 +6,7 @@
   <arg name="online" default="true" />
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <param name="use_sim_time" value="true"/>
-  <!-- Set log_output to true and SparkVio will log output of all modules to
+  <!-- Set log_output to true and KimeraVIO will log output of all modules to
        the log_output_path location. -->
   <arg name="log_output" default="false"/>
   <arg name="log_output_path"
