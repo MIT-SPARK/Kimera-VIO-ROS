@@ -33,9 +33,6 @@
 
 #include "kimera_vio_ros/RosPublishers.h"
 
-#include "kimera_distributed/utils.h"
-#include "kimera_distributed/VLCFrameQuery.h"
-
 namespace VIO {
 
 class RosLoopClosureVisualizer {
@@ -60,15 +57,6 @@ class RosLoopClosureVisualizer {
                            const gtsam::Values& values);
 
   void updateRejectedEdges();
-
-  void publishNewNodesAndEdges(const LcdOutput::ConstPtr& lcd_output);
-
-  // Publish bag-of-word vector associated to latest frame
-  void publishBowQuery();
-
-  // Responde to request to get VLCFrame
-  bool VLCFrameQueryCallback(kimera_distributed::VLCFrameQuery::Request& request, 
-                             kimera_distributed::VLCFrameQuery::Response& response);
 
   pose_graph_tools::PoseGraph getPosegraphMsg();
 
