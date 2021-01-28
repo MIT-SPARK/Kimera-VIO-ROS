@@ -44,12 +44,24 @@ RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
   posegraph_incremental_pub_ =
       nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph_incremental", 1);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
+  bow_query_pub_ = nh_.advertise<kimera_distributed::BowQuery>("bow_query", 1);
+
+  // Service
+  vlc_frame_server_ =
+      nh_.advertiseService("vlc_frame_query",
+                           &RosLoopClosureVisualizer::VLCFrameQueryCallback,
+                           this);
 }
 
 void RosLoopClosureVisualizer::publishLcdOutput(
     const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
+  frames_.push_back(lcd_frame(lcd_output->keypoints_3d_,
+                              lcd_output->bow_vec_,
+                              lcd_output->descriptors_mat_));
+
+  publishBowQuery();
   publishTf(lcd_output);
   if (trajectory_pub_.getNumSubscribers() > 0) {
     publishOptimizedTrajectory(lcd_output);
@@ -333,6 +345,39 @@ void RosLoopClosureVisualizer::publishTf(
   map_tf.child_frame_id = map_frame_id_;
   utils::poseToMsgTF(w_Pose_map, &map_tf.transform);
   tf_broadcaster_.sendTransform(map_tf);
+}
+
+void RosLoopClosureVisualizer::publishBowQuery() {
+  if (frames_.size() == 0) return;
+  kimera_distributed::BowVector bow_vec_msg;
+  kimera_distributed::BowVectorToMsg(frames_.back().bow_vec_, &bow_vec_msg);
+
+  kimera_distributed::BowQuery msg;
+  msg.robot_id = robot_id_;
+  msg.pose_id = frames_.size() - 1;
+  msg.bow_vector = bow_vec_msg;
+
+  bow_query_pub_.publish(msg);
+
+  next_pose_id_++;
+}
+
+bool RosLoopClosureVisualizer::VLCFrameQueryCallback(
+    kimera_distributed::VLCFrameQuery::Request& request,
+    kimera_distributed::VLCFrameQuery::Response& response) {
+  CHECK(request.robot_id == robot_id_);
+  if (request.pose_id >= frames_.size()) {
+    ROS_ERROR("Requested frame not in dbow database. ");
+    return false;
+  }
+  CHECK(request.pose_id < frames_.size());
+  kimera_distributed::VLCFrame frame(request.robot_id,
+                                     request.pose_id,
+                                     frames_[request.pose_id].keypoints_3d_,
+                                     frames_[request.pose_id].descriptors_mat_);
+
+  kimera_distributed::VLCFrameToMsg(frame, &(response.frame));
+  return true;
 }
 
 }  // namespace VIO

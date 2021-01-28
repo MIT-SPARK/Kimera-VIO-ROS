@@ -13,6 +13,14 @@ if(NOT TARGET Boost::boost)
   INTERFACE_INCLUDE_DIRECTORIES "${Boost_INCLUDE_DIRS}")
 endif()
 
+find_package(DBoW2 REQUIRED)
+if(NOT TARGET DBoW2::DBoW2)
+  add_library(DBoW2::DBoW2 INTERFACE IMPORTED)
+  set_target_properties(DBoW2::DBoW2 PROPERTIES
+  INTERFACE_LINK_LIBRARIES "${DBoW2_LIBRARIES}"
+  INTERFACE_INCLUDE_DIRECTORIES "${DBoW2_INCLUDE_DIRS}")
+endif()
+
 catkin_simple()
 
 cs_add_library(${PROJECT_NAME}
@@ -33,7 +41,7 @@ cs_add_library(${PROJECT_NAME}
   src/RosLoopClosureVisualizer.cpp
   src/utils/UtilsRos.cpp
 )
-target_link_libraries(${PROJECT_NAME} kimera_vio)
+target_link_libraries(${PROJECT_NAME} kimera_vio ${catkin_LIBRARIES} DBoW2::DBoW2)
 
 cs_add_executable(${PROJECT_NAME}_node
   src/KimeraVioRosNode.cpp

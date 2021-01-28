@@ -25,6 +25,10 @@
 #include <pose_graph_tools/PoseGraphEdge.h>
 #include <pose_graph_tools/PoseGraphNode.h>
 
+#include <DBoW2/DBoW2.h>
+#include <kimera_distributed/VLCFrameQuery.h>
+#include <kimera_distributed/utils.h>
+
 #include <kimera-vio/backend/VioBackEnd-definitions.h>
 #include <kimera-vio/frontend/StereoVisionFrontEnd-definitions.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
@@ -60,6 +64,14 @@ class RosLoopClosureVisualizer {
 
   pose_graph_tools::PoseGraph getPosegraphMsg();
 
+  // Publish bag-of-word vector associated to latest frame
+  void publishBowQuery();
+
+  // Responde to request to get VLCFrame
+  bool VLCFrameQueryCallback(
+      kimera_distributed::VLCFrameQuery::Request& request,
+      kimera_distributed::VLCFrameQuery::Response& response);
+
  private:
   // ROS handles
   ros::NodeHandle nh_;
@@ -87,12 +99,26 @@ class RosLoopClosureVisualizer {
   std::vector<pose_graph_tools::PoseGraphEdge> inlier_edges_;
   std::vector<pose_graph_tools::PoseGraphNode> pose_graph_nodes_;
 
+  struct lcd_frame {
+    std::vector<gtsam::Vector3> keypoints_3d_;
+    DBoW2::BowVector bow_vec_;
+    VIO::OrbDescriptor descriptors_mat_;
+
+    lcd_frame(const std::vector<gtsam::Vector3>& keypoints_3d,
+              const DBoW2::BowVector& bow_vec,
+              const VIO::OrbDescriptor& descriptors_mat)
+        : keypoints_3d_(keypoints_3d),
+          bow_vec_(bow_vec),
+          descriptors_mat_(descriptors_mat) {}
+  };
+
+  std::vector<lcd_frame> frames_;
+
  private:
   //! Define frame ids for odometry message
   std::string world_frame_id_;
   std::string base_link_frame_id_;
   std::string map_frame_id_;
-
 
   // ID of next frame to publish Bow query
   uint32_t next_pose_id_;
