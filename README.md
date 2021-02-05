@@ -59,9 +59,10 @@ Install [Intel Threaded Building Blocks (TBB)](http://www.threadingbuildingblock
 mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/
 catkin init
-catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release -DGTSAM_TANGENT_PREINTEGRATION=OFF
 # On Ubuntu 16.04:
-# catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release -DGTSAM_USE_SYSTEM_EIGEN=ON
+# catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_TANGENT_PREINTEGRATION=OFF
+
 catkin config --merge-devel
 
 # Add workspace to bashrc for automatic sourcing of workspace.
@@ -82,8 +83,12 @@ wstool merge Kimera-VIO-ROS/install/kimera_vio_ros_ssh.rosinstall
 # For https
 # wstool merge Kimera-VIO-ROS/install/kimera_vio_ros_https.rosinstall
 
-# Finally, download and update repos:
+# download and update repos:
 wstool update
+
+# Optionally install all dependencies that you might have missed:
+# Some packages may report errors, this is expected
+# rosdep install --from-paths . --ignore-src -r -y
 ```
 
 Finally, compile:
