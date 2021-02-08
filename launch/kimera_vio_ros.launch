@@ -13,7 +13,7 @@
   <!-- Use CameraInfo topics to get parameters, instead of yaml files -->
   <arg name="use_online_cam_params" default="false"/>
 
-  <!-- If true, SparkVio will log output of all modules to the
+  <!-- If true, KimeraVIO will log output of all modules to the
        'log_output_path' location. -->
   <arg name="log_output" default="false"/>
   <arg name="log_output_path"
@@ -24,7 +24,7 @@
   <arg name="log_gt_data" default="false"/>
   <arg name="gt_topic"    default="ground_truth_odometry_topic"/>
 
-  <!-- If true, SparkVio will enable the LoopClosureDetector module. -->
+  <!-- If true, KimeraVIO will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
 
   <!-- Parameters -->

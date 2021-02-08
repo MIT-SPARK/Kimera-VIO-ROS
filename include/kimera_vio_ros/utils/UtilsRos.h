@@ -36,6 +36,7 @@ void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
                               CameraParams* cam_params);
 
 void msgGtOdomToVioNavState(const nav_msgs::Odometry& gt_odom,
+                            const ros::NodeHandle& node_handle,
                             VioNavState* vio_navstate);
 
 }  // namespace utils

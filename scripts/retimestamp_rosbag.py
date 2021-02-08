@@ -11,7 +11,7 @@
 # Usage    : python restamp_bag.py -i inbag.bag -o outbag.bag
 #
 #
-# This file has been modified to fit the needs of the SparkVIO project.
+# This file has been modified to fit the needs of the KimeraVIO project.
 # All original credit for this work goes to ETHZ.
 # ------------------------------------------------------------------------------
 
