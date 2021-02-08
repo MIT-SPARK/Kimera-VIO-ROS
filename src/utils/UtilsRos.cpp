@@ -19,9 +19,8 @@
 
 #include <gtsam/geometry/Pose3.h>
 
-#include <kimera-vio/frontend/CameraParams.h>
 #include <kimera-vio/common/VioNavState.h>
-
+#include <kimera-vio/frontend/CameraParams.h>
 
 namespace VIO {
 
@@ -59,7 +58,8 @@ void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
   cam_params->camera_id_ = cam_info->header.frame_id;
   CHECK(!cam_params->camera_id_.empty());
 
-  cam_params->distortion_model_ = CameraParams::stringToDistortion(cam_info->distortion_model, "pinhole");
+  cam_params->distortion_model_ =
+      CameraParams::stringToDistortion(cam_info->distortion_model, "pinhole");
 
   const std::vector<double>& distortion_coeffs = cam_info->D;
   CHECK_EQ(distortion_coeffs.size(), 4);
@@ -122,13 +122,11 @@ void msgGtOdomToVioNavState(const nav_msgs::Odometry& gt_odom,
 
   // Get acceleration and gyro biases. Default is 0.
   std::vector<double> parsed_acc_bias = {0.0, 0.0, 0.0};
-  node_handle.param<std::vector<double> >(
-      "gt_accel_bias", parsed_acc_bias, parsed_acc_bias);
+  node_handle.getParam("gt_accel_bias", parsed_acc_bias);
   CHECK_EQ(parsed_acc_bias.size(), 3u);
 
   std::vector<double> parsed_gyr_bias = {0.0, 0.0, 0.0};
-  node_handle.param<std::vector<double> >(
-      "gt_gyro_bias", parsed_gyr_bias, parsed_gyr_bias);
+  node_handle.getParam("gt_gyro_bias", parsed_gyr_bias);
   CHECK_EQ(parsed_gyr_bias.size(), 3u);
 
   gtsam::Vector3 acc_bias(
