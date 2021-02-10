@@ -359,7 +359,7 @@ VioNavState RosbagDataProvider::getGroundTruthVioNavState(
   CHECK_LT(k_frame, rosbag_data_.gt_odometry_.size());
   nav_msgs::Odometry gt_odometry = *(rosbag_data_.gt_odometry_.at(k_frame));
   VioNavState vio_nav_state;
-  utils::msgGtOdomToVioNavState(gt_odometry, nh_private_, &vio_nav_state);
+  utils::rosOdometryToVioNavState(gt_odometry, nh_private_, &vio_nav_state);
   return vio_nav_state;
 }
 

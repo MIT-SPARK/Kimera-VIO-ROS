@@ -512,7 +512,7 @@ void RosVisualizer::publishTf(const BackendOutput::ConstPtr& output) {
   odom_tf.header.frame_id = world_frame_id_;
   odom_tf.child_frame_id = base_link_frame_id_;
 
-  utils::poseToMsgTF(pose, &odom_tf.transform);
+  utils::gtsamPoseToRosTf(pose, &odom_tf.transform);
   tf_broadcaster_.sendTransform(odom_tf);
 }
 
