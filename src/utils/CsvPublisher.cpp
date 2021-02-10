@@ -2,10 +2,7 @@
 
 #include <glog/logging.h>
 
-#include <Eigen/Core>
-#include <Eigen/LU>
-#include <Eigen/SVD>
-#include <Eigen/Sparse>
+#include <kimera-vio/dataprovider/EurocDataProvider.h>
 
 #include "kimera_vio_ros/utils/UtilsRos.h"
 
@@ -73,32 +70,39 @@ void CsvPublisher::callbackOdometry(
 
   gtsam::Pose3 world_T_gt = csv_odometry_map_it_->second.pose_;
   gtsam::Pose3 world_T_vio;
-  rosOdometryToGtsamPose(odom_msg, world_T_vio);
+  rosOdometryToGtsamPose(*odom_msg, &world_T_vio);
 
   // Align CSV odometry with VIO odometry for nice visualization
   // using the first n messages
-  if (odometry_msgs_count_++ < n_alignment_frames_) {
+  // TODO(Toni): if we were using an incremental method we might be better off
+  // constantly aligning ground-truth with vio?
+  if (odometry_msgs_count_ < n_alignment_frames_) {
     // Associate VIO odometry with CSV (GT) odometry:
-    src_ << world_T_gt.translation();
-    dst_ << world_T_vio.translation();
+    LOG(ERROR) << "Adding meas";
+    src_.conservativeResize(src_.rows() + 1, Eigen::NoChange);
+    dst_.conservativeResize(dst_.rows() + 1, Eigen::NoChange);
+    src_.row(src_.rows() - 1) = world_T_gt.translation();
+    dst_.row(dst_.rows() - 1) = world_T_vio.translation();
+    odometry_msgs_count_++;
     return;
   }
-  CHECK_EQ(src_.rows(), odometry_msgs_count_);
-  CHECK_EQ(src_.rows(), dst_.rows());
 
   // Solve for R,t to align trajectories using Umeyama's method. (only once).
   if (!gt_T_vio_) {
-    LOG(INFO) << "Calculating GT/VIO alignment transform...";
+    CHECK_EQ(src_.rows(), odometry_msgs_count_);
+    CHECK_EQ(src_.rows(), dst_.rows());
+    VLOG(1) << "Calculating GT/VIO alignment transform...";
     static constexpr bool kSolveForScale = false;
-    gt_T_vio_ = std::make_shared<gtsam::Pose3>(
-        Eigen::umeyama(src_, dst_, kSolveForScale));
-    LOG(INFO) << "Done calculating GT/VIO alignment transform.";
+    Eigen::MatrixXd gt_T_vio = Eigen::umeyama(src_, dst_, kSolveForScale);
+    gt_T_vio_ = std::make_shared<gtsam::Pose3>(gt_T_vio);
+    VLOG(1) << "Done calculating GT/VIO alignment transform.";
   } else {
-    VLOG(10) << "Not re-calculating CSV/VIO initial alignment.";
+    VLOG(1) << "Not re-calculating CSV/VIO initial alignment.";
   }
+  CHECK(gt_T_vio_);
 
-  gtsam::Pose3 world_T_aligned_gt = world_T_gt.between(gt_T_vio_);
-  gtsam::Vector3 aligned_velocity = gt_T_vio_.rotation().toQuaternion() *
+  gtsam::Pose3 world_T_aligned_gt = world_T_gt.between(*gt_T_vio_);
+  gtsam::Vector3 aligned_velocity = gt_T_vio_->rotation().toQuaternion() *
                                     csv_odometry_map_it_->second.velocity_;
 
   // Publish Odometry

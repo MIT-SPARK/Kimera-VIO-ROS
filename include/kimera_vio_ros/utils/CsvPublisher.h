@@ -11,24 +11,26 @@
 
 #pragma once
 
-#include <cstdio>
-#include <fstream>
-#include <vector>
-
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
 
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Core>
 
-#include <glog/logging.h>
+#include <gtsam/geometry/Pose3.h>
+#include <gtsam/geometry/Point3.h>
 
-#include <kimera-vio/dataprovider/EurocDataProvider.h>
+#include <kimera-vio/utils/Macros.h>
+#include <kimera-vio/common/vio_types.h>
+#include <kimera-vio/common/VioNavState.h>
 #include <kimera-vio/pipeline/Pipeline-definitions.h>
+#include <kimera-vio/dataprovider/EurocDataProvider.h>
 
 namespace VIO {
+
+class EurocDataProvider;
 
 namespace utils {
 
@@ -38,8 +40,6 @@ class CsvPublisher {
   KIMERA_DELETE_COPY_CONSTRUCTORS(CsvPublisher);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   using MapIterator = std::map<Timestamp, VioNavState>::iterator;
-  using SyncedVioToGtMap =
-      std::map<Timestamp, std::pair<gtsam::Pose3, gtsam::Pose3>>;
 
  public:
   /**
@@ -77,14 +77,13 @@ class CsvPublisher {
   EurocDataProvider::UniquePtr euroc_data_provider_;
 
   MapIterator csv_odometry_map_it_;
-  SyncedVioToGtMap vio_to_gt_association_;
 
-  Eigen::RowVectorXd src_;
-  Eigen::RowVectorXd dst_;
+  Eigen::MatrixX3d src_;
+  Eigen::MatrixX3d dst_;
   std::shared_ptr<gtsam::Pose3> gt_T_vio_ = nullptr;
 
   // Align trajectories
-  static constexpr int n_alignment_frames_ = 50;
+  static constexpr int n_alignment_frames_ = 10;
   int odometry_msgs_count_ = 0;
 };
 
