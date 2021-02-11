@@ -32,10 +32,12 @@ CsvPublisher::CsvPublisher()
 
   // Init ROS publishers/subscribers
   static constexpr int queue_size = 100u;
-  odometry_pub_ = nh_private_.advertise<nav_msgs::Odometry>(
+  aligned_gt_odometry_pub_ = nh_private_.advertise<nav_msgs::Odometry>(
       trajectory_label_ + "_odometry", queue_size);
-  path_pub_ = nh_private_.advertise<nav_msgs::Path>(trajectory_label_ + "_path",
-                                                    queue_size);
+  aligned_gt_path_pub_ = nh_private_.advertise<nav_msgs::Path>(
+      trajectory_label_ + "_path", queue_size);
+  gt_path_pub_ = nh_private_.advertise<nav_msgs::Path>("gt_path", queue_size);
+  vio_path_pub_ = nh_private_.advertise<nav_msgs::Path>("vio_path", queue_size);
   odometry_sub_ = nh_.subscribe(
       "input_odometry", queue_size, &CsvPublisher::callbackOdometry, this);
 }
@@ -68,58 +70,88 @@ void CsvPublisher::callbackOdometry(
     return;
   }
 
-  gtsam::Pose3 world_T_gt = csv_odometry_map_it_->second.pose_;
-  gtsam::Pose3 world_T_vio;
-  rosOdometryToGtsamPose(*odom_msg, &world_T_vio);
+  // Gt pose expressed in Gt world frame of reference (gtw).
+  gtsam::Pose3 gtw_P_gt = csv_odometry_map_it_->second.pose_;
+  // VIO pose expressed in VIO world frame of reference (viow).
+  gtsam::Pose3 viow_P_vio;
+  rosOdometryToGtsamPose(*odom_msg, &viow_P_vio);
+  gtsam::Vector3 gtw_V_gt = csv_odometry_map_it_->second.velocity_;
+
+  // Discard first frames, while we wait for VIO to converge
+  if (odometry_msgs_count_++ < n_discard_frames_) {
+    VLOG(1) << "Discarding initial poses...";
+    return;
+  }
 
   // Align CSV odometry with VIO odometry for nice visualization
   // using the first n messages
   // TODO(Toni): if we were using an incremental method we might be better off
   // constantly aligning ground-truth with vio?
-  if (odometry_msgs_count_ < n_alignment_frames_) {
+  if ((odometry_msgs_count_ - n_discard_frames_) < n_alignment_frames_) {
     // Associate VIO odometry with CSV (GT) odometry:
-    LOG(ERROR) << "Adding meas";
-    src_.conservativeResize(src_.rows() + 1, Eigen::NoChange);
-    dst_.conservativeResize(dst_.rows() + 1, Eigen::NoChange);
-    src_.row(src_.rows() - 1) = world_T_gt.translation();
-    dst_.row(dst_.rows() - 1) = world_T_vio.translation();
-    odometry_msgs_count_++;
+    VLOG(1) << "Adding measurement to align trajectories...";
+    src_.conservativeResize(Eigen::NoChange, src_.cols() + 1);
+    dst_.conservativeResize(Eigen::NoChange, dst_.cols() + 1);
+    src_.col(src_.cols() - 1) = gtw_P_gt.translation();
+    dst_.col(dst_.cols() - 1) = viow_P_vio.translation();
     return;
   }
 
   // Solve for R,t to align trajectories using Umeyama's method. (only once).
-  if (!gt_T_vio_) {
-    CHECK_EQ(src_.rows(), odometry_msgs_count_);
+  if (!T_viow_gtw_) {
     CHECK_EQ(src_.rows(), dst_.rows());
+    CHECK_EQ(src_.cols(), dst_.cols());
     VLOG(1) << "Calculating GT/VIO alignment transform...";
     static constexpr bool kSolveForScale = false;
-    Eigen::MatrixXd gt_T_vio = Eigen::umeyama(src_, dst_, kSolveForScale);
-    gt_T_vio_ = std::make_shared<gtsam::Pose3>(gt_T_vio);
-    VLOG(1) << "Done calculating GT/VIO alignment transform.";
+    // Transforms from gt world frame to vio world frame.
+    T_viow_gtw_ = std::make_shared<gtsam::Pose3>(
+        Eigen::umeyama(src_, dst_, kSolveForScale));
+    VLOG(1) << "Done calculating GT/VIO alignment transform: gt_T_vio_ = \n"
+            << *T_viow_gtw_;
+    CHECK_DOUBLE_EQ(T_viow_gtw_->rotation().toQuaternion().norm(), 1.0);
   } else {
     VLOG(1) << "Not re-calculating CSV/VIO initial alignment.";
   }
-  CHECK(gt_T_vio_);
+  CHECK(T_viow_gtw_);
 
-  gtsam::Pose3 world_T_aligned_gt = world_T_gt.between(*gt_T_vio_);
-  gtsam::Vector3 aligned_velocity = gt_T_vio_->rotation().toQuaternion() *
-                                    csv_odometry_map_it_->second.velocity_;
+  gtsam::Pose3 viow_P_gt = T_viow_gtw_->compose(gtw_P_gt);
+  gtsam::Vector3 viow_V_gt = T_viow_gtw_->rotation().toQuaternion() * gtw_V_gt;
 
   // Publish Odometry
-  nav_msgs::Odometry csv_odometry;
-  fillOdometryMsg(csv_odometry_map_it_->first,
-                  world_T_aligned_gt,
-                  aligned_velocity,
-                  &csv_odometry);
-  odometry_pub_.publish(csv_odometry);
+  nav_msgs::Odometry aligned_odometry;
+  fillOdometryMsg(
+      csv_odometry_map_it_->first, viow_P_gt, viow_V_gt, &aligned_odometry);
+  aligned_gt_odometry_pub_.publish(aligned_odometry);
 
-  // Publish Path
+  nav_msgs::Odometry gt_odometry;
+  fillOdometryMsg(csv_odometry_map_it_->first,
+                  gtw_P_gt,
+                  csv_odometry_map_it_->second.velocity_,
+                  &gt_odometry);
+
+  // Publish aligned Gt Path
   geometry_msgs::PoseStamped csv_pose_stamped;
-  csv_pose_stamped.header = csv_odometry.header;
-  csv_pose_stamped.pose = csv_odometry.pose.pose;
-  csv_trajectory_path_.header = csv_odometry.header;
-  csv_trajectory_path_.poses.push_back(csv_pose_stamped);
-  path_pub_.publish(csv_trajectory_path_);
+  csv_pose_stamped.header = aligned_odometry.header;
+  csv_pose_stamped.pose = aligned_odometry.pose.pose;
+  aligned_gt_trajectory_path_.header = aligned_odometry.header;
+  aligned_gt_trajectory_path_.poses.push_back(csv_pose_stamped);
+  aligned_gt_path_pub_.publish(aligned_gt_trajectory_path_);
+
+  // Publish regular Gt Path
+  geometry_msgs::PoseStamped gt_pose_stamped;
+  gt_pose_stamped.header = gt_odometry.header;
+  gt_pose_stamped.pose = gt_odometry.pose.pose;
+  gt_trajectory_path_.header = gt_odometry.header;
+  gt_trajectory_path_.poses.push_back(gt_pose_stamped);
+  gt_path_pub_.publish(gt_trajectory_path_);
+
+  // Publish VIO Path
+  geometry_msgs::PoseStamped vio_pose_stamped;
+  vio_pose_stamped.header = odom_msg->header;
+  vio_pose_stamped.pose = odom_msg->pose.pose;
+  vio_trajectory_path_.header = odom_msg->header;
+  vio_trajectory_path_.poses.push_back(vio_pose_stamped);
+  vio_path_pub_.publish(vio_trajectory_path_);
 }
 
 void CsvPublisher::fillOdometryMsg(const Timestamp& timestamp,

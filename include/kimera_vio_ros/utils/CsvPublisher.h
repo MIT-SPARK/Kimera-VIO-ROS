@@ -61,16 +61,20 @@ class CsvPublisher {
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
 
-  ros::Publisher odometry_pub_;
-  ros::Publisher path_pub_;
+  ros::Publisher aligned_gt_odometry_pub_;
+  ros::Publisher aligned_gt_path_pub_;
+  ros::Publisher gt_path_pub_;
+  ros::Publisher vio_path_pub_;
 
   ros::Subscriber odometry_sub_;
 
-  nav_msgs::Path csv_trajectory_path_;
+  nav_msgs::Path aligned_gt_trajectory_path_;
+  nav_msgs::Path gt_trajectory_path_;
+  nav_msgs::Path vio_trajectory_path_;
 
   /// This label is prepended to the published topics and used as
   /// the child frame id for the published odometry.
-  std::string trajectory_label_ = "ground_truth";
+  std::string trajectory_label_ = "aligned_gt";
   std::string world_frame_id_ = "world";
 
   VioParams vio_params_;
@@ -78,12 +82,13 @@ class CsvPublisher {
 
   MapIterator csv_odometry_map_it_;
 
-  Eigen::MatrixX3d src_;
-  Eigen::MatrixX3d dst_;
-  std::shared_ptr<gtsam::Pose3> gt_T_vio_ = nullptr;
+  Eigen::Matrix3Xd src_;
+  Eigen::Matrix3Xd dst_;
+  std::shared_ptr<gtsam::Pose3> T_viow_gtw_ = nullptr;
 
   // Align trajectories
-  static constexpr int n_alignment_frames_ = 10;
+  static constexpr int n_alignment_frames_ = 30;
+  static constexpr int n_discard_frames_ = 20;
   int odometry_msgs_count_ = 0;
 };
 
