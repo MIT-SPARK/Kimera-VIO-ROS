@@ -26,18 +26,16 @@ namespace VIO {
 
 namespace utils {
 
-void msgTFtoPose(const geometry_msgs::Transform& tf, gtsam::Pose3* pose) {
+void rosTfToGtsamPose(const geometry_msgs::Transform& tf, gtsam::Pose3* pose) {
   CHECK_NOTNULL(pose);
-
   *pose = gtsam::Pose3(
       gtsam::Rot3(gtsam::Quaternion(
           tf.rotation.w, tf.rotation.x, tf.rotation.y, tf.rotation.z)),
       gtsam::Point3(tf.translation.x, tf.translation.y, tf.translation.z));
 }
 
-void poseToMsgTF(const gtsam::Pose3& pose, geometry_msgs::Transform* tf) {
+void gtsamPoseToRosTf(const gtsam::Pose3& pose, geometry_msgs::Transform* tf) {
   CHECK_NOTNULL(tf);
-
   tf->translation.x = pose.x();
   tf->translation.y = pose.y();
   tf->translation.z = pose.z();
@@ -46,6 +44,19 @@ void poseToMsgTF(const gtsam::Pose3& pose, geometry_msgs::Transform* tf) {
   tf->rotation.x = quat.x();
   tf->rotation.y = quat.y();
   tf->rotation.z = quat.z();
+}
+
+void rosOdometryToGtsamPose(const nav_msgs::Odometry& odom,
+                            gtsam::Pose3* pose) {
+  CHECK_NOTNULL(pose);
+  gtsam::Rot3 rotation = gtsam::Rot3::Quaternion(odom.pose.pose.orientation.w,
+                                                 odom.pose.pose.orientation.x,
+                                                 odom.pose.pose.orientation.y,
+                                                 odom.pose.pose.orientation.z);
+  gtsam::Point3 translation(odom.pose.pose.position.x,
+                            odom.pose.pose.position.y,
+                            odom.pose.pose.position.z);
+  *pose = gtsam::Pose3(rotation, translation);
 }
 
 void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
@@ -97,27 +108,20 @@ void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
         << ex.what();
   }
 
-  msgTFtoPose(cam_tf.transform, &cam_params->body_Pose_cam_);
+  rosTfToGtsamPose(cam_tf.transform, &cam_params->body_Pose_cam_);
 }
 
-void msgGtOdomToVioNavState(const nav_msgs::Odometry& gt_odom,
-                            const ros::NodeHandle& node_handle,
-                            VioNavState* vio_navstate) {
+void rosOdometryToVioNavState(const nav_msgs::Odometry& odom,
+                              const ros::NodeHandle& node_handle,
+                              VioNavState* vio_navstate) {
   CHECK_NOTNULL(vio_navstate);
 
-  // World to Body rotation
-  gtsam::Rot3 W_R_B = gtsam::Rot3::Quaternion(gt_odom.pose.pose.orientation.w,
-                                              gt_odom.pose.pose.orientation.x,
-                                              gt_odom.pose.pose.orientation.y,
-                                              gt_odom.pose.pose.orientation.z);
-  gtsam::Point3 position(gt_odom.pose.pose.position.x,
-                         gt_odom.pose.pose.position.y,
-                         gt_odom.pose.pose.position.z);
-  gtsam::Vector3 velocity(gt_odom.twist.twist.linear.x,
-                          gt_odom.twist.twist.linear.y,
-                          gt_odom.twist.twist.linear.z);
+  rosOdometryToGtsamPose(odom, &vio_navstate->pose_);
 
-  vio_navstate->pose_ = gtsam::Pose3(W_R_B, position);
+  // World to Body rotation
+  gtsam::Vector3 velocity(odom.twist.twist.linear.x,
+                          odom.twist.twist.linear.y,
+                          odom.twist.twist.linear.z);
   vio_navstate->velocity_ = velocity;
 
   // Get acceleration and gyro biases. Default is 0.

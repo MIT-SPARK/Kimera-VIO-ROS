@@ -1,0 +1,17 @@
+<launch>
+  <arg name="dataset_path"  default="/home/tonirv/datasets/EuRoC/MH_05_difficult"/>
+  <arg name="input_odometry" default="/kimera_vio_ros/odometry"/>
+
+  <!-- Assumes we have the same data directory than Euroc, since we use EurocDataProvider-->
+  <!-- launch-prefix="gdb -ex run -args"-->
+  <node name="ground_truth_publisher" pkg="kimera_vio_ros" type="csv_publisher_node" output="screen"
+    args="--logtostderr=1
+          --colorlogtostderr=1
+          --dataset_path=$(arg dataset_path)
+          --log_prefix=1">
+    <remap from="input_odometry" to="$(arg input_odometry)"/>
+    <!-- Appends this string to the topics and child frame id of the published csv data -->
+    <param name="trajectory_label" value="ground_truth"/>
+    <param name="world_frame_id"   value="world"/>
+  </node>
+</launch>
