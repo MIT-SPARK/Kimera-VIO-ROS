@@ -19,8 +19,8 @@
 #include <std_srvs/TriggerResponse.h>
 
 // Dependencies from VIO
-#include <kimera-vio/pipeline/MonoPipeline.h>
-#include <kimera-vio/pipeline/StereoPipeline.h>
+#include <kimera-vio/pipeline/MonoImuPipeline.h>
+#include <kimera-vio/pipeline/StereoImuPipeline.h>
 #include <kimera-vio/utils/Timer.h>
 
 // Dependencies from this repository
@@ -84,11 +84,11 @@ bool KimeraVioRos::runKimeraVio() {
   vio_pipeline_ = nullptr;
   switch (vio_params_->frontend_type_) {
     case VIO::FrontendType::kMonoImu: {
-      vio_pipeline_ = VIO::make_unique<VIO::MonoPipeline>(
+      vio_pipeline_ = VIO::make_unique<VIO::MonoImuPipeline>(
           *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
     } break;
     case VIO::FrontendType::kStereoImu: {
-      vio_pipeline_ = VIO::make_unique<VIO::StereoPipeline>(
+      vio_pipeline_ = VIO::make_unique<VIO::StereoImuPipeline>(
           *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
     } break;
     default: {
@@ -227,16 +227,16 @@ void KimeraVioRos::connectVIO() {
                 std::placeholders::_1));
 
   if (vio_params_->frontend_type_ == VIO::FrontendType::kStereoImu) {
-    VIO::StereoPipeline::UniquePtr stereo_pipeline =
-        VIO::safeCast<VIO::Pipeline, VIO::StereoPipeline>(
+    VIO::StereoImuPipeline::UniquePtr stereo_pipeline =
+        VIO::safeCast<VIO::Pipeline, VIO::StereoImuPipeline>(
             std::move(vio_pipeline_));
 
     data_provider_->registerRightFrameCallback(
-        std::bind(&VIO::StereoPipeline::fillRightFrameQueue,
+        std::bind(&VIO::StereoImuPipeline::fillRightFrameQueue,
                   std::ref(*CHECK_NOTNULL(stereo_pipeline.get())),
                   std::placeholders::_1));
 
-    vio_pipeline_ = VIO::safeCast<VIO::StereoPipeline, VIO::Pipeline>(
+    vio_pipeline_ = VIO::safeCast<VIO::StereoImuPipeline, VIO::Pipeline>(
         std::move(stereo_pipeline));
   }
 }

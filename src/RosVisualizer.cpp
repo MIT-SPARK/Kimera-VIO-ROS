@@ -24,8 +24,8 @@
 #include <tf/transform_broadcaster.h>
 #include <tf2/buffer_core.h>
 
-#include <kimera-vio/backend/VioBackEnd-definitions.h>
-#include <kimera-vio/frontend/StereoVisionFrontEnd-definitions.h>
+#include <kimera-vio/backend/VioBackend-definitions.h>
+#include <kimera-vio/frontend/StereoVisionImuFrontend-definitions.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/mesh/Mesh.h>
 #include <kimera-vio/mesh/Mesher-definitions.h>
@@ -410,7 +410,7 @@ void RosVisualizer::publishFrontendStats(
   frontend_stats_msg.layout.dim[0].size = frontend_stats_msg.data.size();
   frontend_stats_msg.layout.dim[0].stride = 1;
   frontend_stats_msg.layout.dim[0].label =
-      "FrontEnd: nrDetFeat, nrTrackFeat, nrMoIn, nrMoPu, nrStIn, nrStPu, "
+      "Frontend: nrDetFeat, nrTrackFeat, nrMoIn, nrMoPu, nrStIn, nrStPu, "
       "moRaIt, stRaIt, nrVaRKP, nrNoLRKP, nrNoRRKP, nrNoDRKP nrFaARKP";
 
   // Publish Message
@@ -522,7 +522,7 @@ void RosVisualizer::publishOptimizedTrajectory(
   CHECK(lcd_output);
 
   // Get pgo-optimized trajectory
-  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const Timestamp& ts = lcd_output->timestamp_;
   const gtsam::Values& trajectory = lcd_output->states_;
   // Create message type
   nav_msgs::Path path;
@@ -683,7 +683,7 @@ void RosVisualizer::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
   // Get the factor graph
-  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const Timestamp& ts = lcd_output->timestamp_;
   const gtsam::NonlinearFactorGraph& nfg = lcd_output->nfg_;
   const gtsam::Values& values = lcd_output->states_;
   updateNodesAndEdges(nfg, values);
@@ -696,7 +696,7 @@ void RosVisualizer::publishPoseGraph(const LcdOutput::ConstPtr& lcd_output) {
 void RosVisualizer::publishTf(const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
 
-  const Timestamp& ts = lcd_output->timestamp_kf_;
+  const Timestamp& ts = lcd_output->timestamp_;
   const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
   const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
   // Publish map TF.

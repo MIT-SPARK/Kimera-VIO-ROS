@@ -22,7 +22,7 @@
   <arg name="use_online_cam_params" value="false"/>
 
   <!-- Change rosbag path if online argument is false -->
-  <arg name="rosbag_path" default="/home/marcus/datasets/EuRoC/rosbags/V1_01_easy.bag"
+  <arg name="rosbag_path" default=""
     unless="$(arg online)"/>
 
   <!-- Frame IDs -->
