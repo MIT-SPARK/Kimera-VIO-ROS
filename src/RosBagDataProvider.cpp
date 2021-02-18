@@ -125,9 +125,6 @@ bool RosbagDataProvider::spin() {
       static const CameraParams& right_cam_info =
           vio_params_.camera_params_.at(1);
 
-      LOG_IF(WARNING, timestamp_frame_k == timestamp_last_frame_)
-          << "Timestamps for current and previous frames are equal! This should"
-             "not happen...";
       if (timestamp_frame_k > timestamp_last_frame_) {
         // Send left frame data to Kimera:
         CHECK(left_frame_callback_)
@@ -163,11 +160,18 @@ bool RosbagDataProvider::spin() {
 
         timestamp_last_frame_ = timestamp_frame_k;
       } else {
-        LOG(WARNING) << "Skipping frame: " << k_ << '\n'
-                     << " Frame timestamps out of order:\n"
-                     << " Timestamp Current Frame: " << timestamp_frame_k
-                     << "\n"
-                     << " Timestamp Last Frame:    " << timestamp_last_frame_;
+        if (timestamp_frame_k == timestamp_last_frame_) {
+          LOG(WARNING)
+              << "Timestamps for current and previous frames are equal! \n"
+              << "This should not happen, dropping this frame... \n "
+              << "- Offending timestamp: " << timestamp_frame_k;
+        } else {
+          LOG(WARNING) << "Skipping frame: " << k_ << '\n'
+                       << " Frame timestamps out of order:\n"
+                       << " Timestamp Current Frame: " << timestamp_frame_k
+                       << "\n"
+                       << " Timestamp Last Frame:    " << timestamp_last_frame_;
+        }
       }
 
       publishRosbagInfo(timestamp_frame_k);
@@ -241,8 +245,18 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
         rosbag_data->imu_msgs_.push_back(imu_msg);
         last_imu_timestamp = imu_data_timestamp;
       } else {
-        LOG(FATAL) << "IMU timestamps in rosbag are out of order: consider "
-                      "re-ordering rosbag.";
+        if (imu_data_timestamp - last_imu_timestamp == 0u) {
+          LOG(WARNING) << "IMU timestamps in rosbag are repeated!\n"
+                       << "Offending timestamp: " << imu_data_timestamp;
+        } else {
+          LOG(FATAL) << "IMU timestamps in rosbag are out of order: consider "
+                     << "re-ordering rosbag: \n"
+                     << "- Current IMU timestamp: " << imu_data_timestamp
+                     << '\n'
+                     << "- Last IMU timestamp: " << last_imu_timestamp << '\n'
+                     << "Difference (current - last) = "
+                     << imu_data_timestamp - last_imu_timestamp;
+        }
       }
       start_parsing_stereo = true;
       continue;
@@ -323,25 +337,23 @@ void RosbagDataProvider::logGtData(const nav_msgs::OdometryConstPtr& odometry) {
                   << "bgx,bgy,bgz,bax,bay,baz" << std::endl;
     is_header_written = true;
   }
-  output_stream << odometry->header.stamp.toNSec()   << ","  //
-                << odometry->pose.pose.position.x    << ","    //
-                << odometry->pose.pose.position.y    << ","    //
-                << odometry->pose.pose.position.z    << ","    //
+  output_stream << odometry->header.stamp.toNSec() << ","  //
+                << odometry->pose.pose.position.x << ","   //
+                << odometry->pose.pose.position.y << ","   //
+                << odometry->pose.pose.position.z << ","   //
                 << odometry->pose.pose.orientation.w << ","
                 << odometry->pose.pose.orientation.x << ","
                 << odometry->pose.pose.orientation.y << ","
                 << odometry->pose.pose.orientation.z << ","
-                << odometry->twist.twist.linear.x    << ","
-                << odometry->twist.twist.linear.y    << ","
-                << odometry->twist.twist.linear.z    << ","
-                << 0.0 << ","         //
-                << 0.0 << ","         //
-                << 0.0 << ","         //
-                << 0.0 << ","          //
-                << 0.0 << ","          //
-                << 0.0                 //
+                << odometry->twist.twist.linear.x << ","
+                << odometry->twist.twist.linear.y << ","
+                << odometry->twist.twist.linear.z << "," << 0.0 << ","  //
+                << 0.0 << ","                                           //
+                << 0.0 << ","                                           //
+                << 0.0 << ","                                           //
+                << 0.0 << ","                                           //
+                << 0.0                                                  //
                 << std::endl;
-
 }
 
 VioNavState RosbagDataProvider::getGroundTruthVioNavState(
@@ -349,7 +361,7 @@ VioNavState RosbagDataProvider::getGroundTruthVioNavState(
   CHECK_LT(k_frame, rosbag_data_.gt_odometry_.size());
   nav_msgs::Odometry gt_odometry = *(rosbag_data_.gt_odometry_.at(k_frame));
   VioNavState vio_nav_state;
-  utils::msgGtOdomToVioNavState(gt_odometry, &vio_nav_state);
+  utils::rosOdometryToVioNavState(gt_odometry, nh_private_, &vio_nav_state);
   return vio_nav_state;
 }
 

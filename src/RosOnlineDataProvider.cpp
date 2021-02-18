@@ -365,8 +365,10 @@ void RosOnlineDataProvider::callbackGtOdomOnce(
     const nav_msgs::Odometry::ConstPtr& gt_odom_msg) {
   LOG(WARNING) << "Using initial ground-truth state for initialization.";
   CHECK(gt_odom_msg);
-  utils::msgGtOdomToVioNavState(
-      *gt_odom_msg, &vio_params_.backend_params_->initial_ground_truth_state_);
+  utils::rosOdometryToVioNavState(
+      *gt_odom_msg,
+      nh_private_,
+      &vio_params_.backend_params_->initial_ground_truth_state_);
 
   // Signal receptance of ground-truth pose.
   gt_init_pose_received_ = true;
@@ -413,7 +415,7 @@ void RosOnlineDataProvider::publishStaticTf(const gtsam::Pose3& pose,
   static_transform_stamped.header.stamp = ros::Time::now();
   static_transform_stamped.header.frame_id = parent_frame_id;
   static_transform_stamped.child_frame_id = child_frame_id;
-  utils::poseToMsgTF(pose, &static_transform_stamped.transform);
+  utils::gtsamPoseToRosTf(pose, &static_transform_stamped.transform);
   static_broadcaster.sendTransform(static_transform_stamped);
 }
 

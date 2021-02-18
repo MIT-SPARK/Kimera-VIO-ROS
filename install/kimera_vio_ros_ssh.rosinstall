@@ -13,7 +13,7 @@
 - git:
     local-name: gtsam
     uri: git@github.com:borglab/gtsam.git
-    version: master
+    version: develop
 - git:
     local-name: opencv3_catkin
     uri: git@github.com:ethz-asl/opencv3_catkin.git

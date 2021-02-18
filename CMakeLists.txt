@@ -24,13 +24,17 @@ cs_add_library(${PROJECT_NAME}
   include/kimera_vio_ros/RosOnlineDataProvider.h
   include/kimera_vio_ros/RosPublishers.h
   include/kimera_vio_ros/RosVisualizer.h
+  include/kimera_vio_ros/utils/UtilsRos.h
+  include/kimera_vio_ros/utils/CsvPublisher.h
   src/KimeraVioRos.cpp
   src/RosDataProviderInterface.cpp
   src/RosBagDataProvider.cpp
   src/RosOnlineDataProvider.cpp
   src/RosDisplay.cpp
   src/RosVisualizer.cpp
+  src/RosLoopClosureVisualizer.cpp
   src/utils/UtilsRos.cpp
+  src/utils/CsvPublisher.cpp
 )
 target_link_libraries(${PROJECT_NAME} kimera_vio)
 
@@ -38,6 +42,11 @@ cs_add_executable(${PROJECT_NAME}_node
   src/KimeraVioRosNode.cpp
 )
 target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME})
+
+cs_add_executable(csv_publisher_node
+  src/utils/CsvPublisherNode.cpp
+)
+target_link_libraries(csv_publisher_node ${PROJECT_NAME})
 
 catkin_add_gtest(testKimeraVioRos
   test/testKimeraVioRos.cpp
