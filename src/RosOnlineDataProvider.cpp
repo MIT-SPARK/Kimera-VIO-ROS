@@ -285,18 +285,20 @@ void RosOnlineDataProvider::callbackStereoImages(
   const Timestamp& timestamp_left = left_msg->header.stamp.toNSec();
   const Timestamp& timestamp_right = right_msg->header.stamp.toNSec();
 
-  CHECK(left_frame_callback_)
-      << "Did you forget to register the left frame callback?";
-  CHECK(right_frame_callback_)
-      << "Did you forget to register the right frame callback?";
-
   if (!shutdown_) {
+    CHECK(left_frame_callback_)
+        << "Did you forget to register the left frame callback?";
     left_frame_callback_(VIO::make_unique<Frame>(
         frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
-    right_frame_callback_(VIO::make_unique<Frame>(frame_count_,
-                                                  timestamp_right,
-                                                  right_cam_info,
-                                                  readRosImage(right_msg)));
+
+    if (vio_params_.frontend_type_ == VIO::FrontendType::kStereoImu) {
+      CHECK(right_frame_callback_)
+          << "Did you forget to register the right frame callback?";
+      right_frame_callback_(VIO::make_unique<Frame>(frame_count_,
+                                                    timestamp_right,
+                                                    right_cam_info,
+                                                    readRosImage(right_msg)));
+    }
     frame_count_++;
   }
 }

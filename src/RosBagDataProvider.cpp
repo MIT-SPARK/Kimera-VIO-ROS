@@ -136,13 +136,15 @@ bool RosbagDataProvider::spin() {
             readRosImage(rosbag_data_.left_imgs_.at(k_))));
 
         // Send right frame data to Kimera:
-        CHECK(right_frame_callback_)
-            << "Did you forget to register the right frame callback?";
-        right_frame_callback_(VIO::make_unique<Frame>(
-            k_,
-            timestamp_frame_k,
-            right_cam_info,
-            readRosImage(rosbag_data_.right_imgs_.at(k_))));
+        if (vio_params_.frontend_type_ == VIO::FrontendType::kStereoImu) {
+          CHECK(right_frame_callback_)
+              << "Did you forget to register the right frame callback?";
+          right_frame_callback_(VIO::make_unique<Frame>(
+              k_,
+              timestamp_frame_k,
+              right_cam_info,
+              readRosImage(rosbag_data_.right_imgs_.at(k_))));
+        }
 
         VLOG(10) << "Sent left/right images to VIO for frame k = " << k_;
 

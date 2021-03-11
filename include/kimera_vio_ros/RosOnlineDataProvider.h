@@ -17,6 +17,7 @@
 #include <std_msgs/Bool.h>
 
 #include "kimera_vio_ros/RosDataProviderInterface.h"
+#include "kimera-vio/frontend/StereoImuSyncPacket.h"
 
 namespace VIO {
 

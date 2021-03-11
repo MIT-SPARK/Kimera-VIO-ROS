@@ -88,10 +88,6 @@ void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
   VIO::CameraParams::convertIntrinsicsVectorToMatrix(cam_params->intrinsics_,
                                                      &cam_params->K_);
 
-  VIO::CameraParams::createGtsamCalibration(cam_params->distortion_coeff_,
-                                            cam_params->intrinsics_,
-                                            &cam_params->calibration_);
-
   // Get extrinsics from the TF tree:
   tf2_ros::Buffer t_buffer;
   static constexpr size_t kTfLookupTimeout = 5u;

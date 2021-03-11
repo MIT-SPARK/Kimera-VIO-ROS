@@ -70,8 +70,8 @@
         args="--use_lcd=$(arg use_lcd)
               --vocabulary_path=$(arg path_to_vocab)
               --flagfile=$(arg params_folder)/flags/Mesher.flags
-              --flagfile=$(arg params_folder)/flags/VioBackEnd.flags
-              --flagfile=$(arg params_folder)/flags/RegularVioBackEnd.flags
+              --flagfile=$(arg params_folder)/flags/VioBackend.flags
+              --flagfile=$(arg params_folder)/flags/RegularVioBackend.flags
               --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
               --logtostderr=1
               --colorlogtostderr=1
