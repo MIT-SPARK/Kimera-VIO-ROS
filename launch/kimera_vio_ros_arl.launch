@@ -1,0 +1,36 @@
+
+<launch>
+  <arg name="camera_id" default="thoth"/>
+  <arg name="online" default="true" />
+  <arg name="log_output" default="true"/>
+  <arg name="rosbag_path" default="path" />
+
+  <arg name="use_lcd" default="false"/>
+
+  <!-- Image Decompression -->
+  <node name="decompress_image_1" type="republish" pkg="image_transport" output="screen" args="compressed in:=/$(arg camera_id)/infra1/image_rect_raw raw out:=/$(arg camera_id)/infra1/image_rect_raw" />
+  <node name="decompress_image_2" type="republish" pkg="image_transport" output="screen" args="compressed in:=/$(arg camera_id)/infra2/image_rect_raw raw out:=/$(arg camera_id)/infra2/image_rect_raw" />
+
+  <!-- Other settings -->
+  <arg name="log_gt_data" value="false"/>
+  <arg name="should_use_sim_time" default="true"/>
+  <arg name="params_folder" value="$(find kimera_vio)/params/arl"/>
+  <arg if="$(arg log_output)" name="log_output_path" value="$(find kimera_vio_ros)/output_logs/arl"/>
+
+  <!-- Subscribed Topics -->
+  <arg name="left_cam_topic" value="/$(arg camera_id)/forward/infra1/image_rect_raw"/>
+  <arg name="right_cam_topic" value="/$(arg camera_id)/forward/infra2/image_rect_raw"/>
+  <arg name="imu_topic"  value="/$(arg camera_id)/forward/imu"/>
+  <!-- Only used when parsing a rosbag -->
+  <arg name="world_frame_id"     value="world"/>
+  <arg name="base_link_frame_id" value="base_link"/>
+  <arg name="map_frame_id"       value="map"/>
+  <arg name="left_cam_frame_id"  value="left_cam"/>
+  <arg name="right_cam_frame_id" value="right_cam"/>
+
+  <!-- Launch actual pipeline -->
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
+    pass_all_args="true"/>
+
+
+</launch>
