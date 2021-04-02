@@ -21,13 +21,13 @@ def process_bag(input_rosbag, output_rosbag, compressed_image_topics=[], output_
 				grayscale = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
 				img_msg = bridge.cv2_to_imgmsg(grayscale, "mono8")
 				img_msg.header = msg.header
-				output_bag.write(output_image_topics[compressed_image_topics.index(topic)], img_msg)
+				output_bag.write(output_image_topics[compressed_image_topics.index(topic)], img_msg, t)
 			elif topic in output_image_topics:
 				pass
 			else:
-				output_bag.write(topic, msg)
+				output_bag.write(topic, msg, t)
 		except AttributeError: 
-			output_bag.write(topic, msg)
+			output_bag.write(topic, msg, t)
 	return
 
 if __name__=="__main__":
