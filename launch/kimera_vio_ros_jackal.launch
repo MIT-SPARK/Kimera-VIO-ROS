@@ -30,5 +30,6 @@
   <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
     pass_all_args="true"/>
 
+  <node pkg="tf" type="static_transform_publisher" name="acl_kimera_tf" args="0 0 0 0 0 0 /world /acl_jackal/map 100"/>
 
 </launch>
