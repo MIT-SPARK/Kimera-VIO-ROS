@@ -5,13 +5,15 @@
   <arg name="rosbag_path" default="path" />
   <arg name="robot_type" default="Jackal" />
 
-  <arg name="use_lcd" default="false"/>
+  <arg name="use_lcd" default="true"/>
 
   <!-- Other settings -->
-  <arg name="log_gt_data" value="false"/>
+  <arg name="log_gt_data" value="true"/>
   <arg name="should_use_sim_time" default="true"/>
   <arg name="params_folder" value="$(find kimera_vio)/params/$(arg robot_type)"/>
   <arg if="$(arg log_output)" name="log_output_path" value="$(find kimera_vio_ros)/output_logs/$(arg robot_type)"/>
+  <remap from="/kimera_vio_ros/gt_odom"        to="/acl_jackal/jackal_velocity_controller/odom"/>
+  
 
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic" value="/$(arg camera_id)/infra1/image_rect_raw"/>
