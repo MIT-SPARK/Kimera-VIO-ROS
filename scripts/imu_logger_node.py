@@ -1,20 +1,20 @@
 #!/usr/bin/env python
-
 import os
 import csv
-
 import rospy
 from sensor_msgs.msg import Imu
+from rosgraph_msgs.msg import Clock
 
-# TODO(marcus): add support for choosing EuRoC standard or SWE format.
 class IMULoggerNode:
     def __init__(self):
         self.imu_topic = rospy.get_param("~imu_topic")
+        self.clock_topic = "/clock"
         self.output_dir = rospy.get_param("~output_dir")
         self.output_csv_file = os.path.join(self.output_dir, "imu_data.csv")
+        self.t = "0"
 
-        # rospy.Subscriber(self.gt_topic, TransformStamped, self.gt_cb_tfs)
         rospy.Subscriber(self.imu_topic, Imu, self.record_imu_msg, queue_size=20)
+        rospy.Subscriber(self.clock_topic, Clock, self.record_clock_msg, queue_size=20)
         self.setup_imu_file()
 
     def record_imu_msg(self, msg):
@@ -22,7 +22,7 @@ class IMULoggerNode:
 
             Writes each point to a csv file in the swe format. This format is
             as follows:
-                timestamp[ns], ang_vel_x, ang_vel_y, ang_vel_z, 
+                timestamp[ns], clock, ang_vel_x, ang_vel_y, ang_vel_z, 
                 lin_acc_x, lin_acc_y, lin_acc_z
 
             Args:
@@ -34,6 +34,7 @@ class IMULoggerNode:
             # in each datum.
             writer = csv.writer(file, delimiter=",")
             writer.writerow([str(msg.header.stamp.to_nsec()),
+                            self.t,
                              str(msg.angular_velocity.x),
                              str(msg.angular_velocity.y),
                              str(msg.angular_velocity.z),
@@ -41,6 +42,17 @@ class IMULoggerNode:
                              str(msg.linear_acceleration.y),
                              str(msg.linear_acceleration.z)])
 
+    def record_clock_msg(self, msg):
+        """ Callback for clock data as it comes in as Clock msgs.
+
+            Writes each point to self.t as a timestamp[ns]
+            representing the rosbag time
+            Args:
+                msg: A rosgraph_msgs/Clock object representing
+                     the current timestamp.
+        """
+        self.t = str(msg.clock.to_nsec())
+            
     def setup_imu_file(self):
         """ File initializer.
 
@@ -49,7 +61,7 @@ class IMULoggerNode:
         """
         with open(self.output_csv_file, mode='wb') as file:
             writer = csv.writer(file, delimiter=",")
-            writer.writerow(['timestamp[ns]', 'ang_vel_x', 'ang_vel_y', 'ang_vel_z', 
+            writer.writerow(['timestamp', 'clock', 'ang_vel_x', 'ang_vel_y', 'ang_vel_z', 
             'lin_acc_x', 'lin_acc_y', 'lin_acc_z'])
 
 if __name__ == "__main__":
