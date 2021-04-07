@@ -9,6 +9,7 @@
 
   <!-- Other settings -->
   <arg name="log_gt_data" value="true"/>
+  <arg name="log_imu_data" value="true"/>
   <arg name="should_use_sim_time" default="true"/>
   <arg name="params_folder" value="$(find kimera_vio)/params/$(arg robot_type)"/>
   <arg if="$(arg log_output)" name="log_output_path" value="$(find kimera_vio_ros)/output_logs/$(arg robot_type)"/>
