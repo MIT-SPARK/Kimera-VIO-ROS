@@ -11,7 +11,7 @@
 # Usage    : python restamp_bag.py -i inbag.bag -o outbag.bag
 #
 #
-# This file has been modified to fit the needs of the SparkVIO project.
+# This file has been modified to fit the needs of the KimeraVIO project.
 # All original credit for this work goes to ETHZ.
 # ------------------------------------------------------------------------------
 
@@ -31,11 +31,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"hi:o:",["ifile=","ofile="])
     except getopt.GetoptError:
-        print 'usage: restamp_bag.py -i <inputfile> -o <outputfile>'
+        print('usage: restamp_bag.py -i <inputfile> -o <outputfile>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'usage: python restamp_bag.py -i <inputfile> -o <outputfile>'
+            print('usage: python restamp_bag.py -i <inputfile> -o <outputfile>')
             sys.exit()
         elif opt in ("-i", "--ifile"):
             inputfile = arg
@@ -43,14 +43,14 @@ def main(argv):
             outputfile = arg
 
     # print console header
-    print ""
-    print "restamp_bag"
-    print ""
-    print 'input file:  ', inputfile
-    print 'output file: ', outputfile
-    print ""
-    print "starting restamping (may take a while)"
-    print ""
+    print("")
+    print("restamp_bag")
+    print("")
+    print('input file:  ', inputfile)
+    print('output file: ', outputfile)
+    print("")
+    print("starting restamping (may take a while)")
+    print("")
 
     outbag = rosbag.Bag(outputfile, 'w')
     messageCounter = 0
@@ -70,7 +70,7 @@ def main(argv):
                     # Write message in output bag with input message header stamp
                     outbag.write(topic, msg, msg.header.stamp)
                 except:
-                    print "a message has no header here. Coming from topic: ", topic
+                    print("a message has no header here. Coming from topic: ", topic)
 
             if (messageCounter % kPrintDotReductionFactor) == 0:
                     #print '.',
@@ -80,11 +80,11 @@ def main(argv):
 
     # print console footer
     finally:
-        print ""
-        print ""
-        print "finished iterating through input bag"
-        print "output bag written"
-        print ""
+        print("")
+        print("")
+        print("finished iterating through input bag")
+        print("output bag written")
+        print("")
         outbag.close()
 
 if __name__ == "__main__":

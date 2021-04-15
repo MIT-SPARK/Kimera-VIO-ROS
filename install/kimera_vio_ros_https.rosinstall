@@ -13,8 +13,7 @@
 - git:
     local-name: gtsam
     uri: https://github.com/borglab/gtsam.git
-    version: master
-    # Last tested commit: 342f30d148fae84c92ff71705c9e50e0a3683bda
+    version: develop
 - git:
     local-name: opencv3_catkin
     uri: https://github.com/ethz-asl/opencv3_catkin.git

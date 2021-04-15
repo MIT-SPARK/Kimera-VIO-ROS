@@ -25,8 +25,8 @@
 #include <pose_graph_tools/PoseGraphEdge.h>
 #include <pose_graph_tools/PoseGraphNode.h>
 
-#include <kimera-vio/backend/VioBackEnd-definitions.h>
-#include <kimera-vio/frontend/StereoVisionFrontEnd-definitions.h>
+#include <kimera-vio/backend/VioBackend-definitions.h>
+#include <kimera-vio/frontend/StereoVisionImuFrontend-definitions.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector.h>
 #include <kimera-vio/mesh/Mesher-definitions.h>

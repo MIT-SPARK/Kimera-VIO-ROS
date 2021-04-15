@@ -22,7 +22,7 @@
 namespace VIO {
 
 RosDisplay::RosDisplay()
-    : DisplayBase(), nh_private_("~"), image_publishers_(nullptr) {
+    : DisplayBase(VIO::DisplayType::kOpenCV), nh_private_("~"), image_publishers_(nullptr) {
   image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
 }
 
