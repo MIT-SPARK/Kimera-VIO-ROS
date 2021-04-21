@@ -3,7 +3,7 @@
   <arg name="verbosity"    default="0" />
 
   <!-- Set online to true if you use rosbag play or sensor stream -->
-  <arg name="online" default="false" />
+  <arg name="online" default="true" />
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <param name="use_sim_time" value="true"/>
   <!-- Set log_output to true and KimeraVIO will log output of all modules to
@@ -21,6 +21,7 @@
 
   <arg name="use_lcd"   default="false"/>
   <arg name="visualize" default="true"/>
+  <arg name="log_imu_data" value="true"/>
 
   <arg name="use_online_cam_params" value="false"/>
 
