@@ -81,8 +81,8 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
 
   if (!external_odom_topic_.empty() && use_external_odom_) {
     use_external_odom_ = true;
-    external_odometry_pub_ = nh_.advertise<nav_msgs::Odometry>(
-        external_odom_topic_, kQueueSize);
+    external_odometry_pub_ =
+        nh_.advertise<nav_msgs::Odometry>(external_odom_topic_, kQueueSize);
   }
 }
 
@@ -259,6 +259,14 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
     topics.push_back(external_odom_topic_);
   }
 
+  std::stringstream ss;
+  ss << "query topics:" << std::endl;
+  ss << "=============" << std::endl;
+  for (const auto& topic : topics) {
+    ss << " - " << topic << std::endl;
+  }
+  VLOG(2) << ss.str();
+
   // Query rosbag for given topics
   rosbag::View view(bag, rosbag::TopicQuery(topics));
 
@@ -318,22 +326,22 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
     }
 
     // Check if msg is a ground-truth odometry message.
-    nav_msgs::OdometryConstPtr odom_msg =
-        msg.instantiate<nav_msgs::Odometry>();
+    nav_msgs::OdometryConstPtr odom_msg = msg.instantiate<nav_msgs::Odometry>();
     if (odom_msg != nullptr) {
+      // handle gt
       if (msg_topic == gt_odom_topic_) {
         rosbag_data->gt_odometry_.push_back(odom_msg);
         if (log_gt_data_) {
           logGtData(odom_msg);
         }
-      } else if (msg_topic == external_odom_topic_) {
-        if (use_external_odom_) {
-          rosbag_data->external_odom_.push_back(odom_msg);
-        }
-      } else {
+      } else if (msg_topic != external_odom_topic_) {
         LOG(ERROR) << "Unrecognized topic name for odometry msg. We were"
                       " expecting ground-truth odometry on this topic: "
                    << msg_topic;
+      }
+      // handle odom
+      if (use_external_odom_ && msg_topic == external_odom_topic_) {
+        rosbag_data->external_odom_.push_back(odom_msg);
       }
     } else {
       LOG(ERROR) << "Could not find the type of this rosbag msg from topic:\n"
