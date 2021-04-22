@@ -195,7 +195,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   // External Odometry Subscription
   CHECK(nh_private_.getParam("use_external_odom", use_external_odom_));
   if (use_external_odom_) {
-    static constexpr size_t kMaxExternalOdomQueueSize = 1u;
+    static constexpr size_t kMaxExternalOdomQueueSize = 1000u;
     external_odom_subscriber_ =
         nh_.subscribe("external_odom",
                       kMaxExternalOdomQueueSize,
@@ -386,7 +386,6 @@ void RosOnlineDataProvider::callbackGtOdom(
 
 void RosOnlineDataProvider::callbackExternalOdom(
     const nav_msgs::Odometry::ConstPtr& odom_msg) {
-  LOG(INFO) << "Sending external odometry to pipeline.";
   CHECK(odom_msg);
   VIO::VioNavState kimera_odom;
   utils::rosOdometryToVioNavState(
