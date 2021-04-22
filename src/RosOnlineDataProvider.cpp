@@ -33,6 +33,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       sync_cam_info_(),
       imu_subscriber_(),
       gt_odom_subscriber_(),
+      external_odom_subscriber_(),
       reinit_flag_subscriber_(),
       reinit_pose_subscriber_(),
       imu_queue_(),
@@ -190,6 +191,17 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   CHECK(!left_cam_frame_id_.empty());
   CHECK(nh_private_.getParam("right_cam_frame_id", right_cam_frame_id_));
   CHECK(!right_cam_frame_id_.empty());
+
+  // External Odometry Subscription
+  CHECK(nh_private_.getParam("use_external_odom", use_external_odom_));
+  if (use_external_odom_) {
+    static constexpr size_t kMaxExternalOdomQueueSize = 1u;
+    external_odom_subscriber_ =
+        nh_.subscribe("external_odom",
+                      kMaxExternalOdomQueueSize,
+                      &RosOnlineDataProvider::callbackExternalOdom,
+                      this);
+  }
 
   publishStaticTf(vio_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
@@ -369,6 +381,20 @@ void RosOnlineDataProvider::callbackGtOdomOnce(
 
   // Shutdown subscriber to prevent new gt poses from interfering
   gt_odom_subscriber_.shutdown();
+}
+
+void RosOnlineDataProvider::callbackExternalOdom(
+    const nav_msgs::Odometry::ConstPtr& odom_msg) {
+  LOG(INFO) << "Sending external odometry to pipeline.";
+  CHECK(odom_msg);
+  VIO::VioNavState kimera_odom;
+  utils::rosOdometryToVioNavState(
+      *odom_msg,
+      nh_private_,
+      &kimera_odom);
+  external_odom_callback_(ExternalOdomMeasurement(
+      odom_msg->header.stamp.toNSec(),
+      gtsam::NavState(kimera_odom.pose_, kimera_odom.velocity_)));
 }
 
 // Reinitialization callback

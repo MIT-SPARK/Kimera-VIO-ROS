@@ -27,6 +27,8 @@
   <!-- If true, KimeraVIO will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
 
+  <arg name="use_external_odom" default="false"/>
+
   <!-- Parameters -->
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
@@ -45,6 +47,7 @@
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
   <arg name="odometry_ground_truth_topic"       default=""/>
+  <arg name="external_odom_topic"               default=""/>
 
   <!-- Frame IDs -->
   <arg name="world_frame_id"     default="world"/>
@@ -87,6 +90,7 @@
     <param name="online_run"            value="$(arg online)"/>
     <param name="use_lcd"               value="$(arg use_lcd)"/>
     <param name="use_online_cam_params" value="$(arg use_online_cam_params)"/>
+    <param name="use_external_odom"     value="$(arg use_external_odom)"/>
 
     <!-- Frame IDs for Odometry -->
     <param name="world_frame_id"     value="$(arg world_frame_id)"/>
@@ -113,6 +117,9 @@
     <param name="imu_rosbag_topic"       value="$(arg imu_topic)"       unless="$(arg online)"/>
     <param name="ground_truth_odometry_rosbag_topic"
            value="$(arg odometry_ground_truth_topic)"                   unless="$(arg online)"/>
+    <param name="external_odometry_rosbag_topic"
+           value="$(arg external_odom_topic)"
+           unless="$(arg online)"/>
     <param name="log_gt_data"            value="$(arg log_gt_data)"     unless="$(arg online)"/>
 
     <!-- Other subscription topics -->

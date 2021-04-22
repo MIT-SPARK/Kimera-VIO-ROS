@@ -226,6 +226,11 @@ void KimeraVioRos::connectVIO() {
                 std::ref(*CHECK_NOTNULL(vio_pipeline_.get())),
                 std::placeholders::_1));
 
+  data_provider_->registerExternalOdomCallback(
+      std::bind(&VIO::Pipeline::fillExternalOdomQueue,
+                std::ref(*CHECK_NOTNULL(vio_pipeline_.get())),
+                std::placeholders::_1));
+
   if (vio_params_->frontend_type_ == VIO::FrontendType::kStereoImu) {
     VIO::StereoImuPipeline::UniquePtr stereo_pipeline =
         VIO::safeCast<VIO::Pipeline, VIO::StereoImuPipeline>(
