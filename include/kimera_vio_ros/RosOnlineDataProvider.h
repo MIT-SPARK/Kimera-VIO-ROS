@@ -85,7 +85,7 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   void callbackIMU(const sensor_msgs::ImuConstPtr& imu_msg);
 
   // GT odometry callback
-  void callbackGtOdomOnce(const nav_msgs::Odometry::ConstPtr& gt_odom_msg);
+  void callbackGtOdom(const nav_msgs::Odometry::ConstPtr& gt_odom_msg);
 
   // External odometry callback
   void callbackExternalOdom(const nav_msgs::Odometry::ConstPtr& odom_msg);

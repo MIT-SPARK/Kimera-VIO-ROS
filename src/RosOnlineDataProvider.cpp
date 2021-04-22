@@ -59,7 +59,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
     gt_odom_subscriber_ =
         nh_.subscribe("gt_odom",
                       kMaxGtOdomQueueSize,
-                      &RosOnlineDataProvider::callbackGtOdomOnce,
+                      &RosOnlineDataProvider::callbackGtOdom,
                       this);
 
     // We wait for the gt pose.
@@ -367,20 +367,21 @@ void RosOnlineDataProvider::callbackIMU(
 }
 
 // Ground-truth odometry callback
-void RosOnlineDataProvider::callbackGtOdomOnce(
+void RosOnlineDataProvider::callbackGtOdom(
     const nav_msgs::Odometry::ConstPtr& gt_odom_msg) {
-  LOG(WARNING) << "Using initial ground-truth state for initialization.";
-  CHECK(gt_odom_msg);
-  utils::rosOdometryToVioNavState(
-      *gt_odom_msg,
-      nh_private_,
-      &vio_params_.backend_params_->initial_ground_truth_state_);
+  if (!gt_init_pose_received_) {
+    LOG(WARNING) << "Using initial ground-truth state for initialization.";
+    CHECK(gt_odom_msg);
+    utils::rosOdometryToVioNavState(
+        *gt_odom_msg,
+        nh_private_,
+        &vio_params_.backend_params_->initial_ground_truth_state_);
 
-  // Signal receptance of ground-truth pose.
-  gt_init_pose_received_ = true;
+    // Signal receptance of ground-truth pose.
+    gt_init_pose_received_ = true;
+  }
 
-  // Shutdown subscriber to prevent new gt poses from interfering
-  gt_odom_subscriber_.shutdown();
+  logGtData(gt_odom_msg);
 }
 
 void RosOnlineDataProvider::callbackExternalOdom(

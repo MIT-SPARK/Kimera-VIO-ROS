@@ -40,18 +40,13 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
       k_last_kf_(0u),
       k_last_imu_(0u),
       k_last_gt_(0u),
-      k_last_odom_(0u),
-      log_gt_data_(false),
-      is_header_written_poses_vio_(false),
-      use_external_odom_(false),
-      output_gt_poses_csv_("traj_gt.csv") {
+      use_external_odom_(false) {
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
   CHECK(nh_private_.getParam("left_cam_rosbag_topic", left_imgs_topic_));
   CHECK(nh_private_.getParam("right_cam_rosbag_topic", right_imgs_topic_));
   CHECK(nh_private_.getParam("imu_rosbag_topic", imu_topic_));
   CHECK(nh_private_.getParam("ground_truth_odometry_rosbag_topic",
                              gt_odom_topic_));
-  CHECK(nh_private_.getParam("log_gt_data", log_gt_data_));
   CHECK(nh_private_.getParam("use_external_odom", use_external_odom_));
   CHECK(nh_private_.getParam("external_odometry_rosbag_topic",
                              external_odom_topic_));
@@ -371,37 +366,6 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
       << "Fewer external odometry messages than image data.";
   LOG(INFO) << "Finished parsing rosbag data.";
   return true;
-}
-
-void RosbagDataProvider::logGtData(const nav_msgs::OdometryConstPtr& odometry) {
-  CHECK(odometry);
-  // We log the poses in csv format for later alignement and analysis.
-  std::ofstream& output_stream = output_gt_poses_csv_.ofstream_;
-  bool& is_header_written = is_header_written_poses_vio_;
-
-  // First, write header, but only once.
-  if (!is_header_written) {
-    output_stream << "#timestamp,x,y,z,qw,qx,qy,qz,vx,vy,vz,"
-                  << "bgx,bgy,bgz,bax,bay,baz" << std::endl;
-    is_header_written = true;
-  }
-  output_stream << odometry->header.stamp.toNSec() << ","  //
-                << odometry->pose.pose.position.x << ","   //
-                << odometry->pose.pose.position.y << ","   //
-                << odometry->pose.pose.position.z << ","   //
-                << odometry->pose.pose.orientation.w << ","
-                << odometry->pose.pose.orientation.x << ","
-                << odometry->pose.pose.orientation.y << ","
-                << odometry->pose.pose.orientation.z << ","
-                << odometry->twist.twist.linear.x << ","
-                << odometry->twist.twist.linear.y << ","
-                << odometry->twist.twist.linear.z << "," << 0.0 << ","  //
-                << 0.0 << ","                                           //
-                << 0.0 << ","                                           //
-                << 0.0 << ","                                           //
-                << 0.0 << ","                                           //
-                << 0.0                                                  //
-                << std::endl;
 }
 
 VioNavState RosbagDataProvider::getGroundTruthVioNavState(
