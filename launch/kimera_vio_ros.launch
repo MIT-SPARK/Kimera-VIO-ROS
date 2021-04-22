@@ -122,7 +122,7 @@
     <param name="external_odometry_rosbag_topic"
            value="$(arg external_odom_topic)"
            unless="$(arg online)"/>
-    <param name="log_gt_data"            value="$(arg log_gt_data)"     unless="$(arg online)"/>
+    <param name="log_gt_data"            value="$(arg log_gt_data)"/>
 
     <!-- Other subscription topics -->
     <remap from="reinit_flag" to="reinit_flag"/>
