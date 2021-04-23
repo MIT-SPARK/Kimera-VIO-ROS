@@ -19,8 +19,8 @@
 #include <std_srvs/TriggerResponse.h>
 
 // Dependencies from VIO
-#include <kimera-vio/pipeline/Pipeline-definitions.h>
-#include <kimera-vio/pipeline/Pipeline.h>
+#include <kimera-vio/pipeline/MonoImuPipeline.h>
+#include <kimera-vio/pipeline/StereoImuPipeline.h>
 #include <kimera-vio/utils/Timer.h>
 
 // Dependencies from this repository
@@ -80,8 +80,24 @@ bool KimeraVioRos::runKimeraVio() {
   // Then, create Kimera-VIO from scratch.
   VLOG(1) << "Creating Kimera-VIO.";
   CHECK(ros_display_);
-  vio_pipeline_ = VIO::make_unique<VIO::Pipeline>(
-      *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
+
+  vio_pipeline_ = nullptr;
+  switch (vio_params_->frontend_type_) {
+    case VIO::FrontendType::kMonoImu: {
+      vio_pipeline_ = VIO::make_unique<VIO::MonoImuPipeline>(
+          *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
+    } break;
+    case VIO::FrontendType::kStereoImu: {
+      vio_pipeline_ = VIO::make_unique<VIO::StereoImuPipeline>(
+          *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
+    } break;
+    default: {
+      LOG(FATAL) << "Unrecognized frontend type: "
+                 << VIO::to_underlying(vio_params_->frontend_type_)
+                 << ". 0: Mono, 1: Stereo.";
+    } break;
+  }
+  
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
 
   // Finally, connect data_provider and vio_pipeline
@@ -105,11 +121,15 @@ bool KimeraVioRos::spin() {
     std::future<bool> data_provider_handle =
         std::async(std::launch::async,
                    &VIO::RosDataProviderInterface::spin,
-                   data_provider_.get());
-    std::future<bool> vio_viz_handle = std::async(
-        std::launch::async, &VIO::Pipeline::spinViz, vio_pipeline_.get());
-    std::future<bool> vio_pipeline_handle = std::async(
-        std::launch::async, &VIO::Pipeline::spin, vio_pipeline_.get());
+                   std::ref(*CHECK_NOTNULL(data_provider_.get())));
+    std::future<bool> vio_viz_handle =
+        std::async(std::launch::async,
+                   &VIO::Pipeline::spinViz,
+                   std::ref(*CHECK_NOTNULL(vio_pipeline_.get())));
+    std::future<bool> vio_pipeline_handle =
+        std::async(std::launch::async,
+                   &VIO::Pipeline::spin,
+                   std::ref(*CHECK_NOTNULL(vio_pipeline_.get())));
     // Run while ROS is ok and vio pipeline is not shutdown.
     ros::Rate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {
@@ -186,29 +206,39 @@ void KimeraVioRos::connectVIO() {
   // shutsdown.
   CHECK(data_provider_);
   CHECK(vio_pipeline_);
-  vio_pipeline_->registerShutdownCallback(std::bind(
-      &VIO::DataProviderInterface::shutdown, std::ref(*data_provider_)));
+  vio_pipeline_->registerShutdownCallback(
+      std::bind(&VIO::DataProviderInterface::shutdown,
+                std::ref(*CHECK_NOTNULL(data_provider_.get()))));
 
   // Register Data Provider callbacks
   data_provider_->registerImuSingleCallback(
       std::bind(&VIO::Pipeline::fillSingleImuQueue,
-                std::ref(*vio_pipeline_),
+                std::ref(*CHECK_NOTNULL(vio_pipeline_.get())),
                 std::placeholders::_1));
 
   data_provider_->registerImuMultiCallback(
       std::bind(&VIO::Pipeline::fillMultiImuQueue,
-                std::ref(*vio_pipeline_),
+                std::ref(*CHECK_NOTNULL(vio_pipeline_.get())),
                 std::placeholders::_1));
 
   data_provider_->registerLeftFrameCallback(
       std::bind(&VIO::Pipeline::fillLeftFrameQueue,
-                std::ref(*vio_pipeline_),
+                std::ref(*CHECK_NOTNULL(vio_pipeline_.get())),
                 std::placeholders::_1));
 
-  data_provider_->registerRightFrameCallback(
-      std::bind(&VIO::Pipeline::fillRightFrameQueue,
-                std::ref(*vio_pipeline_),
-                std::placeholders::_1));
+  if (vio_params_->frontend_type_ == VIO::FrontendType::kStereoImu) {
+    VIO::StereoImuPipeline::UniquePtr stereo_pipeline =
+        VIO::safeCast<VIO::Pipeline, VIO::StereoImuPipeline>(
+            std::move(vio_pipeline_));
+
+    data_provider_->registerRightFrameCallback(
+        std::bind(&VIO::StereoImuPipeline::fillRightFrameQueue,
+                  std::ref(*CHECK_NOTNULL(stereo_pipeline.get())),
+                  std::placeholders::_1));
+
+    vio_pipeline_ = VIO::safeCast<VIO::StereoImuPipeline, VIO::Pipeline>(
+        std::move(stereo_pipeline));
+  }
 }
 
 bool KimeraVioRos::restartKimeraVio(std_srvs::Trigger::Request& request,

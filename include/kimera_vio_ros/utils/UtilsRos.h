@@ -19,25 +19,27 @@
 
 #include <gtsam/geometry/Pose3.h>
 
-#include <kimera-vio/frontend/CameraParams.h>
 #include <kimera-vio/common/VioNavState.h>
+#include <kimera-vio/frontend/CameraParams.h>
 
 namespace VIO {
 
 namespace utils {
 
-void msgTFtoPose(const geometry_msgs::Transform& tf, gtsam::Pose3* pose);
+void rosTfToGtsamPose(const geometry_msgs::Transform& tf, gtsam::Pose3* pose);
 
-void poseToMsgTF(const gtsam::Pose3& pose, geometry_msgs::Transform* tf);
+void gtsamPoseToRosTf(const gtsam::Pose3& pose, geometry_msgs::Transform* tf);
+
+void rosOdometryToGtsamPose(const nav_msgs::Odometry& odom, gtsam::Pose3* pose);
 
 void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
                               const std::string& base_link_frame_id,
                               const std::string& cam_frame_id,
                               CameraParams* cam_params);
 
-void msgGtOdomToVioNavState(const nav_msgs::Odometry& gt_odom,
-                            const ros::NodeHandle& node_handle,
-                            VioNavState* vio_navstate);
+void rosOdometryToVioNavState(const nav_msgs::Odometry& gt_odom,
+                              const ros::NodeHandle& node_handle,
+                              VioNavState* vio_navstate);
 
 }  // namespace utils
 

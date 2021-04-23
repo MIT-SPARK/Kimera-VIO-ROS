@@ -24,9 +24,10 @@
 #include <tf/transform_broadcaster.h>
 #include <tf2/buffer_core.h>
 
-#include <kimera-vio/backend/VioBackEnd-definitions.h>
-#include <kimera-vio/frontend/StereoVisionFrontEnd-definitions.h>
+#include <kimera-vio/backend/VioBackend-definitions.h>
+#include <kimera-vio/frontend/StereoVisionImuFrontend-definitions.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
+#include <kimera-vio/mesh/Mesh.h>
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>
 #include <kimera-vio/visualizer/Visualizer3D.h>
@@ -37,7 +38,9 @@ namespace VIO {
 
 RosVisualizer::RosVisualizer(const VioParams& vio_params)
     // I'm not sure we use this flag in ROS?
-    : Visualizer3D(VisualizationType::kMesh2dTo3dSparse),
+    : Visualizer3D(vio_params.frontend_type_ == FrontendType::kMonoImu
+                   ? VisualizationType::kNone
+                   : VisualizationType::kMesh2dTo3dSparse),
       nh_(),
       nh_private_("~"),
       image_size_(vio_params.camera_params_.at(0).image_size_),
@@ -91,7 +94,7 @@ void RosVisualizer::publishBackendOutput(
 }
 
 void RosVisualizer::publishFrontendOutput(
-    const FrontendOutput::ConstPtr& output) const {
+    const FrontendOutputPacketBase::ConstPtr& output) const {
   CHECK(output);
   if (frontend_stats_pub_.getNumSubscribers() > 0) {
     publishFrontendStats(output);
@@ -219,7 +222,7 @@ void RosVisualizer::publishPerFrameMesh3D(
     // Returns indices of points in the 3D mesh corresponding to the
     // vertices
     // in the 2D mesh.
-    int p0_id, p1_id, p2_id;
+    Mesh3D::VertexId p0_id, p1_id, p2_id;
     Mesh3D::VertexType vtx0, vtx1, vtx2;
     if (mesh_3d.getVertex(lmk0_id, &vtx0, &p0_id) &&
         mesh_3d.getVertex(lmk1_id, &vtx1, &p1_id) &&
@@ -364,7 +367,7 @@ void RosVisualizer::publishState(const BackendOutput::ConstPtr& output) const {
 }
 
 void RosVisualizer::publishFrontendStats(
-    const FrontendOutput::ConstPtr& output) const {
+    const FrontendOutputPacketBase::ConstPtr& output) const {
   CHECK(output);
 
   // Get frontend data for resiliency output
@@ -392,7 +395,7 @@ void RosVisualizer::publishFrontendStats(
   frontend_stats_msg.layout.dim[0].size = frontend_stats_msg.data.size();
   frontend_stats_msg.layout.dim[0].stride = 1;
   frontend_stats_msg.layout.dim[0].label =
-      "FrontEnd: nrDetFeat, nrTrackFeat, nrMoIn, nrMoPu, nrStIn, nrStPu, "
+      "Frontend: nrDetFeat, nrTrackFeat, nrMoIn, nrMoPu, nrStIn, nrStPu, "
       "moRaIt, stRaIt, nrVaRKP, nrNoLRKP, nrNoRRKP, nrNoDRKP nrFaARKP";
 
   // Publish Message
@@ -400,7 +403,7 @@ void RosVisualizer::publishFrontendStats(
 }
 
 void RosVisualizer::publishResiliency(
-    const FrontendOutput::ConstPtr& frontend_output,
+    const FrontendOutputPacketBase::ConstPtr& frontend_output,
     const BackendOutput::ConstPtr& backend_output) const {
   CHECK(frontend_output);
   CHECK(backend_output);
@@ -413,7 +416,7 @@ void RosVisualizer::publishResiliency(
   const gtsam::Matrix3& vel_cov =
       gtsam::sub(backend_output->state_covariance_lkf_, 6, 9, 6, 9);
 
-  // Create message type for quality of SparkVIO
+  // Create message type for quality of KimeraVIO
   std_msgs::Float64MultiArray resiliency_msg;
 
   // Publishing extra information:
@@ -512,7 +515,7 @@ void RosVisualizer::publishTf(const BackendOutput::ConstPtr& output) {
   odom_tf.header.frame_id = world_frame_id_;
   odom_tf.child_frame_id = base_link_frame_id_;
 
-  utils::poseToMsgTF(pose, &odom_tf.transform);
+  utils::gtsamPoseToRosTf(pose, &odom_tf.transform);
   tf_broadcaster_.sendTransform(odom_tf);
 }
 

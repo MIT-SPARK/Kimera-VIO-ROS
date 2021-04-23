@@ -136,13 +136,15 @@ bool RosbagDataProvider::spin() {
             readRosImage(rosbag_data_.left_imgs_.at(k_))));
 
         // Send right frame data to Kimera:
-        CHECK(right_frame_callback_)
-            << "Did you forget to register the right frame callback?";
-        right_frame_callback_(VIO::make_unique<Frame>(
-            k_,
-            timestamp_frame_k,
-            right_cam_info,
-            readRosImage(rosbag_data_.right_imgs_.at(k_))));
+        if (vio_params_.frontend_type_ == VIO::FrontendType::kStereoImu) {
+          CHECK(right_frame_callback_)
+              << "Did you forget to register the right frame callback?";
+          right_frame_callback_(VIO::make_unique<Frame>(
+              k_,
+              timestamp_frame_k,
+              right_cam_info,
+              readRosImage(rosbag_data_.right_imgs_.at(k_))));
+        }
 
         VLOG(10) << "Sent left/right images to VIO for frame k = " << k_;
 
@@ -359,7 +361,7 @@ VioNavState RosbagDataProvider::getGroundTruthVioNavState(
   CHECK_LT(k_frame, rosbag_data_.gt_odometry_.size());
   nav_msgs::Odometry gt_odometry = *(rosbag_data_.gt_odometry_.at(k_frame));
   VioNavState vio_nav_state;
-  utils::msgGtOdomToVioNavState(gt_odometry, nh_private_, &vio_nav_state);
+  utils::rosOdometryToVioNavState(gt_odometry, nh_private_, &vio_nav_state);
   return vio_nav_state;
 }
 

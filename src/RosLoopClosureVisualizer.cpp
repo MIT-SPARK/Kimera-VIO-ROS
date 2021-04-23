@@ -343,7 +343,7 @@ void RosLoopClosureVisualizer::publishTf(
   map_tf.header.stamp.fromNSec(ts);
   map_tf.header.frame_id = world_frame_id_;
   map_tf.child_frame_id = map_frame_id_;
-  utils::poseToMsgTF(w_Pose_map, &map_tf.transform);
+  utils::gtsamPoseToRosTf(w_Pose_map, &map_tf.transform);
   tf_broadcaster_.sendTransform(map_tf);
 }
 
