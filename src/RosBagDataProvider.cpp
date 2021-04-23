@@ -123,10 +123,10 @@ void RosbagDataProvider::sendExternalOdometryToVio() {
   for (const nav_msgs::OdometryConstPtr& odom_msg :
        rosbag_data_.external_odom_) {
     const Timestamp& timestamp = odom_msg->header.stamp.toNSec();
-    gtsam::Pose3 odom_pose(gtsam::Rot3(odom_msg->pose.pose.orientation.x,
+    gtsam::Pose3 odom_pose(gtsam::Rot3(odom_msg->pose.pose.orientation.w,
+                                       odom_msg->pose.pose.orientation.x,
                                        odom_msg->pose.pose.orientation.y,
-                                       odom_msg->pose.pose.orientation.z,
-                                       odom_msg->pose.pose.orientation.w),
+                                       odom_msg->pose.pose.orientation.z),
                            gtsam::Point3(odom_msg->pose.pose.position.x,
                                          odom_msg->pose.pose.position.y,
                                          odom_msg->pose.pose.position.z));
