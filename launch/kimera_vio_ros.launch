@@ -25,6 +25,10 @@
        and processing data from the gt_topic rostopic -->
   <arg name="log_gt_data" default="false"/>
   <arg name="gt_topic"    default="ground_truth_odometry_topic"/>
+  <!-- If true, log IMU data to a csv file using the
+       imu_logger_node (if online is true) or rosbag (if online is false),
+       and processing data from the imu_topic rostopic -->
+  <arg name="log_imu_data" default="false"/>
 
   <!-- If true, KimeraVIO will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
@@ -120,6 +124,7 @@
     <param name="ground_truth_odometry_rosbag_topic"
            value="$(arg odometry_ground_truth_topic)"                   unless="$(arg online)"/>
     <param name="log_gt_data"            value="$(arg log_gt_data)"     unless="$(arg online)"/>
+    <param name="log_imu_data"           value="$(arg log_imu_data)"    unless="$(arg online)"/>
 
     <!-- Other subscription topics -->
     <remap from="reinit_flag" to="reinit_flag"/>
@@ -157,7 +162,14 @@
   <!-- Log ground-truth data only if requested and if not running in offline mode-->
   <node if="$(eval log_gt_data and online)" name="gt_logger_node" pkg="kimera_vio_ros"
         type="gt_logger_node.py" output="screen">
-    <param name="gt_topic"   value="$(arg gt_topic)"/>
+    <param name="gt_topic"   value="/kimera_vio_ros/gt_odom"/>
+    <param name="output_dir" value="$(arg log_output_path)"/>
+  </node>
+
+  <!-- Log IMU data only if requested and if not running in offline mode-->
+  <node if="$(eval log_imu_data and online)" name="imu_logger_node" pkg="kimera_vio_ros"
+        type="imu_logger_node.py" output="screen">
+    <param name="imu_topic"   value="$(arg imu_topic)"/>
     <param name="output_dir" value="$(arg log_output_path)"/>
   </node>
 
