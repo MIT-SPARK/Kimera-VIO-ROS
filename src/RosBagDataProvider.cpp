@@ -122,19 +122,13 @@ void RosbagDataProvider::sendExternalOdometryToVio() {
       << "Did you forget to register the external odometry callback?";
   for (const nav_msgs::OdometryConstPtr& odom_msg :
        rosbag_data_.external_odom_) {
-    const Timestamp& timestamp = odom_msg->header.stamp.toNSec();
-    gtsam::Pose3 odom_pose(gtsam::Rot3(odom_msg->pose.pose.orientation.w,
-                                       odom_msg->pose.pose.orientation.x,
-                                       odom_msg->pose.pose.orientation.y,
-                                       odom_msg->pose.pose.orientation.z),
-                           gtsam::Point3(odom_msg->pose.pose.position.x,
-                                         odom_msg->pose.pose.position.y,
-                                         odom_msg->pose.pose.position.z));
-    gtsam::Velocity3 odom_vel(odom_msg->twist.twist.linear.x,
-                              odom_msg->twist.twist.linear.y,
-                              odom_msg->twist.twist.linear.z);
+    const Timestamp timestamp = odom_msg->header.stamp.toNSec();
+
+    VIO::VioNavState kimera_odom;
+    utils::rosOdometryToVioNavState(*odom_msg, nh_private_, &kimera_odom);
+
     external_odom_callback_(ExternalOdomMeasurement(
-        timestamp, gtsam::NavState(odom_pose, odom_vel)));
+        timestamp, gtsam::NavState(kimera_odom.pose_, kimera_odom.velocity_)));
   }
 }
 
@@ -143,7 +137,9 @@ bool RosbagDataProvider::spin() {
     // Send IMU data directly to VIO for speed boost
     sendImuDataToVio();
     // Send external odometry directly to VIO as well
-    if (use_external_odom_) sendExternalOdometryToVio();
+    if (use_external_odom_) {
+      sendExternalOdometryToVio();
+    }
   }
 
   // We break the while loop (but increase k_!) if we run in sequential mode.
