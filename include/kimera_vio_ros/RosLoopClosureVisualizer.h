@@ -26,8 +26,7 @@
 #include <pose_graph_tools/PoseGraphNode.h>
 
 #include <DBoW2/DBoW2.h>
-#include <kimera_distributed/VLCFrameQuery.h>
-#include <kimera_distributed/utils.h>
+#include <kimera_vio_ros/VLCFrameQuery.h>
 
 #include <kimera-vio/backend/VioBackend-definitions.h>
 #include <kimera-vio/frontend/StereoVisionImuFrontend-definitions.h>
@@ -68,9 +67,8 @@ class RosLoopClosureVisualizer {
   void publishBowQuery();
 
   // Responde to request to get VLCFrame
-  bool VLCFrameQueryCallback(
-      kimera_distributed::VLCFrameQuery::Request& request,
-      kimera_distributed::VLCFrameQuery::Response& response);
+  bool VLCFrameQueryCallback(kimera_vio_ros::VLCFrameQuery::Request& request,
+                             kimera_vio_ros::VLCFrameQuery::Response& response);
 
  private:
   // ROS handles

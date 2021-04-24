@@ -1,0 +1,4 @@
+uint32 robot_id
+uint32 pose_id
+---
+kimera_vio_ros/VLCFrameMsg frame

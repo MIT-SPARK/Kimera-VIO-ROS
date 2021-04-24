@@ -10,9 +10,13 @@
 
 #include <glog/logging.h>
 
+#include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/point_cloud.h>
 #include <ros/ros.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <tf/transform_broadcaster.h>
@@ -21,6 +25,7 @@
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>
 
+#include "kimera_vio_ros/BowQuery.h"
 #include "kimera_vio_ros/utils/UtilsRos.h"
 
 namespace VIO {
@@ -44,7 +49,7 @@ RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
   posegraph_incremental_pub_ =
       nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph_incremental", 1);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
-  bow_query_pub_ = nh_.advertise<kimera_distributed::BowQuery>("bow_query", 1);
+  bow_query_pub_ = nh_.advertise<kimera_vio_ros::BowQuery>("bow_query", 1);
 
   // Service
   vlc_frame_server_ =
@@ -349,10 +354,16 @@ void RosLoopClosureVisualizer::publishTf(
 
 void RosLoopClosureVisualizer::publishBowQuery() {
   if (frames_.size() == 0) return;
-  kimera_distributed::BowVector bow_vec_msg;
-  kimera_distributed::BowVectorToMsg(frames_.back().bow_vec_, &bow_vec_msg);
+  kimera_vio_ros::BowVector bow_vec_msg;
 
-  kimera_distributed::BowQuery msg;
+  for (auto it = frames_.back().bow_vec_.begin();
+       it != frames_.back().bow_vec_.end();
+       ++it) {
+    bow_vec_msg.word_ids.push_back(it->first);
+    bow_vec_msg.word_values.push_back(it->second);
+  }
+
+  kimera_vio_ros::BowQuery msg;
   msg.robot_id = robot_id_;
   msg.pose_id = frames_.size() - 1;
   msg.bow_vector = bow_vec_msg;
@@ -363,20 +374,33 @@ void RosLoopClosureVisualizer::publishBowQuery() {
 }
 
 bool RosLoopClosureVisualizer::VLCFrameQueryCallback(
-    kimera_distributed::VLCFrameQuery::Request& request,
-    kimera_distributed::VLCFrameQuery::Response& response) {
+    kimera_vio_ros::VLCFrameQuery::Request& request,
+    kimera_vio_ros::VLCFrameQuery::Response& response) {
   CHECK(request.robot_id == robot_id_);
   if (request.pose_id >= frames_.size()) {
     ROS_ERROR("Requested frame not in dbow database. ");
     return false;
   }
   CHECK(request.pose_id < frames_.size());
-  kimera_distributed::VLCFrame frame(request.robot_id,
-                                     request.pose_id,
-                                     frames_[request.pose_id].keypoints_3d_,
-                                     frames_[request.pose_id].descriptors_mat_);
 
-  kimera_distributed::VLCFrameToMsg(frame, &(response.frame));
+  response.frame.robot_id = request.robot_id;
+  response.frame.pose_id = request.pose_id;
+
+  // Convert keypoints
+  pcl::PointCloud<pcl::PointXYZ> keypoints;
+  for (size_t i = 0; i < frames_[request.pose_id].keypoints_3d_.size(); ++i) {
+    gtsam::Vector3 p_ = frames_[request.pose_id].keypoints_3d_[i];
+    pcl::PointXYZ p(p_(0), p_(1), p_(2));
+    keypoints.push_back(p);
+  }
+  pcl::toROSMsg(keypoints, response.frame.keypoints);
+
+  // Convert descriptors
+  cv_bridge::CvImage cv_img;
+  // cv_img.header   = in_msg->header; // Yulun: need to set header explicitly?
+  cv_img.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
+  cv_img.image = frames_[request.pose_id].descriptors_mat_;
+  cv_img.toImageMsg(response.frame.descriptors_mat);
   return true;
 }
 

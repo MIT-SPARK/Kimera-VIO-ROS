@@ -17,7 +17,6 @@
   <depend>opencv3_catkin</depend>
   <depend>eigen_catkin</depend>
   <depend>kimera_vio</depend>
-  <depend>kimera_distributed</depend>
   <depend>DBoW2</depend>
 
   <depend>roscpp</depend>
@@ -25,6 +24,8 @@
   <depend>sensor_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>message_filters</depend>
+  <depend>message_generation</depend>
+  <depend>message_runtime</depend>
   <depend>image_transport</depend>
   <depend>rosbag</depend>
   <depend>cv_bridge</depend>
