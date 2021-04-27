@@ -4,7 +4,7 @@
   <arg name="robot_id"     default="0" /> 
 
   <!-- Set online to true if you use rosbag play or sensor stream -->
-  <arg name="online" default="false" />
+  <arg name="online" default="true" />
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <param name="use_sim_time" value="true"/>
   <!-- Set log_output to true and KimeraVIO will log output of all modules to
