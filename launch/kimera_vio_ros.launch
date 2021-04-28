@@ -166,11 +166,32 @@
     <param name="output_dir" value="$(arg log_output_path)"/>
   </node>
 
-  <!-- Log IMU data only if requested and if not running in offline mode-->
+  <!-- Log IMU data only if requested and if not running in offline mode -->
   <node if="$(eval log_imu_data and online)" name="imu_logger_node" pkg="kimera_vio_ros"
         type="imu_logger_node.py" output="screen">
     <param name="imu_topic"   value="$(arg imu_topic)"/>
     <param name="output_dir" value="$(arg log_output_path)"/>
   </node>
+
+  <!-- Log IMU data only if requested and if not running in offline mode
+  <node if="$(eval log_imu_data and online)" name="timestamps_logger_node" pkg="kimera_vio_ros"
+        type="timestamps_logger_node.py" output="screen">
+    <param name="imu_topic"   value="$(arg imu_topic)"/>
+    <param name="output_dir" value="$(arg log_output_path)"/>
+  </node> -->
+
+  <!-- Log IMU data only if requested and if not running in offline mode-->
+  <node if="$(eval log_imu_data and online)" name="infra1_logger_node" pkg="kimera_vio_ros"
+        type="infra1_logger_node.py" output="screen">
+    <param name="left_cam_topic"   value="$(arg left_cam_topic)"/>
+    <param name="output_dir" value="$(arg log_output_path)"/>
+  </node>
+
+<!-- Log IMU data only if requested and if not running in offline mode-->
+  <node if="$(eval log_imu_data and online)" name="infra2_logger_node" pkg="kimera_vio_ros"
+        type="infra2_logger_node.py" output="screen">
+    <param name="right_cam_topic"   value="$(arg right_cam_topic)"/>
+    <param name="output_dir" value="$(arg log_output_path)"/>
+  </node> -->
 
 </launch>

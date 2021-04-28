@@ -1,8 +1,9 @@
 <launch>
   <arg name="dataset_name" value="RealSenseIR"/>
-  <arg name="online" default="True" />
-
-  <arg name="log_output" default="false"/>
+  <!-- <arg name="dataset_name" value="Jackal"/> -->
+  <arg name="online" default="true" />
+  <arg name="use_lcd" default="true"/>
+  <arg name="log_output" default="true"/>
   <arg name="log_output_path"
        default="$(find kimera_vio_ros)/output_logs/"
        if="$(arg log_output)"/>
@@ -23,10 +24,10 @@
   <arg name="left_cam_frame_id"  value="left_cam"/>
   <arg name="right_cam_frame_id" value="right_cam"/>
 
-  <!-- Subscribed Topics -->
-  <arg name="left_cam_topic"  value="/camera/infra1/image_rect_raw"/>
-  <arg name="right_cam_topic" value="/camera/infra2/image_rect_raw"/>
-  <arg name="imu_topic"       value="/camera/imu"/>
+  <!-- Subscribed Topics for utils record-->
+  <arg name="left_cam_topic"  value="/cam_down/infra1/image_rect_raw"/>
+  <arg name="right_cam_topic" value="/cam_down/infra2/image_rect_raw"/>
+  <arg name="imu_topic"       value="/cam_down/imu"/> 
 
   <!-- Launch actual pipeline -->
   <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
