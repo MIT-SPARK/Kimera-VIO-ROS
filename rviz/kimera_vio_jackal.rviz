@@ -59,6 +59,72 @@ Visualization Manager:
       Show Names: true
       Tree:
         world:
+          acl_jackal/map:
+            acl_jackal/odom:
+              acl_jackal/base:
+                acl_jackal/base_link:
+                  acl_jackal/chassis_link:
+                    acl_jackal/embedded_imu_link:
+                      {}
+                    acl_jackal/front_fender_link:
+                      {}
+                    acl_jackal/front_left_wheel_link:
+                      {}
+                    acl_jackal/front_right_wheel_link:
+                      {}
+                    acl_jackal/mid_mount:
+                      acl_jackal/front_mount:
+                        {}
+                      acl_jackal/rear_mount:
+                        {}
+                    acl_jackal/navsat_link:
+                      {}
+                    acl_jackal/rear_fender_link:
+                      {}
+                    acl_jackal/rear_left_wheel_link:
+                      {}
+                    acl_jackal/rear_right_wheel_link:
+                      {}
+                  acl_jackal/sensor_plate_link:
+                    acl_jackal/forward_link:
+                      acl_jackal/forward_accel_frame:
+                        acl_jackal/forward_accel_optical_frame:
+                          {}
+                      acl_jackal/forward_aligned_depth_to_color_frame:
+                        acl_jackal/forward_color_optical_frame:
+                          {}
+                      acl_jackal/forward_aligned_depth_to_infra1_frame:
+                        acl_jackal/forward_infra1_optical_frame:
+                          {}
+                      acl_jackal/forward_bottom_screw_frame:
+                        acl_jackal/forward_camera_link:
+                          {}
+                      acl_jackal/forward_color_frame:
+                        {}
+                      acl_jackal/forward_depth_frame:
+                        acl_jackal/forward_depth_optical_frame:
+                          {}
+                        acl_jackal/forward_left_ir_frame:
+                          acl_jackal/forward_left_ir_optical_frame:
+                            {}
+                        acl_jackal/forward_right_ir_frame:
+                          acl_jackal/forward_right_ir_optical_frame:
+                            {}
+                      acl_jackal/forward_gyro_frame:
+                        acl_jackal/forward_imu_optical_frame:
+                          {}
+                      acl_jackal/forward_infra1_frame:
+                        {}
+                      acl_jackal/forward_infra2_frame:
+                        acl_jackal/forward_infra2_optical_frame:
+                          {}
+                    acl_jackal/microstrain_link:
+                      acl_jackal/microstrain_link_ned:
+                        {}
+                    acl_jackal/velodyne_link:
+                      acl_jackal/velodyne_base_link:
+                        acl_jackal/velodyne:
+                          {}
           base_link:
             cam0:
               {}
@@ -198,7 +264,7 @@ Visualization Manager:
       Displays:
         - Class: rviz/Marker
           Enabled: false
-          Marker Topic: /kimera_vio_ros/graph_nodes
+          Marker Topic: /kimera_vio_ros/posegraph_viewer/graph_nodes
           Name: Nodes
           Namespaces:
             {}
@@ -227,7 +293,7 @@ Visualization Manager:
           Namespaces:
             {}
           Queue Size: 100
-          Value: true
+          Value: false
       Enabled: true
       Name: PoseGraph
   Enabled: true
