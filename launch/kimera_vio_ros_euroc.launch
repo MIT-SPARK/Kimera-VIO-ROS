@@ -8,7 +8,7 @@
   <param name="use_sim_time" value="true"/>
   <!-- Set log_output to true and KimeraVIO will log output of all modules to
        the log_output_path location. -->
-  <arg name="log_output" default="false"/>
+  <arg name="log_output" default="true"/>
   <arg name="log_output_path"
     default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
        if="$(arg log_output)"/>
@@ -19,7 +19,7 @@
   <rosparam param="gt_gyro_bias"> [-0.002229, 0.0207, 0.07635] </rosparam>
   <rosparam param="gt_accel_bias"> [-0.012492, 0.547666, 0.069073] </rosparam>
 
-  <arg name="use_lcd"   default="false"/>
+  <arg name="use_lcd"   default="true"/>
   <arg name="visualize" default="true"/>
   <arg name="log_imu_data" value="true"/>
 
