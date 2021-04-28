@@ -33,6 +33,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       sync_cam_info_(),
       imu_subscriber_(),
       gt_odom_subscriber_(),
+      external_odom_subscriber_(),
       reinit_flag_subscriber_(),
       reinit_pose_subscriber_(),
       imu_queue_(),
@@ -58,7 +59,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
     gt_odom_subscriber_ =
         nh_.subscribe("gt_odom",
                       kMaxGtOdomQueueSize,
-                      &RosOnlineDataProvider::callbackGtOdomOnce,
+                      &RosOnlineDataProvider::callbackGtOdom,
                       this);
 
     // We wait for the gt pose.
@@ -190,6 +191,17 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   CHECK(!left_cam_frame_id_.empty());
   CHECK(nh_private_.getParam("right_cam_frame_id", right_cam_frame_id_));
   CHECK(!right_cam_frame_id_.empty());
+
+  // External Odometry Subscription
+  CHECK(nh_private_.getParam("use_external_odom", use_external_odom_));
+  if (use_external_odom_) {
+    static constexpr size_t kMaxExternalOdomQueueSize = 1000u;
+    external_odom_subscriber_ =
+        nh_.subscribe("external_odom",
+                      kMaxExternalOdomQueueSize,
+                      &RosOnlineDataProvider::callbackExternalOdom,
+                      this);
+  }
 
   publishStaticTf(vio_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
@@ -347,12 +359,6 @@ void RosOnlineDataProvider::callbackIMU(
   // Adapt imu timestamp to account for time shift in IMU-cam
   Timestamp timestamp = imu_msg->header.stamp.toNSec();
 
-  const ros::Duration imu_shift(vio_params_.imu_params_.imu_time_shift_);
-  if (imu_shift != ros::Duration(0)) {
-    LOG_EVERY_N(WARNING, 1000) << "imu_shift is not 0.";
-    timestamp -= imu_shift.toNSec();
-  }
-
   if (!shutdown_) {
     CHECK(imu_single_callback_)
         << "Did you forget to register the IMU callback?";
@@ -361,20 +367,34 @@ void RosOnlineDataProvider::callbackIMU(
 }
 
 // Ground-truth odometry callback
-void RosOnlineDataProvider::callbackGtOdomOnce(
+void RosOnlineDataProvider::callbackGtOdom(
     const nav_msgs::Odometry::ConstPtr& gt_odom_msg) {
-  LOG(WARNING) << "Using initial ground-truth state for initialization.";
-  CHECK(gt_odom_msg);
+  if (!gt_init_pose_received_) {
+    LOG(WARNING) << "Using initial ground-truth state for initialization.";
+    CHECK(gt_odom_msg);
+    utils::rosOdometryToVioNavState(
+        *gt_odom_msg,
+        nh_private_,
+        &vio_params_.backend_params_->initial_ground_truth_state_);
+
+    // Signal receptance of ground-truth pose.
+    gt_init_pose_received_ = true;
+  }
+
+  logGtData(gt_odom_msg);
+}
+
+void RosOnlineDataProvider::callbackExternalOdom(
+    const nav_msgs::Odometry::ConstPtr& odom_msg) {
+  CHECK(odom_msg);
+  VIO::VioNavState kimera_odom;
   utils::rosOdometryToVioNavState(
-      *gt_odom_msg,
+      *odom_msg,
       nh_private_,
-      &vio_params_.backend_params_->initial_ground_truth_state_);
-
-  // Signal receptance of ground-truth pose.
-  gt_init_pose_received_ = true;
-
-  // Shutdown subscriber to prevent new gt poses from interfering
-  gt_odom_subscriber_.shutdown();
+      &kimera_odom);
+  external_odom_callback_(ExternalOdomMeasurement(
+      odom_msg->header.stamp.toNSec(),
+      gtsam::NavState(kimera_odom.pose_, kimera_odom.velocity_)));
 }
 
 // Reinitialization callback

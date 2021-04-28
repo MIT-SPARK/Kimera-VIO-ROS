@@ -19,7 +19,7 @@
   <arg name="log_output_path"
        default="$(find kimera_vio_ros)/output_logs/"/>
   <!-- If true, log ground-truth poses to a csv file using the
-       gt_logger_node (if online is true) or rosbag (if online is false),
+       Logger utils (if online is true) or rosbag (if online is false),
        and processing data from the gt_topic rostopic -->
   <arg name="log_gt_data" default="false"/>
   <arg name="gt_topic"    default="ground_truth_odometry_topic"/>
@@ -30,6 +30,8 @@
 
   <!-- If true, KimeraVIO will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
+
+  <arg name="use_external_odom" default="false"/>
 
   <!-- Parameters -->
   <!-- each dataset has its own set of parameter files -->
@@ -49,6 +51,7 @@
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
   <arg name="odometry_ground_truth_topic"       default=""/>
+  <arg name="external_odom_topic"               default=""/>
 
   <!-- Frame IDs -->
   <arg name="world_frame_id"     default="world"/>
@@ -77,6 +80,7 @@
               --flagfile=$(arg params_folder)/flags/VioBackend.flags
               --flagfile=$(arg params_folder)/flags/RegularVioBackend.flags
               --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+              --use_external_odometry=$(arg use_external_odom)
               --logtostderr=1
               --colorlogtostderr=1
               --log_prefix=1
@@ -91,6 +95,7 @@
     <param name="online_run"            value="$(arg online)"/>
     <param name="use_lcd"               value="$(arg use_lcd)"/>
     <param name="use_online_cam_params" value="$(arg use_online_cam_params)"/>
+    <param name="use_external_odom"     value="$(arg use_external_odom)"/>
 
     <!-- Frame IDs for Odometry -->
     <param name="world_frame_id"     value="$(arg world_frame_id)"/>
@@ -106,6 +111,7 @@
     <remap from="imu"       to="$(arg imu_topic)"                   if="$(arg online)"/>
     <remap from="gt_odom"   to="$(arg odometry_ground_truth_topic)"
            if="$(eval arg('online') and arg('odometry_ground_truth_topic') != '')"/>
+    <remap from="external_odom" to="$(arg external_odom_topic)"/>
 
     <remap from="left_cam/camera_info"  to="$(arg left_cam_info_topic)"  if="$(arg online)"/>
     <remap from="right_cam/camera_info" to="$(arg right_cam_info_topic)" if="$(arg online)"/>
@@ -119,6 +125,9 @@
            value="$(arg odometry_ground_truth_topic)"                   unless="$(arg online)"/>
     <param name="log_gt_data"            value="$(arg log_gt_data)"     unless="$(arg online)"/>
     <param name="log_imu_data"           value="$(arg log_imu_data)"    unless="$(arg online)"/>
+    <param name="external_odometry_rosbag_topic"
+           value="$(arg external_odom_topic)"
+           unless="$(arg online)"/>
 
     <!-- Other subscription topics -->
     <remap from="reinit_flag" to="reinit_flag"/>
