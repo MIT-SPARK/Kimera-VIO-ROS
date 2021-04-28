@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /Debug Img1/Status1
       Splitter Ratio: 0.5
     Tree Height: 351
   - Class: rviz/Selection
@@ -35,92 +34,10 @@ Visualization Manager:
   Class: ""
   Displays:
     - Class: rviz/TF
-      Enabled: true
+      Enabled: false
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        base_link:
-          Value: true
-        camera_imu_optical_frame:
-          Value: true
-        left_cam:
-          Value: true
-        right_cam:
-          Value: true
-        thoth/base:
-          Value: true
-        thoth/base_link:
-          Value: true
-        thoth/chassis_link:
-          Value: true
-        thoth/embedded_imu_link:
-          Value: true
-        thoth/forward_accel_frame:
-          Value: true
-        thoth/forward_accel_optical_frame:
-          Value: true
-        thoth/forward_aligned_depth_to_color_frame:
-          Value: true
-        thoth/forward_aligned_depth_to_infra1_frame:
-          Value: true
-        thoth/forward_aligned_depth_to_infra2_frame:
-          Value: true
-        thoth/forward_bottom_screw_frame:
-          Value: true
-        thoth/forward_camera_link:
-          Value: true
-        thoth/forward_color_frame:
-          Value: true
-        thoth/forward_color_optical_frame:
-          Value: true
-        thoth/forward_depth_frame:
-          Value: true
-        thoth/forward_depth_optical_frame:
-          Value: true
-        thoth/forward_gyro_frame:
-          Value: true
-        thoth/forward_infra1_frame:
-          Value: true
-        thoth/forward_infra1_optical_frame:
-          Value: true
-        thoth/forward_infra2_frame:
-          Value: true
-        thoth/forward_infra2_optical_frame:
-          Value: true
-        thoth/forward_left_ir_frame:
-          Value: true
-        thoth/forward_left_ir_optical_frame:
-          Value: true
-        thoth/forward_link:
-          Value: true
-        thoth/forward_right_ir_frame:
-          Value: true
-        thoth/forward_right_ir_optical_frame:
-          Value: true
-        thoth/front_fender_link:
-          Value: true
-        thoth/front_left_wheel_link:
-          Value: true
-        thoth/front_mount:
-          Value: true
-        thoth/front_right_wheel_link:
-          Value: true
-        thoth/mid_mount:
-          Value: true
-        thoth/navsat_link:
-          Value: true
-        thoth/odom:
-          Value: true
-        thoth/rear_fender_link:
-          Value: true
-        thoth/rear_left_wheel_link:
-          Value: true
-        thoth/rear_mount:
-          Value: true
-        thoth/rear_right_wheel_link:
-          Value: true
-        thoth/sensor_plate_link:
-          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
@@ -129,7 +46,7 @@ Visualization Manager:
       Tree:
         {}
       Update Interval: 0
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -217,7 +134,7 @@ Visualization Manager:
           Value: true
         Value: true
       Enabled: true
-      Keep: 1
+      Keep: 100
       Name: Odometry
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -225,11 +142,11 @@ Visualization Manager:
         Axes Length: 0.30000001192092896
         Axes Radius: 0.009999999776482582
         Color: 255; 25; 0
-        Head Length: 0.30000001192092896
-        Head Radius: 0.10000000149011612
-        Shaft Length: 1
-        Shaft Radius: 0.05000000074505806
-        Value: Axes
+        Head Length: 0.03999999910593033
+        Head Radius: 0.05000000074505806
+        Shaft Length: 0.10000000149011612
+        Shaft Radius: 0.019999999552965164
+        Value: Arrow
       Topic: /kimera_vio_ros/odometry
       Unreliable: false
       Value: true
