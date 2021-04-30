@@ -66,7 +66,7 @@
   <!-- Note that this is duplicated from the flags file -->
   <arg name="visualize"    default="true" />
   <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
-  <arg name="viz_type"     default="0" />
+  <arg name="viz_type"     default="1" />
 
   <!-- Only here for convenience -->
   <arg name="run_stereo_dense"     default="false"/>
