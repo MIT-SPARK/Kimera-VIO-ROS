@@ -31,7 +31,8 @@ RosDataProviderInterface::RosDataProviderInterface(const VioParams& vio_params)
       log_gt_data_(false) {
   VLOG(1) << "Initializing RosDataProviderInterface.";
 
-  CHECK(nh_private_.getParam("log_gt_data", log_gt_data_));
+  // TODO (Fernando/Marcu): gt logger in library should fully replace node
+  // CHECK(nh_private_.getParam("log_gt_data", log_gt_data_));
   if (VLOG_IS_ON(1)) printParsedParams();  // Print parameters to check.
 }
 
