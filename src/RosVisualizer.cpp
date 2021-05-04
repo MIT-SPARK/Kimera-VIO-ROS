@@ -34,13 +34,16 @@
 
 #include "kimera_vio_ros/utils/UtilsRos.h"
 
+DECLARE_int32(viz_type);
+
 namespace VIO {
 
 RosVisualizer::RosVisualizer(const VioParams& vio_params)
     // I'm not sure we use this flag in ROS?
+    // TODO(nathan) check if mono supports kPointCloud
     : Visualizer3D(vio_params.frontend_type_ == FrontendType::kMonoImu
                    ? VisualizationType::kNone
-                   : VisualizationType::kMesh2dTo3dSparse),
+                   : static_cast<VisualizationType>(FLAGS_viz_type)),
       nh_(),
       nh_private_("~"),
       image_size_(vio_params.camera_params_.at(0).image_size_),

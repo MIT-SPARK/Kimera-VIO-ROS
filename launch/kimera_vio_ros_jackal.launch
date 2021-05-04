@@ -5,10 +5,11 @@
   <arg name="rosbag_path" default="path" />
   <arg name="robot_type" default="Jackal" />
 
+  <arg name="use_external_odom" default="false"/>
   <arg name="use_lcd" default="true"/>
 
   <!-- Other settings -->
-  <arg name="log_gt_data" value="true"/>
+  <arg name="log_gt_data" value="false"/>
   <arg name="log_imu_data" value="true"/>
   <arg name="should_use_sim_time" default="true"/>
   <arg name="params_folder" value="$(find kimera_vio)/params/$(arg robot_type)"/>
@@ -26,6 +27,7 @@
   <arg name="map_frame_id"       value="map"/>
   <arg name="left_cam_frame_id"  value="left_cam"/>
   <arg name="right_cam_frame_id" value="right_cam"/>
+  <arg name="external_odom_topic" value="/acl_jackal/jackal_velocity_controller/odom"/>
 
   <!-- Launch actual pipeline -->
   <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
