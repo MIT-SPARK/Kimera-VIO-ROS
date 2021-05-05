@@ -7,18 +7,17 @@
 
 #pragma once
 
-#include <functional>
-#include <string>
-
-#include <opencv2/opencv.hpp>
-
 #include <image_transport/subscriber_filter.h>
+#include <kimera-vio/dataprovider/DataProviderInterface.h>
+#include <kimera-vio/logging/Logger.h>
+#include <kimera-vio/pipeline/Pipeline-definitions.h>
+#include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
-#include <nav_msgs/Odometry.h>
 
-#include <kimera-vio/dataprovider/DataProviderInterface.h>
-#include <kimera-vio/pipeline/Pipeline-definitions.h>
+#include <functional>
+#include <opencv2/opencv.hpp>
+#include <string>
 
 #include "kimera_vio_ros/RosPublishers.h"
 
@@ -48,6 +47,8 @@ class RosDataProviderInterface : public DataProviderInterface {
   const cv::Mat readRosDepthImage(
       const sensor_msgs::ImageConstPtr& img_msg) const;
 
+  void logGtData(const nav_msgs::OdometryConstPtr& odometry);
+
  protected:
   // Define Node Handler for general use (Parameter server)
   ros::NodeHandle nh_;
@@ -58,6 +59,10 @@ class RosDataProviderInterface : public DataProviderInterface {
   // vio callback...
   // Pipeline params
   VioParams vio_params_;
+
+  bool log_gt_data_;
+  bool is_header_written_poses_vio_;
+  OfstreamWrapper output_gt_poses_csv_;
 
  private:
   void printParsedParams() const;

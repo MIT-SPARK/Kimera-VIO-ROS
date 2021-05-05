@@ -25,11 +25,14 @@ RosDataProviderInterface::RosDataProviderInterface(const VioParams& vio_params)
     : DataProviderInterface(),
       nh_(),
       nh_private_("~"),
-      vio_params_(vio_params) {
+      vio_params_(vio_params),
+      is_header_written_poses_vio_(false),
+      output_gt_poses_csv_("traj_gt.csv"),
+      log_gt_data_(false) {
   VLOG(1) << "Initializing RosDataProviderInterface.";
 
-  // Print parameters to check.
-  if (VLOG_IS_ON(1)) printParsedParams();
+  CHECK(nh_private_.getParam("log_gt_data", log_gt_data_));
+  if (VLOG_IS_ON(1)) printParsedParams();  // Print parameters to check.
 }
 
 RosDataProviderInterface::~RosDataProviderInterface() {
@@ -92,6 +95,38 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
     img_depth.convertTo(img_depth, CV_16UC1);
   }
   return img_depth;
+}
+
+void RosDataProviderInterface::logGtData(
+    const nav_msgs::OdometryConstPtr& odometry) {
+  CHECK(odometry);
+  // We log the poses in csv format for later alignement and analysis.
+  std::ofstream& output_stream = output_gt_poses_csv_.ofstream_;
+  bool& is_header_written = is_header_written_poses_vio_;
+
+  // First, write header, but only once.
+  if (!is_header_written) {
+    output_stream << "#timestamp,x,y,z,qw,qx,qy,qz,vx,vy,vz,"
+                  << "bgx,bgy,bgz,bax,bay,baz" << std::endl;
+    is_header_written = true;
+  }
+  output_stream << odometry->header.stamp.toNSec() << ","  //
+                << odometry->pose.pose.position.x << ","   //
+                << odometry->pose.pose.position.y << ","   //
+                << odometry->pose.pose.position.z << ","   //
+                << odometry->pose.pose.orientation.w << ","
+                << odometry->pose.pose.orientation.x << ","
+                << odometry->pose.pose.orientation.y << ","
+                << odometry->pose.pose.orientation.z << ","
+                << odometry->twist.twist.linear.x << ","
+                << odometry->twist.twist.linear.y << ","
+                << odometry->twist.twist.linear.z << "," << 0.0 << ","  //
+                << 0.0 << ","                                           //
+                << 0.0 << ","                                           //
+                << 0.0 << ","                                           //
+                << 0.0 << ","                                           //
+                << 0.0                                                  //
+                << std::endl;
 }
 
 void RosDataProviderInterface::printParsedParams() const {
