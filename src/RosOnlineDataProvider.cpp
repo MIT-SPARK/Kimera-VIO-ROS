@@ -363,9 +363,9 @@ void RosOnlineDataProvider::callbackIMU(
 // Ground-truth odometry callback
 void RosOnlineDataProvider::callbackGtOdom(
     const nav_msgs::Odometry::ConstPtr& gt_odom_msg) {
+  CHECK(gt_odom_msg);
   if (!gt_init_pose_received_) {
     LOG(WARNING) << "Using initial ground-truth state for initialization.";
-    CHECK(gt_odom_msg);
     utils::rosOdometryToVioNavState(
         *gt_odom_msg,
         nh_private_,
@@ -375,7 +375,13 @@ void RosOnlineDataProvider::callbackGtOdom(
     gt_init_pose_received_ = true;
   }
 
-  logGtData(gt_odom_msg);
+  CHECK(gt_init_pose_received_);
+  if (log_gt_data_) {
+    logGtData(gt_odom_msg);
+  } else {
+    // Shutdown to prevent more than one message being processed.
+    gt_odom_subscriber_.shutdown();
+  }
 }
 
 // Reinitialization callback
