@@ -21,8 +21,6 @@
 #include <sensor_msgs/Imu.h>
 
 #include <kimera-vio/pipeline/Pipeline-definitions.h>
-#include <kimera-vio/logging/Logger.h>
-
 #include "kimera_vio_ros/RosDataProviderInterface.h"
 
 namespace VIO {
@@ -83,9 +81,6 @@ class RosbagDataProvider : public RosDataProviderInterface {
   // Publish outputs
   void publishOutputs();
 
-  // Log output gt csv
-  void logGtData(const nav_msgs::OdometryConstPtr& odometry);
-
  private:
   RosbagData rosbag_data_;
 
@@ -112,10 +107,6 @@ class RosbagDataProvider : public RosDataProviderInterface {
   size_t k_last_kf_;
   size_t k_last_imu_;
   size_t k_last_gt_;
-
-  bool log_gt_data_;
-  bool is_header_written_poses_vio_;
-  OfstreamWrapper output_gt_poses_csv_;
 };
 
 }  // namespace VIO
