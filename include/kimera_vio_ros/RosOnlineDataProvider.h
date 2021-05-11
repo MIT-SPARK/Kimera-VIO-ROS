@@ -107,12 +107,6 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   ImageSubscriber left_img_subscriber_;
   ImageSubscriber right_img_subscriber_;
 
-  // Define CameraInfo message subscribers
-  typedef message_filters::Subscriber<sensor_msgs::CameraInfo>
-      CameraInfoSubscriber;
-  CameraInfoSubscriber left_cam_info_subscriber_;
-  CameraInfoSubscriber right_cam_info_subscriber_;
-
   // Declare Approx Synchronization Policy and Synchronizer for stereo images.
   // TODO(Toni): should be exact sync policy
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
@@ -122,7 +116,6 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
       ApproximateTime<sensor_msgs::CameraInfo, sensor_msgs::CameraInfo>
           sync_pol_info;
   std::unique_ptr<message_filters::Synchronizer<sync_pol_img>> sync_img_;
-  std::unique_ptr<message_filters::Synchronizer<sync_pol_info>> sync_cam_info_;
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;
