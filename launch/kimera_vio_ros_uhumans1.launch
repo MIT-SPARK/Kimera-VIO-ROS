@@ -13,8 +13,6 @@
   <arg name="log_gt_data" default="true"/>
   <arg name="gt_topic"    default="/tesse/odom"/>
 
-  <arg name="use_online_cam_params" default="false"/>
-
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path"
     default=""

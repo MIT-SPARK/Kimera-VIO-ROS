@@ -12,7 +12,6 @@
 #include <message_filters/time_synchronizer.h>
 #include <nav_msgs/Odometry.h>
 #include <ros/callback_queue.h>
-#include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/Imu.h>
 #include <std_msgs/Bool.h>
 
@@ -77,10 +76,6 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   void callbackStereoImages(const sensor_msgs::ImageConstPtr& left_msg,
                             const sensor_msgs::ImageConstPtr& right_msg);
 
-  // CameraInfo callback
-  void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& left_msg,
-                          const sensor_msgs::CameraInfoConstPtr& right_msg);
-
   // IMU callback
   void callbackIMU(const sensor_msgs::ImuConstPtr& imu_msg);
 
@@ -107,22 +102,12 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   ImageSubscriber left_img_subscriber_;
   ImageSubscriber right_img_subscriber_;
 
-  // Define CameraInfo message subscribers
-  typedef message_filters::Subscriber<sensor_msgs::CameraInfo>
-      CameraInfoSubscriber;
-  CameraInfoSubscriber left_cam_info_subscriber_;
-  CameraInfoSubscriber right_cam_info_subscriber_;
-
   // Declare Approx Synchronization Policy and Synchronizer for stereo images.
   // TODO(Toni): should be exact sync policy
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
                                                           sensor_msgs::Image>
       sync_pol_img;
-  typedef message_filters::sync_policies::
-      ApproximateTime<sensor_msgs::CameraInfo, sensor_msgs::CameraInfo>
-          sync_pol_info;
   std::unique_ptr<message_filters::Synchronizer<sync_pol_img>> sync_img_;
-  std::unique_ptr<message_filters::Synchronizer<sync_pol_info>> sync_cam_info_;
 
   // Define subscriber for IMU data
   ros::Subscriber imu_subscriber_;

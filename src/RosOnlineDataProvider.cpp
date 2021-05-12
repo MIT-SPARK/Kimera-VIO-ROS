@@ -27,10 +27,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       frame_count_(FrameId(0)),
       left_img_subscriber_(),
       right_img_subscriber_(),
-      left_cam_info_subscriber_(),
-      right_cam_info_subscriber_(),
       sync_img_(),
-      sync_cam_info_(),
       imu_subscriber_(),
       gt_odom_subscriber_(),
       reinit_flag_subscriber_(),
@@ -86,53 +83,6 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
              "pose.";
       vio_params_.backend_params_->autoInitialize_ = true;
     }
-  }
-
-  // Determine whether to use camera info topics for camera parameters:
-  bool use_online_cam_params = false;
-  CHECK(nh_private_.getParam("use_online_cam_params", use_online_cam_params));
-  if (use_online_cam_params) {
-    LOG(WARNING)
-        << "Using online camera parameters instead of YAML parameter files.";
-
-    static constexpr size_t kMaxCamInfoQueueSize = 10u;
-    static constexpr size_t kMaxCamInfoSynchronizerQueueSize = 10u;
-    left_cam_info_subscriber_.subscribe(
-        nh_, "left_cam/camera_info", kMaxCamInfoQueueSize);
-    right_cam_info_subscriber_.subscribe(
-        nh_, "right_cam/camera_info", kMaxCamInfoQueueSize);
-
-    sync_cam_info_ =
-        VIO::make_unique<message_filters::Synchronizer<sync_pol_info>>(
-            sync_pol_info(kMaxCamInfoSynchronizerQueueSize),
-            left_cam_info_subscriber_,
-            right_cam_info_subscriber_);
-
-    DCHECK(sync_cam_info_);
-    sync_cam_info_->registerCallback(
-        boost::bind(&RosOnlineDataProvider::callbackCameraInfo, this, _1, _2));
-
-    // Wait for camera info to be received.
-    static const ros::Duration kMaxTimeSecsForCamInfo(10.0);
-    ros::Time start = ros::Time::now();
-    ros::Time current = ros::Time::now();
-    while (!camera_info_received_ &&
-           (current - start) < kMaxTimeSecsForCamInfo) {
-      if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
-        ros::spinOnce();
-      } else {
-        LOG(FATAL) << "Ros is not ok... Shutting down.";
-      }
-      current = ros::Time::now();
-      CHECK(current.isValid());
-    }
-    LOG_IF(FATAL, !camera_info_received_)
-        << "Missing camera info, while trying for " << (current - start).toSec()
-        << " seconds.\n"
-        << "Expected camera info in topics:\n"
-        << " - Left cam info topic: " << left_cam_info_subscriber_.getTopic()
-        << '\n'
-        << " - Right cam info topic: " << right_cam_info_subscriber_.getTopic();
   }
 
   //! IMU Subscription
@@ -301,34 +251,6 @@ void RosOnlineDataProvider::callbackStereoImages(
     }
     frame_count_++;
   }
-}
-
-void RosOnlineDataProvider::callbackCameraInfo(
-    const sensor_msgs::CameraInfoConstPtr& left_msg,
-    const sensor_msgs::CameraInfoConstPtr& right_msg) {
-  CHECK_GE(vio_params_.camera_params_.size(), 2u);
-
-  // Initialize CameraParams for pipeline.
-  utils::msgCamInfoToCameraParams(left_msg,
-                                  base_link_frame_id_,
-                                  left_cam_frame_id_,
-                                  &vio_params_.camera_params_.at(0));
-  utils::msgCamInfoToCameraParams(right_msg,
-                                  base_link_frame_id_,
-                                  right_cam_frame_id_,
-                                  &vio_params_.camera_params_.at(1));
-
-  vio_params_.camera_params_.at(0).print();
-  vio_params_.camera_params_.at(1).print();
-
-  // Unregister this callback as it is no longer needed.
-  LOG(INFO)
-      << "Unregistering CameraInfo subscribers as data has been received.";
-  left_cam_info_subscriber_.unsubscribe();
-  right_cam_info_subscriber_.unsubscribe();
-
-  // Signal the correct reception of camera info
-  camera_info_received_ = true;
 }
 
 void RosOnlineDataProvider::callbackIMU(
