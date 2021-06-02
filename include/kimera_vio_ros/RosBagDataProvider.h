@@ -114,8 +114,8 @@ class RosbagDataProvider : public RosDataProviderInterface {
   size_t k_last_kf_;
   size_t k_last_imu_;
   size_t k_last_gt_;
-
   size_t k_last_odom_;
+
   bool use_external_odom_;
 };
 

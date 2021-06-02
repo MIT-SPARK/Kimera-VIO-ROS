@@ -31,6 +31,7 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
       left_img_pub_(),
       right_img_pub_(),
       gt_odometry_pub_(),
+      external_odometry_pub_(),
       timestamp_last_frame_(std::numeric_limits<Timestamp>::min()),
       timestamp_last_kf_(std::numeric_limits<Timestamp>::min()),
       timestamp_last_imu_(std::numeric_limits<Timestamp>::min()),
@@ -40,6 +41,7 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
       k_last_kf_(0u),
       k_last_imu_(0u),
       k_last_gt_(0u),
+      k_last_odom_(0u),
       use_external_odom_(false) {
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
   CHECK(nh_private_.getParam("left_cam_rosbag_topic", left_imgs_topic_));
@@ -57,7 +59,8 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
             << " - Left cam: " << left_imgs_topic_.c_str() << '\n'
             << " - Right cam: " << right_imgs_topic_.c_str() << '\n'
             << " - IMU: " << imu_topic_.c_str() << '\n'
-            << " - GT odom: " << gt_odom_topic_.c_str();
+            << " - GT odom: " << gt_odom_topic_.c_str() << '\n'
+            << " - External odom: " << external_odom_topic_.c_str();
 
   CHECK(!rosbag_path_.empty());
   CHECK(!left_imgs_topic_.empty());
@@ -412,6 +415,17 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
       timestamp_last_gt_ =
           rosbag_data_.gt_odometry_.at(k_last_gt_)->header.stamp.toNSec();
       k_last_gt_++;
+    }
+  }
+
+  // Publish external odometry data if available:
+  if (k_last_odom_ < rosbag_data_.external_odom_.size()) {
+    while (timestamp_last_odom_ < timestamp_kf && 
+           k_last_odom_ < rosbag_data_.external_odom_.size()) {
+      external_odometry_pub_.publish(rosbag_data_.external_odom_.at(k_last_odom_));
+      timestamp_last_odom_ =
+          rosbag_data_.external_odom_.at(k_last_odom_)->header.stamp.toNSec();
+      k_last_odom_++;         
     }
   }
 
