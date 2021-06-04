@@ -40,7 +40,6 @@ namespace VIO {
 
 RosVisualizer::RosVisualizer(const VioParams& vio_params)
     // I'm not sure we use this flag in ROS?
-    // TODO(nathan) check if mono supports kPointCloud
     : Visualizer3D(vio_params.frontend_type_ == FrontendType::kMonoImu
                    ? VisualizationType::kNone
                    : static_cast<VisualizationType>(FLAGS_viz_type)),
