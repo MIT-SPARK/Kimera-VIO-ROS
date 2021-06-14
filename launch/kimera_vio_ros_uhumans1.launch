@@ -3,6 +3,8 @@
   <arg name="verbosity"      default="0"/>
   <arg name="online"         default="true"/>
   <arg name="use_lcd"        default="true"/>
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
 
   <param name="use_sim_time" value="true"/>
 

@@ -24,6 +24,13 @@
   <!-- If true, KimeraVIO will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
 
+  <!-- If true, KimeraVIO will compute a static offset between the
+       latest IMU and camera measurement -->
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <!-- If true, KimeraVIO will estimate the time delay between the
+       IMU and camera -->
+  <arg name="do_fine_temporal_sync" default="false"/>
+
   <!-- Parameters -->
   <!-- each dataset has its own set of parameter files -->
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
@@ -70,6 +77,8 @@
               --flagfile=$(arg params_folder)/flags/VioBackend.flags
               --flagfile=$(arg params_folder)/flags/RegularVioBackend.flags
               --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+              --do_coarse_imu_camera_temporal_sync=$(arg do_coarse_temporal_sync)
+              --do_fine_imu_camera_temporal_sync=$(arg do_fine_temporal_sync)
               --logtostderr=1
               --colorlogtostderr=1
               --log_prefix=1

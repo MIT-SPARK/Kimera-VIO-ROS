@@ -1,6 +1,8 @@
 <launch>
   <arg name="dataset_name" value="Euroc"/>
   <arg name="verbosity"    default="0" />
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
 
   <!-- Set online to true if you use rosbag play or sensor stream -->
   <arg name="online" default="false" />
