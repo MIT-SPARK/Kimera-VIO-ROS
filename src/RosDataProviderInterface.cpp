@@ -97,24 +97,8 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
   return img_depth;
 }
 
-void RosDataProviderInterface::printParsedParams() const {
-  static constexpr int kSeparatorWidth = 40;
-  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Left camera info:";
-  vio_params_.camera_params_.at(0).print();
-  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Right camera info:";
-  vio_params_.camera_params_.at(1).print();
-  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Frontend params:";
-  vio_params_.frontend_params_.print();
-  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - IMU params:";
-  vio_params_.imu_params_.print();
-  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Backend params";
-  vio_params_.backend_params_->print();
-  LOG(INFO) << std::string(kSeparatorWidth, '=');
-  vio_params_.lcd_params_.print();
-  LOG(INFO) << std::string(kSeparatorWidth, '=');
-}
-
-void RosDataProviderInterface::logGtData(const nav_msgs::OdometryConstPtr& odometry) {
+void RosDataProviderInterface::logGtData(
+    const nav_msgs::OdometryConstPtr& odometry) {
   CHECK(odometry);
   // We log the poses in csv format for later alignement and analysis.
   std::ofstream& output_stream = output_gt_poses_csv_.ofstream_;
@@ -143,6 +127,23 @@ void RosDataProviderInterface::logGtData(const nav_msgs::OdometryConstPtr& odome
                 << 0.0 << ","                                           //
                 << 0.0                                                  //
                 << std::endl;
+}
+
+void RosDataProviderInterface::printParsedParams() const {
+  static constexpr int kSeparatorWidth = 40;
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Left camera info:";
+  vio_params_.camera_params_.at(0).print();
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Right camera info:";
+  vio_params_.camera_params_.at(1).print();
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Frontend params:";
+  vio_params_.frontend_params_.print();
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - IMU params:";
+  vio_params_.imu_params_.print();
+  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Backend params";
+  vio_params_.backend_params_->print();
+  LOG(INFO) << std::string(kSeparatorWidth, '=');
+  vio_params_.lcd_params_.print();
+  LOG(INFO) << std::string(kSeparatorWidth, '=');
 }
 
 }  // namespace VIO

@@ -3,6 +3,8 @@
   <arg name="verbosity"      default="0"/>
   <arg name="online"         default="true"/>
   <arg name="use_lcd"        default="true"/>
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
 
   <param name="use_sim_time" value="true"/>
 
@@ -12,8 +14,6 @@
        if="$(arg log_output)"/>
   <arg name="log_gt_data" default="true"/>
   <arg name="gt_topic"    default="/tesse/odom"/>
-
-  <arg name="use_online_cam_params" default="false"/>
 
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path"

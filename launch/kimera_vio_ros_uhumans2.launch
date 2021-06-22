@@ -5,6 +5,9 @@
   <arg name="use_lcd"           default="false"/>
   <arg name="use_external_odom" default="false"/>
 
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
+
   <param name="use_sim_time" value="true"/>
 
   <arg name="log_output" default="true"/>
@@ -14,10 +17,8 @@
   <arg name="log_gt_data" default="true"/>
   <arg name="gt_topic"    default="/tesse/odom"/>
 
-  <arg name="use_online_cam_params" default="false"/>
-
   <!-- Change rosbag path if online argument is false -->
-  <arg name="rosbag_path" default="/data/datasets/uHumans2/apartment/uHumans2_apartment_s1_00h.bag"
+  <arg name="rosbag_path" default=""
        unless="$(arg online)"/>
 
   <!-- Frame IDs -->
