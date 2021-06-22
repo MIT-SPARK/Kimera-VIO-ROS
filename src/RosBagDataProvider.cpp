@@ -82,10 +82,14 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
         nh_.advertise<nav_msgs::Odometry>(gt_odom_topic_, kQueueSize);
   }
 
-  if (!external_odom_topic_.empty() && use_external_odom_) {
+  if (use_external_odom_) {
     use_external_odom_ = true;
-    external_odometry_pub_ =
-        nh_.advertise<nav_msgs::Odometry>(external_odom_topic_, kQueueSize);
+    if (!external_odom_topic_.empty()) {
+      external_odometry_pub_ =
+          nh_.advertise<nav_msgs::Odometry>(external_odom_topic_, kQueueSize);
+    } else {
+      LOG(WARNING) << "use_external_odom set to true but no topic provided.";
+    }
   }
 }
 
