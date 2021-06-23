@@ -82,6 +82,9 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // GT odometry callback
   void callbackGtOdom(const nav_msgs::Odometry::ConstPtr& gt_odom_msg);
 
+  // External odometry callback
+  void callbackExternalOdom(const nav_msgs::Odometry::ConstPtr& odom_msg);
+
   // Reinitialization callback
   void callbackReinit(const std_msgs::Bool::ConstPtr& reinitFlag);
 
@@ -115,6 +118,9 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Define subscriber for gt data
   ros::Subscriber gt_odom_subscriber_;
 
+  // Define subscriber for external odom
+  ros::Subscriber external_odom_subscriber_;
+
   // Define subscriber for Reinit data
   ros::Subscriber reinit_flag_subscriber_;
   ros::Subscriber reinit_pose_subscriber_;
@@ -125,6 +131,8 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
 
   // Have the async spinners start?
   bool started_async_spinners_ = false;
+
+  bool use_external_odom_ = false;
 
   // Frame ids
   std::string base_link_frame_id_;

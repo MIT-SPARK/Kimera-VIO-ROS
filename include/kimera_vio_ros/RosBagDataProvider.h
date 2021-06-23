@@ -36,6 +36,8 @@ struct RosbagData {
   std::vector<Timestamp> timestamps_;
   /// Ground-truth Odometry (only if available)
   std::vector<nav_msgs::OdometryConstPtr> gt_odometry_;
+  /// External odometry (only if available)
+  std::vector<nav_msgs::OdometryConstPtr> external_odom_;
 };
 
 class RosbagDataProvider : public RosDataProviderInterface {
@@ -65,6 +67,8 @@ class RosbagDataProvider : public RosDataProviderInterface {
 
   void sendImuDataToVio();
 
+  void sendExternalOdometryToVio();
+
   // Get ground-truth nav state for VIO initialization.
   // It uses odometry messages inside of the rosbag as ground-truth (indexed
   // by the sequential order in the rosbag).
@@ -89,17 +93,20 @@ class RosbagDataProvider : public RosDataProviderInterface {
   std::string right_imgs_topic_;
   std::string imu_topic_;
   std::string gt_odom_topic_;
+  std::string external_odom_topic_;
 
   ros::Publisher clock_pub_;
   ros::Publisher imu_pub_;
   ros::Publisher left_img_pub_;
   ros::Publisher right_img_pub_;
   ros::Publisher gt_odometry_pub_;
+  ros::Publisher external_odometry_pub_;
 
   Timestamp timestamp_last_frame_;
   Timestamp timestamp_last_kf_;
   Timestamp timestamp_last_imu_;
   Timestamp timestamp_last_gt_;
+  Timestamp timestamp_last_odom_;
 
   // Frame indices
   //! Left frame index
@@ -107,6 +114,9 @@ class RosbagDataProvider : public RosDataProviderInterface {
   size_t k_last_kf_;
   size_t k_last_imu_;
   size_t k_last_gt_;
+  size_t k_last_odom_;
+
+  bool use_external_odom_;
 };
 
 }  // namespace VIO

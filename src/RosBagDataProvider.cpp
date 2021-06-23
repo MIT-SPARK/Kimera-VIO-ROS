@@ -25,25 +25,33 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
       right_imgs_topic_(""),
       imu_topic_(""),
       gt_odom_topic_(""),
+      external_odom_topic_(""),
       clock_pub_(),
       imu_pub_(),
       left_img_pub_(),
       right_img_pub_(),
       gt_odometry_pub_(),
+      external_odometry_pub_(),
       timestamp_last_frame_(std::numeric_limits<Timestamp>::min()),
       timestamp_last_kf_(std::numeric_limits<Timestamp>::min()),
       timestamp_last_imu_(std::numeric_limits<Timestamp>::min()),
       timestamp_last_gt_(std::numeric_limits<Timestamp>::min()),
+      timestamp_last_odom_(std::numeric_limits<Timestamp>::min()),
       k_(0u),
       k_last_kf_(0u),
       k_last_imu_(0u),
-      k_last_gt_(0u) {
+      k_last_gt_(0u),
+      k_last_odom_(0u),
+      use_external_odom_(false) {
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
   CHECK(nh_private_.getParam("left_cam_rosbag_topic", left_imgs_topic_));
   CHECK(nh_private_.getParam("right_cam_rosbag_topic", right_imgs_topic_));
   CHECK(nh_private_.getParam("imu_rosbag_topic", imu_topic_));
   CHECK(nh_private_.getParam("ground_truth_odometry_rosbag_topic",
                              gt_odom_topic_));
+  CHECK(nh_private_.getParam("use_external_odom", use_external_odom_));
+  CHECK(nh_private_.getParam("external_odometry_rosbag_topic",
+                             external_odom_topic_));
 
   LOG(INFO) << "Constructing RosbagDataProvider from path: \n"
             << " - Rosbag Path: " << rosbag_path_.c_str() << '\n'
@@ -51,7 +59,8 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
             << " - Left cam: " << left_imgs_topic_.c_str() << '\n'
             << " - Right cam: " << right_imgs_topic_.c_str() << '\n'
             << " - IMU: " << imu_topic_.c_str() << '\n'
-            << " - GT odom: " << gt_odom_topic_.c_str();
+            << " - GT odom: " << gt_odom_topic_.c_str() << '\n'
+            << " - External odom: " << external_odom_topic_.c_str();
 
   CHECK(!rosbag_path_.empty());
   CHECK(!left_imgs_topic_.empty());
@@ -71,6 +80,16 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
   if (!gt_odom_topic_.empty()) {
     gt_odometry_pub_ =
         nh_.advertise<nav_msgs::Odometry>(gt_odom_topic_, kQueueSize);
+  }
+
+  if (use_external_odom_) {
+    use_external_odom_ = true;
+    if (!external_odom_topic_.empty()) {
+      external_odometry_pub_ =
+          nh_.advertise<nav_msgs::Odometry>(external_odom_topic_, kQueueSize);
+    } else {
+      LOG(WARNING) << "use_external_odom set to true but no topic provided.";
+    }
   }
 }
 
@@ -105,10 +124,29 @@ void RosbagDataProvider::sendImuDataToVio() {
   }
 }
 
+void RosbagDataProvider::sendExternalOdometryToVio() {
+  CHECK(external_odom_callback_)
+      << "Did you forget to register the external odometry callback?";
+  for (const nav_msgs::OdometryConstPtr& odom_msg :
+       rosbag_data_.external_odom_) {
+    const Timestamp timestamp = odom_msg->header.stamp.toNSec();
+
+    VIO::VioNavState kimera_odom;
+    utils::rosOdometryToVioNavState(*odom_msg, nh_private_, &kimera_odom);
+
+    external_odom_callback_(ExternalOdomMeasurement(
+        timestamp, gtsam::NavState(kimera_odom.pose_, kimera_odom.velocity_)));
+  }
+}
+
 bool RosbagDataProvider::spin() {
   if (k_ == 0u) {
     // Send IMU data directly to VIO for speed boost
     sendImuDataToVio();
+    // Send external odometry directly to VIO as well
+    if (use_external_odom_) {
+      sendExternalOdometryToVio();
+    }
   }
 
   // We break the while loop (but increase k_!) if we run in sequential mode.
@@ -220,6 +258,17 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
            "was given. Make sure you set ground_truth_odometry_rosbag_topic, "
            "or turn autoInitialize to false in BackendParameters.yaml.";
   }
+  if (use_external_odom_) {
+    topics.push_back(external_odom_topic_);
+  }
+
+  std::stringstream ss;
+  ss << "query topics:" << std::endl;
+  ss << "=============" << std::endl;
+  for (const auto& topic : topics) {
+    ss << " - " << topic << std::endl;
+  }
+  VLOG(2) << ss.str();
 
   // Query rosbag for given topics
   rosbag::View view(bag, rosbag::TopicQuery(topics));
@@ -280,18 +329,22 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
     }
 
     // Check if msg is a ground-truth odometry message.
-    nav_msgs::OdometryConstPtr gt_odom_msg =
-        msg.instantiate<nav_msgs::Odometry>();
-    if (gt_odom_msg != nullptr) {
+    nav_msgs::OdometryConstPtr odom_msg = msg.instantiate<nav_msgs::Odometry>();
+    if (odom_msg != nullptr) {
+      // handle gt
       if (msg_topic == gt_odom_topic_) {
-        rosbag_data->gt_odometry_.push_back(gt_odom_msg);
+        rosbag_data->gt_odometry_.push_back(odom_msg);
         if (log_gt_data_) {
-          logGtData(gt_odom_msg);
+          logGtData(odom_msg);
         }
-      } else {
+      } else if (msg_topic != external_odom_topic_) {
         LOG(ERROR) << "Unrecognized topic name for odometry msg. We were"
                       " expecting ground-truth odometry on this topic: "
                    << msg_topic;
+      }
+      // handle odom
+      if (use_external_odom_ && msg_topic == external_odom_topic_) {
+        rosbag_data->external_odom_.push_back(odom_msg);
       }
     } else {
       LOG(ERROR) << "Could not find the type of this rosbag msg from topic:\n"
@@ -317,6 +370,11 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
          !gt_odom_topic_.empty() &&
              rosbag_data->gt_odometry_.size() < rosbag_data->left_imgs_.size())
       << "Fewer ground_truth data than image data.";
+  LOG_IF(
+      WARNING,
+      !external_odom_topic_.empty() && use_external_odom_ &&
+          rosbag_data->external_odom_.size() < rosbag_data->left_imgs_.size())
+      << "Fewer external odometry messages than image data.";
   LOG(INFO) << "Finished parsing rosbag data.";
   return true;
 }
@@ -361,6 +419,17 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
       timestamp_last_gt_ =
           rosbag_data_.gt_odometry_.at(k_last_gt_)->header.stamp.toNSec();
       k_last_gt_++;
+    }
+  }
+
+  // Publish external odometry data if available:
+  if (k_last_odom_ < rosbag_data_.external_odom_.size()) {
+    while (timestamp_last_odom_ < timestamp_kf && 
+           k_last_odom_ < rosbag_data_.external_odom_.size()) {
+      external_odometry_pub_.publish(rosbag_data_.external_odom_.at(k_last_odom_));
+      timestamp_last_odom_ =
+          rosbag_data_.external_odom_.at(k_last_odom_)->header.stamp.toNSec();
+      k_last_odom_++;         
     }
   }
 

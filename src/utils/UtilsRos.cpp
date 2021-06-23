@@ -113,11 +113,14 @@ void rosOdometryToVioNavState(const nav_msgs::Odometry& odom,
 
   rosOdometryToGtsamPose(odom, &vio_navstate->pose_);
 
-  // World to Body rotation
-  gtsam::Vector3 velocity(odom.twist.twist.linear.x,
+  // velocity of body frame w.r.t. world frame in body frame
+  gtsam::Vector3 body_world_Vel_body(odom.twist.twist.linear.x,
                           odom.twist.twist.linear.y,
                           odom.twist.twist.linear.z);
-  vio_navstate->velocity_ = velocity;
+  // velocity of body frame w.r.t world frame in world frame
+  const gtsam::Rot3 world_R_body = vio_navstate->pose_.rotation();
+  gtsam::Vector3 body_world_Vel_world = world_R_body * body_world_Vel_body;
+  vio_navstate->velocity_ = body_world_Vel_world;
 
   // Get acceleration and gyro biases. Default is 0.
   std::vector<double> parsed_acc_bias = {0.0, 0.0, 0.0};

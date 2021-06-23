@@ -24,6 +24,7 @@
   <!-- If true, KimeraVIO will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
 
+  <arg name="use_external_odom" default="false"/>
   <!-- If true, KimeraVIO will compute a static offset between the
        latest IMU and camera measurement -->
   <arg name="do_coarse_temporal_sync" default="false"/>
@@ -49,6 +50,7 @@
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
   <arg name="odometry_ground_truth_topic"       default=""/>
+  <arg name="external_odom_topic"               default=""/>
 
   <!-- Frame IDs -->
   <arg name="world_frame_id"     default="world"/>
@@ -77,6 +79,7 @@
               --flagfile=$(arg params_folder)/flags/VioBackend.flags
               --flagfile=$(arg params_folder)/flags/RegularVioBackend.flags
               --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+              --use_external_odometry=$(arg use_external_odom)
               --do_coarse_imu_camera_temporal_sync=$(arg do_coarse_temporal_sync)
               --do_fine_imu_camera_temporal_sync=$(arg do_fine_temporal_sync)
               --logtostderr=1
@@ -92,6 +95,7 @@
 
     <param name="online_run"            value="$(arg online)"/>
     <param name="use_lcd"               value="$(arg use_lcd)"/>
+    <param name="use_external_odom"     value="$(arg use_external_odom)"/>
 
     <!-- Frame IDs for Odometry -->
     <param name="world_frame_id"     value="$(arg world_frame_id)"/>
@@ -102,10 +106,12 @@
 
     <!-- Subscriber topics -->
     <!-- if we run online, use remap -->
-    <remap from="left_cam/image_raw"  to="$(arg left_cam_topic)"    if="$(arg online)"/>
-    <remap from="right_cam/image_raw" to="$(arg right_cam_topic)"   if="$(arg online)"/>
-    <remap from="imu"       to="$(arg imu_topic)"                   if="$(arg online)"/>
-    <remap from="gt_odom"   to="$(arg odometry_ground_truth_topic)"
+    <remap from="left_cam/image_raw"  to="$(arg left_cam_topic)"      if="$(arg online)"/>
+    <remap from="right_cam/image_raw" to="$(arg right_cam_topic)"     if="$(arg online)"/>
+    <remap from="imu"                 to="$(arg imu_topic)"           if="$(arg online)"/>
+    <remap from="external_odom"       to="$(arg external_odom_topic)"
+           if="$(eval arg('online') and arg('external_odom_topic') != '')"/>
+    <remap from="gt_odom"             to="$(arg odometry_ground_truth_topic)"
            if="$(eval arg('online') and arg('odometry_ground_truth_topic') != '')"/>
 
     <remap from="left_cam/camera_info"  to="$(arg left_cam_info_topic)"  if="$(arg online)"/>
@@ -118,7 +124,10 @@
     <param name="imu_rosbag_topic"       value="$(arg imu_topic)"       unless="$(arg online)"/>
     <param name="ground_truth_odometry_rosbag_topic"
            value="$(arg odometry_ground_truth_topic)"                   unless="$(arg online)"/>
-    <param name="log_gt_data"            value="$(arg log_gt_data)"     unless="$(arg online)"/>
+    <param name="external_odometry_rosbag_topic"
+           value="$(arg external_odom_topic)"
+           unless="$(arg online)"/>
+    <param name="log_gt_data"            value="$(arg log_gt_data)"/>
 
     <!-- Other subscription topics -->
     <remap from="reinit_flag" to="reinit_flag"/>
