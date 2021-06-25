@@ -37,6 +37,9 @@
   <!-- the parameters are set in param folder, ordered by the dataset's name -->
   <arg name="params_folder" default="$(find kimera_vio)/params/$(arg dataset_name)"/>
 
+  <!-- you can optionally specify an alternative location -->
+  <arg name="sensor_folder" default=""/>
+
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
   <arg name="path_to_vocab" default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
@@ -92,6 +95,7 @@
               --viz_type=$(arg viz_type)
               --visualize=$(arg visualize)">
     <param name="params_folder_path"    value="$(arg params_folder)"/>
+    <param name="sensor_params_folder_path" value="$(arg sensor_folder)"/>
 
     <param name="online_run"            value="$(arg online)"/>
     <param name="use_lcd"               value="$(arg use_lcd)"/>

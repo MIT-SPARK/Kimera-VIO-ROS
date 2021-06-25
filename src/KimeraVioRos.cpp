@@ -48,7 +48,7 @@ KimeraVioRos::KimeraVioRos()
 
   // Parse VIO parameters
   std::string params_path;
-  CHECK(nh_private_.getParam("pipeline_params_folder_path", params_path));
+  CHECK(nh_private_.getParam("params_folder_path", params_path));
   CHECK(!params_path.empty());
 
   std::string sensor_params_path;
