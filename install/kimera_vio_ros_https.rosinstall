@@ -31,7 +31,7 @@
     # Last tested commit: 9ffe480feeac036cdf43a27c9c11637a382aa628
 - git:
     local-name: dbow2_catkin
-    uri: https://github.com/marcusabate/dbow2_catkin.git
+    uri: https://github.com/MIT-SPARK/dbow2_catkin.git
     version: master
 - git:
     local-name: cmake_external_project_catkin
