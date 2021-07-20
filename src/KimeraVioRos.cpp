@@ -30,6 +30,9 @@
 
 namespace VIO {
 
+#define MAKE_CONFIG_FILEPATH(dir_to_use, config_name) \
+  dir_to_use + '/' + VioParams::k##config_name
+
 KimeraVioRos::KimeraVioRos()
     : nh_private_("~"),
       vio_params_(nullptr),
@@ -44,11 +47,35 @@ KimeraVioRos::KimeraVioRos()
       "restart_kimera_vio", &KimeraVioRos::restartKimeraVio, this);
 
   // Parse VIO parameters
-  std::string params_folder_path;
-  CHECK(nh_private_.getParam("params_folder_path", params_folder_path));
-  CHECK(!params_folder_path.empty());
-  vio_params_ = std::make_shared<VioParams>(params_folder_path);
+  std::string params_path;
+  CHECK(nh_private_.getParam("params_folder_path", params_path));
+  CHECK(!params_path.empty());
+
+  std::string sensor_params_path;
+  nh_private_.getParam("sensor_params_folder_path", sensor_params_path);
+  if (sensor_params_path.empty()) {
+    VLOG(1) << "Using provided parameter path for every configuration file";
+    vio_params_ = std::make_shared<VioParams>(params_path);
+  } else {
+    VLOG(1) << "Using split parameter paths for general and sensor parameters";
+    vio_params_ = std::make_shared<VioParams>(
+        MAKE_CONFIG_FILEPATH(params_path, PipelineFilename),
+        MAKE_CONFIG_FILEPATH(sensor_params_path, ImuFilename),
+        MAKE_CONFIG_FILEPATH(sensor_params_path, LeftCameraFilename),
+        MAKE_CONFIG_FILEPATH(sensor_params_path, RightCameraFilename),
+        MAKE_CONFIG_FILEPATH(params_path, FrontendFilename),
+        MAKE_CONFIG_FILEPATH(params_path, BackendFilename),
+        MAKE_CONFIG_FILEPATH(params_path, LcdFilename),
+        MAKE_CONFIG_FILEPATH(params_path, DisplayFilename),
+        FLAGS_use_external_odometry
+            ? boost::optional<std::string>(
+                  MAKE_CONFIG_FILEPATH(sensor_params_path, OdometryFilename))
+            : boost::none,
+        true);
+  }
 }
+
+#undef MAKE_CONFIG_FILEPATH
 
 bool KimeraVioRos::runKimeraVio() {
   // First, destroy VIO pipeline, this will in turn call the shutdown of
@@ -97,7 +124,7 @@ bool KimeraVioRos::runKimeraVio() {
                  << ". 0: Mono, 1: Stereo.";
     } break;
   }
-  
+
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
 
   // Finally, connect data_provider and vio_pipeline

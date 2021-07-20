@@ -1,5 +1,11 @@
 <launch>
   <arg name="dataset_name" value="RealSenseIR"/>
+
+  <!-- allow for different sensor calibrations -->
+  <arg name="sensor_config_path" default="$(find kimera_vio)/params"/>
+  <arg name="sensor_config_name" default="$(arg dataset_name)"/>
+  <arg name="sensor_folder" value="$(arg sensor_config_path)/$(arg sensor_config_name)"/>
+
   <arg name="online" default="true" />
   <arg name="do_coarse_temporal_sync" default="false"/>
   <arg name="do_fine_temporal_sync" default="false"/>
@@ -15,7 +21,7 @@
 
   <!-- Only used when parsing a rosbag -->
   <arg name="rosbag_path" default="default.bag"
-       unless="$(arg online)"/>"/>
+       unless="$(arg online)"/>
 
   <!-- Frame IDs. These DO NOT match frame id's on the video streams, as the 
 	RealSense and Kimera publish conflicting Tf's -->
