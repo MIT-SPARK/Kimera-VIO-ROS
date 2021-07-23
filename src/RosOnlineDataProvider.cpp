@@ -108,19 +108,34 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   // real-time than to be delayed...
   static constexpr size_t kMaxImagesQueueSize = 1u;
   it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
-  left_img_subscriber_.subscribe(
-      *it_, "left_cam/image_raw", kMaxImagesQueueSize);
-  right_img_subscriber_.subscribe(
-      *it_, "right_cam/image_raw", kMaxImagesQueueSize);
-  static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
-  sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
-      sync_pol_img(kMaxImageSynchronizerQueueSize),
-      left_img_subscriber_,
-      right_img_subscriber_);
+  switch (vio_params_.frontend_type_) {
+    case FrontendType::kMonoImu: {
+      left_img_subscriber_.subscribe(
+          *it_, "left_cam/image_raw", kMaxImagesQueueSize);
+      left_img_subscriber_.registerCallback(
+          boost::bind(&RosOnlineDataProvider::callbackMonoImage, this, _1));
+      break;
+    }
+    case FrontendType::kStereoImu: {
+      left_img_subscriber_.subscribe(
+          *it_, "left_cam/image_raw", kMaxImagesQueueSize);
+      right_img_subscriber_.subscribe(
+          *it_, "right_cam/image_raw", kMaxImagesQueueSize);
+      static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
+      sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
+          sync_pol_img(kMaxImageSynchronizerQueueSize),
+          left_img_subscriber_,
+          right_img_subscriber_);
 
-  DCHECK(sync_img_);
-  sync_img_->registerCallback(
-      boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
+      DCHECK(sync_img_);
+      sync_img_->registerCallback(boost::bind(
+          &RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
+      break;
+    }
+    default: {
+      LOG(FATAL) << "Frontend type not recognized.";
+    }
+  }
 
   // Define Reinitializer Subscriber
   static constexpr size_t kMaxReinitQueueSize = 1u;
@@ -231,6 +246,25 @@ bool RosOnlineDataProvider::sequentialSpin() {
   // ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0));
   ros::spinOnce();
   return true;
+}
+
+// TODO(marcus): with the readRosImage, this is a slow callback. Might be too
+// slow...
+void RosOnlineDataProvider::callbackMonoImage(
+    const sensor_msgs::ImageConstPtr& img_msg) {
+  CHECK_GE(vio_params_.camera_params_.size(), 1u);
+  const CameraParams& cam_info = vio_params_.camera_params_.at(0);
+
+  CHECK(img_msg);
+  const Timestamp& timestamp = img_msg->header.stamp.toNSec();
+
+  if (!shutdown_) {
+    CHECK(left_frame_callback_)
+        << "Did you forget to register the left frame callback?";
+    left_frame_callback_(VIO::make_unique<Frame>(
+        frame_count_, timestamp, cam_info, readRosImage(img_msg)));
+    frame_count_++;
+  }
 }
 
 // TODO(marcus): with the readRosImage, this is a slow callback. Might be too

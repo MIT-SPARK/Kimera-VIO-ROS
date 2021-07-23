@@ -72,6 +72,9 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   ReinitPacket reinit_packet_ = ReinitPacket();
 
  private:
+  // Mono image callback
+  void callbackMonoImage(const sensor_msgs::ImageConstPtr& img_msg);
+
   // Stereo image callback
   void callbackStereoImages(const sensor_msgs::ImageConstPtr& left_msg,
                             const sensor_msgs::ImageConstPtr& right_msg);

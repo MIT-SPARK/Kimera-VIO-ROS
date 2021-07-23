@@ -45,7 +45,8 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
       use_external_odom_(false) {
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
   CHECK(nh_private_.getParam("left_cam_rosbag_topic", left_imgs_topic_));
-  CHECK(nh_private_.getParam("right_cam_rosbag_topic", right_imgs_topic_));
+  if (vio_params_.frontend_type_ == FrontendType::kStereoImu)
+    CHECK(nh_private_.getParam("right_cam_rosbag_topic", right_imgs_topic_));
   CHECK(nh_private_.getParam("imu_rosbag_topic", imu_topic_));
   CHECK(nh_private_.getParam("ground_truth_odometry_rosbag_topic",
                              gt_odom_topic_));
@@ -64,7 +65,8 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
 
   CHECK(!rosbag_path_.empty());
   CHECK(!left_imgs_topic_.empty());
-  CHECK(!right_imgs_topic_.empty());
+  if (vio_params_.frontend_type_ == FrontendType::kStereoImu)
+    CHECK(!right_imgs_topic_.empty());
   CHECK(!imu_topic_.empty());
 
   // Ros publishers specific to rosbag data provider
@@ -74,8 +76,10 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
   imu_pub_ = nh_.advertise<sensor_msgs::Imu>(imu_topic_, kQueueSize);
   left_img_pub_ =
       nh_.advertise<sensor_msgs::Image>(left_imgs_topic_, kQueueSize);
-  right_img_pub_ =
-      nh_.advertise<sensor_msgs::Image>(right_imgs_topic_, kQueueSize);
+  if (vio_params_.frontend_type_ == FrontendType::kStereoImu) {
+    right_img_pub_ =
+        nh_.advertise<sensor_msgs::Image>(right_imgs_topic_, kQueueSize);
+  }
 
   if (!gt_odom_topic_.empty()) {
     gt_odometry_pub_ =
@@ -242,7 +246,8 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   // Generate list of topics to parse:
   std::vector<std::string> topics;
   topics.push_back(left_imgs_topic_);
-  topics.push_back(right_imgs_topic_);
+  if (vio_params_.frontend_type_ == FrontendType::kStereoImu)
+    topics.push_back(right_imgs_topic_);
   topics.push_back(imu_topic_);
   if (!gt_odom_topic_.empty()) {
     LOG_IF(WARNING, vio_params_.backend_params_->autoInitialize_ != 0)
@@ -316,7 +321,8 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
           // Timestamp is in nanoseconds
           rosbag_data->timestamps_.push_back(img_msg->header.stamp.toNSec());
           rosbag_data->left_imgs_.push_back(img_msg);
-        } else if (msg_topic == right_imgs_topic_) {
+        } else if (vio_params_.frontend_type_ == FrontendType::kStereoImu &&
+                   msg_topic == right_imgs_topic_) {
           rosbag_data->right_imgs_.push_back(img_msg);
         } else {
           LOG(WARNING) << "Img with unexpected topic: " << msg_topic;
@@ -356,11 +362,13 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   // Sanity check:
   LOG_IF(FATAL,
          rosbag_data->left_imgs_.size() == 0 ||
-             rosbag_data->right_imgs_.size() == 0)
+             (vio_params_.frontend_type_ == FrontendType::kStereoImu &&
+              rosbag_data->right_imgs_.size() == 0))
       << "No images parsed from rosbag.";
-  LOG_IF(FATAL,
-         rosbag_data->left_imgs_.size() != rosbag_data->right_imgs_.size())
-      << "Unequal number of images from left and right cameras.";
+  if (vio_params_.frontend_type_ == FrontendType::kStereoImu)
+    LOG_IF(FATAL,
+           rosbag_data->left_imgs_.size() != rosbag_data->right_imgs_.size())
+        << "Unequal number of images from left and right cameras.";
   LOG_IF(FATAL, rosbag_data->imu_msgs_.size() <= rosbag_data->left_imgs_.size())
       << "Less than or equal number of imu data as image data.";
   LOG_IF(FATAL,
@@ -433,16 +441,37 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
     }
   }
 
-  // Publish left and right images:
-  if (k_last_kf_ < rosbag_data_.left_imgs_.size() &&
-      k_last_kf_ < rosbag_data_.right_imgs_.size()) {
-    while (timestamp_last_kf_ < timestamp_kf &&
-           k_last_kf_ < rosbag_data_.left_imgs_.size() &&
-           k_last_kf_ < rosbag_data_.right_imgs_.size()) {
-      left_img_pub_.publish(rosbag_data_.left_imgs_.at(k_last_kf_));
-      right_img_pub_.publish(rosbag_data_.right_imgs_.at(k_last_kf_));
-      timestamp_last_kf_ = rosbag_data_.timestamps_.at(k_last_kf_);
-      k_last_kf_++;
+  switch (vio_params_.frontend_type_) {
+    case FrontendType::kMonoImu: {
+      // Publish left images:
+      if (k_last_kf_ < rosbag_data_.left_imgs_.size()) {
+        while (timestamp_last_kf_ < timestamp_kf &&
+               k_last_kf_ < rosbag_data_.left_imgs_.size()) {
+          left_img_pub_.publish(rosbag_data_.left_imgs_.at(k_last_kf_));
+          timestamp_last_kf_ = rosbag_data_.timestamps_.at(k_last_kf_);
+          k_last_kf_++;
+        }
+      }
+      break;
+    }
+    case FrontendType::kStereoImu: {
+      // Publish left and right images:
+      if (k_last_kf_ < rosbag_data_.left_imgs_.size() &&
+          k_last_kf_ < rosbag_data_.right_imgs_.size()) {
+        while (timestamp_last_kf_ < timestamp_kf &&
+               k_last_kf_ < rosbag_data_.left_imgs_.size() &&
+               k_last_kf_ < rosbag_data_.right_imgs_.size()) {
+          left_img_pub_.publish(rosbag_data_.left_imgs_.at(k_last_kf_));
+          right_img_pub_.publish(rosbag_data_.right_imgs_.at(k_last_kf_));
+          timestamp_last_kf_ = rosbag_data_.timestamps_.at(k_last_kf_);
+          k_last_kf_++;
+        }
+      }
+      break;
+    }
+    default: {
+      LOG(FATAL) << "Don't know this frontend type.";
+      break;
     }
   }
 }

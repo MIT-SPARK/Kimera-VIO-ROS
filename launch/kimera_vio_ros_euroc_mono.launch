@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" value="Euroc"/>
+  <arg name="dataset_name" value="EurocMono"/>
   <arg name="verbosity"    default="0" />
   <arg name="do_coarse_temporal_sync" default="false"/>
   <arg name="do_fine_temporal_sync" default="false"/>
@@ -35,7 +35,7 @@
   <arg name="right_cam_frame_id" value="cam1"/>
 
   <arg name="left_cam_topic"      default="/cam0/image_raw"/>
-  <arg name="right_cam_topic"     default="/cam1/image_raw"/>
+  <arg name="right_cam_topic"     default="/NA"/>
   <arg name="imu_topic"           default="/imu0"/>
   <arg name="external_odom_topic" default=""/>
 

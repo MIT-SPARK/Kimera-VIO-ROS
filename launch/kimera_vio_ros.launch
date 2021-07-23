@@ -19,7 +19,7 @@
        Logger utils (if online is true) or rosbag (if online is false),
        and processing data from the gt_topic rostopic -->
   <arg name="log_gt_data" default="false"/>
-  <arg name="gt_topic"    default="ground_truth_odometry_topic"/>
+  <arg name="gt_topic"    default=""/>
 
   <!-- If true, KimeraVIO will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
@@ -46,13 +46,10 @@
 
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"                    default="/cam0/image_raw"/>
-  <arg name="left_cam_info_topic"               default="/cam0/camera_info"/>
   <arg name="right_cam_topic"                   default="/cam1/image_raw"/>
-  <arg name="right_cam_info_topic"              default="/cam1/camera_info"/>
   <arg name="imu_topic"                         default="/imu0"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
-  <arg name="odometry_ground_truth_topic"       default=""/>
   <arg name="external_odom_topic"               default=""/>
 
   <!-- Frame IDs -->
@@ -115,11 +112,8 @@
     <remap from="imu"                 to="$(arg imu_topic)"           if="$(arg online)"/>
     <remap from="external_odom"       to="$(arg external_odom_topic)"
            if="$(eval arg('online') and arg('external_odom_topic') != '')"/>
-    <remap from="gt_odom"             to="$(arg odometry_ground_truth_topic)"
-           if="$(eval arg('online') and arg('odometry_ground_truth_topic') != '')"/>
-
-    <remap from="left_cam/camera_info"  to="$(arg left_cam_info_topic)"  if="$(arg online)"/>
-    <remap from="right_cam/camera_info" to="$(arg right_cam_info_topic)" if="$(arg online)"/>
+    <remap from="gt_odom"             to="$(arg gt_topic)"
+           if="$(eval arg('online') and arg('gt_topic') != '')"/>
 
     <!-- if we run offline, use params -->
     <param name="rosbag_path"            value="$(arg rosbag_path)"     unless="$(arg online)"/>
@@ -127,7 +121,7 @@
     <param name="right_cam_rosbag_topic" value="$(arg right_cam_topic)" unless="$(arg online)"/>
     <param name="imu_rosbag_topic"       value="$(arg imu_topic)"       unless="$(arg online)"/>
     <param name="ground_truth_odometry_rosbag_topic"
-           value="$(arg odometry_ground_truth_topic)"                   unless="$(arg online)"/>
+           value="$(arg gt_topic)"                   unless="$(arg online)"/>
     <param name="external_odometry_rosbag_topic"
            value="$(arg external_odom_topic)"
            unless="$(arg online)"/>
