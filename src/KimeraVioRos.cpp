@@ -129,7 +129,7 @@ bool KimeraVioRos::spin() {
     std::future<bool> vio_pipeline_handle =
         std::async(std::launch::async,
                    &VIO::Pipeline::spin,
-                   *CHECK_NOTNULL(vio_pipeline_.get()));
+                   CHECK_NOTNULL(vio_pipeline_.get()));
     // Run while ROS is ok and vio pipeline is not shutdown.
     ros::Rate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {
