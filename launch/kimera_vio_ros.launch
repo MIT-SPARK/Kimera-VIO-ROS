@@ -1,7 +1,7 @@
 <launch>
   <!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
   file and include this one to launch KimeraVIO on the dataset of your choice -->
-  <arg name="dataset_name" default="Euroc"/>
+  <arg name="dataset_name" default=""/>
   <!-- If False, parses the given rosbag, otw it plays the rosbage -->
   <arg name="online" default="true" />
   <!-- !!!! VIT !!!! This should be true when running online with a rosbag publishing clock,
@@ -108,7 +108,8 @@
     <!-- Subscriber topics -->
     <!-- if we run online, use remap -->
     <remap from="left_cam/image_raw"  to="$(arg left_cam_topic)"      if="$(arg online)"/>
-    <remap from="right_cam/image_raw" to="$(arg right_cam_topic)"     if="$(arg online)"/>
+    <remap from="right_cam/image_raw" to="$(arg right_cam_topic)"
+           if="$(eval arg('online') and arg('right_cam_topic') != '')"/>
     <remap from="imu"                 to="$(arg imu_topic)"           if="$(arg online)"/>
     <remap from="external_odom"       to="$(arg external_odom_topic)"
            if="$(eval arg('online') and arg('external_odom_topic') != '')"/>

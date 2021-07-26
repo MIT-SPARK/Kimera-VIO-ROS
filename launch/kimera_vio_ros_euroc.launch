@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" value="Euroc"/>
+  <arg name="dataset_name" default="Euroc"/>
   <arg name="verbosity"    default="0" />
   <arg name="do_coarse_temporal_sync" default="false"/>
   <arg name="do_fine_temporal_sync" default="false"/>

@@ -45,8 +45,9 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
       use_external_odom_(false) {
   CHECK(nh_private_.getParam("rosbag_path", rosbag_path_));
   CHECK(nh_private_.getParam("left_cam_rosbag_topic", left_imgs_topic_));
-  if (vio_params_.frontend_type_ == FrontendType::kStereoImu)
+  if (vio_params_.frontend_type_ == FrontendType::kStereoImu) {
     CHECK(nh_private_.getParam("right_cam_rosbag_topic", right_imgs_topic_));
+  }
   CHECK(nh_private_.getParam("imu_rosbag_topic", imu_topic_));
   CHECK(nh_private_.getParam("ground_truth_odometry_rosbag_topic",
                              gt_odom_topic_));
@@ -65,8 +66,9 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
 
   CHECK(!rosbag_path_.empty());
   CHECK(!left_imgs_topic_.empty());
-  if (vio_params_.frontend_type_ == FrontendType::kStereoImu)
+  if (vio_params_.frontend_type_ == FrontendType::kStereoImu) {
     CHECK(!right_imgs_topic_.empty());
+  }
   CHECK(!imu_topic_.empty());
 
   // Ros publishers specific to rosbag data provider
@@ -246,8 +248,9 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   // Generate list of topics to parse:
   std::vector<std::string> topics;
   topics.push_back(left_imgs_topic_);
-  if (vio_params_.frontend_type_ == FrontendType::kStereoImu)
+  if (vio_params_.frontend_type_ == FrontendType::kStereoImu) {
     topics.push_back(right_imgs_topic_);
+  }
   topics.push_back(imu_topic_);
   if (!gt_odom_topic_.empty()) {
     LOG_IF(WARNING, vio_params_.backend_params_->autoInitialize_ != 0)
@@ -441,37 +444,46 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
     }
   }
 
+  // Publish input images if available:
   switch (vio_params_.frontend_type_) {
     case FrontendType::kMonoImu: {
       // Publish left images:
-      if (k_last_kf_ < rosbag_data_.left_imgs_.size()) {
-        while (timestamp_last_kf_ < timestamp_kf &&
-               k_last_kf_ < rosbag_data_.left_imgs_.size()) {
-          left_img_pub_.publish(rosbag_data_.left_imgs_.at(k_last_kf_));
-          timestamp_last_kf_ = rosbag_data_.timestamps_.at(k_last_kf_);
-          k_last_kf_++;
-        }
-      }
+      publishMonoImages(timestamp_kf);
       break;
     }
     case FrontendType::kStereoImu: {
       // Publish left and right images:
-      if (k_last_kf_ < rosbag_data_.left_imgs_.size() &&
-          k_last_kf_ < rosbag_data_.right_imgs_.size()) {
-        while (timestamp_last_kf_ < timestamp_kf &&
-               k_last_kf_ < rosbag_data_.left_imgs_.size() &&
-               k_last_kf_ < rosbag_data_.right_imgs_.size()) {
-          left_img_pub_.publish(rosbag_data_.left_imgs_.at(k_last_kf_));
-          right_img_pub_.publish(rosbag_data_.right_imgs_.at(k_last_kf_));
-          timestamp_last_kf_ = rosbag_data_.timestamps_.at(k_last_kf_);
-          k_last_kf_++;
-        }
-      }
+      publishStereoImages(timestamp_kf);
       break;
     }
     default: {
       LOG(FATAL) << "Don't know this frontend type.";
       break;
+    }
+  }
+}
+
+void RosbagDataProvider::publishMonoImages(const Timestamp& timestamp_kf) {
+  if (k_last_kf_ < rosbag_data_.left_imgs_.size()) {
+    while (timestamp_last_kf_ < timestamp_kf &&
+           k_last_kf_ < rosbag_data_.left_imgs_.size()) {
+      left_img_pub_.publish(rosbag_data_.left_imgs_.at(k_last_kf_));
+      timestamp_last_kf_ = rosbag_data_.timestamps_.at(k_last_kf_);
+      k_last_kf_++;
+    }
+  }
+}
+
+void RosbagDataProvider::publishStereoImages(const Timestamp& timestamp_kf) {
+  if (k_last_kf_ < rosbag_data_.left_imgs_.size() &&
+      k_last_kf_ < rosbag_data_.right_imgs_.size()) {
+    while (timestamp_last_kf_ < timestamp_kf &&
+           k_last_kf_ < rosbag_data_.left_imgs_.size() &&
+           k_last_kf_ < rosbag_data_.right_imgs_.size()) {
+      left_img_pub_.publish(rosbag_data_.left_imgs_.at(k_last_kf_));
+      right_img_pub_.publish(rosbag_data_.right_imgs_.at(k_last_kf_));
+      timestamp_last_kf_ = rosbag_data_.timestamps_.at(k_last_kf_);
+      k_last_kf_++;
     }
   }
 }

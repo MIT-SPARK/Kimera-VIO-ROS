@@ -30,7 +30,7 @@
     unless="$(arg online)"/>
 
   <!-- Right camera topic not necessary -->
-  <arg name="right_cam_topic"     default="/NA"/>
+  <arg name="right_cam_topic"     default=""/>
 
   <!-- Perform stereo dense reconstruction? -->
   <arg name="run_stereo_dense"     default="false"/>

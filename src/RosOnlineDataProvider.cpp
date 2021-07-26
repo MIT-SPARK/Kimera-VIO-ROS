@@ -110,26 +110,11 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
   switch (vio_params_.frontend_type_) {
     case FrontendType::kMonoImu: {
-      left_img_subscriber_.subscribe(
-          *it_, "left_cam/image_raw", kMaxImagesQueueSize);
-      left_img_subscriber_.registerCallback(
-          boost::bind(&RosOnlineDataProvider::callbackMonoImage, this, _1));
+      subscribeMono(kMaxImagesQueueSize);
       break;
     }
     case FrontendType::kStereoImu: {
-      left_img_subscriber_.subscribe(
-          *it_, "left_cam/image_raw", kMaxImagesQueueSize);
-      right_img_subscriber_.subscribe(
-          *it_, "right_cam/image_raw", kMaxImagesQueueSize);
-      static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
-      sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
-          sync_pol_img(kMaxImageSynchronizerQueueSize),
-          left_img_subscriber_,
-          right_img_subscriber_);
-
-      DCHECK(sync_img_);
-      sync_img_->registerCallback(boost::bind(
-          &RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
+      subscribeStereo(kMaxImagesQueueSize);
       break;
     }
     default: {
@@ -201,6 +186,29 @@ RosOnlineDataProvider::~RosOnlineDataProvider() {
   if (async_spinner_) async_spinner_->stop();
 
   LOG(INFO) << "RosOnlineDataProvider successfully shutdown.";
+}
+
+void RosOnlineDataProvider::subscribeMono(const size_t& kMaxImagesQueueSize) {
+  left_img_subscriber_.subscribe(
+      *it_, "left_cam/image_raw", kMaxImagesQueueSize);
+  left_img_subscriber_.registerCallback(
+      boost::bind(&RosOnlineDataProvider::callbackMonoImage, this, _1));
+}
+
+void RosOnlineDataProvider::subscribeStereo(const size_t& kMaxImagesQueueSize) {
+  left_img_subscriber_.subscribe(
+      *it_, "left_cam/image_raw", kMaxImagesQueueSize);
+  right_img_subscriber_.subscribe(
+      *it_, "right_cam/image_raw", kMaxImagesQueueSize);
+  static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
+  sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
+      sync_pol_img(kMaxImageSynchronizerQueueSize),
+      left_img_subscriber_,
+      right_img_subscriber_);
+
+  DCHECK(sync_img_);
+  sync_img_->registerCallback(
+      boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
 }
 
 bool RosOnlineDataProvider::spin() {

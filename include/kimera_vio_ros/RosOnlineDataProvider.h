@@ -72,6 +72,10 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   ReinitPacket reinit_packet_ = ReinitPacket();
 
  private:
+  // Helpers to subscribe to relevant input image topics
+  void subscribeMono(const size_t& kMaxImagesQueueSize);
+  void subscribeStereo(const size_t& kMaxImagesQueueSize);
+
   // Mono image callback
   void callbackMonoImage(const sensor_msgs::ImageConstPtr& img_msg);
 
