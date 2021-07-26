@@ -82,6 +82,12 @@ class RosbagDataProvider : public RosDataProviderInterface {
   // Publish raw input data to ROS at keyframe rate
   void publishInputs(const Timestamp& timestamp_kf);
 
+  // Publish raw input images for mono
+  void publishMonoImages(const Timestamp& timestamp_kf);
+
+  // Publish raw input images for stere
+  void publishStereoImages(const Timestamp& timestamp_kf);
+
   // Publish outputs
   void publishOutputs();
 

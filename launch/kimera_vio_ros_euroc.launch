@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" value="Euroc"/>
+  <arg name="dataset_name" default="Euroc"/>
   <arg name="verbosity"    default="0" />
   <arg name="do_coarse_temporal_sync" default="false"/>
   <arg name="do_fine_temporal_sync" default="false"/>
@@ -21,8 +21,9 @@
   <rosparam param="gt_gyro_bias"> [-0.002229, 0.0207, 0.07635] </rosparam>
   <rosparam param="gt_accel_bias"> [-0.012492, 0.547666, 0.069073] </rosparam>
 
-  <arg name="use_lcd"   default="false"/>
-  <arg name="visualize" default="true"/>
+  <arg name="use_lcd"           default="false"/>
+  <arg name="use_external_odom" default="false"/>
+  <arg name="visualize"         default="true"/>
 
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path" default=""
@@ -32,6 +33,11 @@
   <arg name="base_link_frame_id" value="base_link"/>
   <arg name="left_cam_frame_id"  value="cam0"/>
   <arg name="right_cam_frame_id" value="cam1"/>
+
+  <arg name="left_cam_topic"      default="/cam0/image_raw"/>
+  <arg name="right_cam_topic"     default="/cam1/image_raw"/>
+  <arg name="imu_topic"           default="/imu0"/>
+  <arg name="external_odom_topic" default=""/>
 
   <!-- Perform stereo dense reconstruction? -->
   <arg name="run_stereo_dense"     default="false"/>
