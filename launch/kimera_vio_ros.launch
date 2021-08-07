@@ -66,6 +66,8 @@
   <arg name="visualize"    default="true" />
   <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
   <arg name="viz_type"     default="0" />
+  <!-- Use Rviz for visualization or OpenCV -->
+  <arg name="use_rviz"     default="false"/>
 
   <!-- Only here for convenience -->
   <arg name="run_stereo_dense"     default="false"/>
@@ -149,6 +151,9 @@
     <param name="position_det_threshold"  value="0.3"/>
     <param name="stereo_ransac_threshold" value="20"/>
     <param name="mono_ransac_threshold"   value="30"/>
+
+    <!-- Visualize in Rviz or in OpenCV -->
+    <param name="use_rviz"                value="$(arg use_rviz)"/>
 
     <!-- Load calibration -->
     <!-- <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/> -->
