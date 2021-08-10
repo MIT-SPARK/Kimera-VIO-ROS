@@ -46,6 +46,8 @@ KimeraVioRos::KimeraVioRos()
   restart_vio_pipeline_srv_ = nh_private_.advertiseService(
       "restart_kimera_vio", &KimeraVioRos::restartKimeraVio, this);
 
+  CHECK(nh_private_.getParam("use_rviz", use_rviz_));
+
   // Parse VIO parameters
   std::string params_path;
   CHECK(nh_private_.getParam("params_folder_path", params_path));
@@ -82,14 +84,19 @@ bool KimeraVioRos::runKimeraVio() {
   // the data provider.
   // NOTE: had the data provider been destroyed before, the vio would be calling
   // the shutdown function of a deleted object, aka segfault.
-  VLOG(1) << "Destroy Ros Display.";
-  ros_display_.reset();
-  ros_visualizer_.reset();
+  if (use_rviz_) {
+    VLOG(1) << "Destroy Ros Display.";
+    ros_display_.reset();
+    ros_visualizer_.reset();
 
-  VLOG(1) << "Creating Ros Display.";
-  CHECK(vio_params_);
-  ros_display_ = VIO::make_unique<RosDisplay>();
-  ros_visualizer_ = VIO::make_unique<RosVisualizer>(*vio_params_);
+    VLOG(1) << "Creating Ros Display.";
+    CHECK(vio_params_);
+    ros_display_ = VIO::make_unique<RosDisplay>();
+    ros_visualizer_ = VIO::make_unique<RosVisualizer>(*vio_params_);
+  } else {
+    ros_display_ = nullptr;
+    ros_visualizer_ = nullptr;
+  }
 
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
@@ -106,16 +113,19 @@ bool KimeraVioRos::runKimeraVio() {
 
   // Then, create Kimera-VIO from scratch.
   VLOG(1) << "Creating Kimera-VIO.";
-  CHECK(ros_display_);
+  if (use_rviz_) {
+    CHECK(ros_display_);
+    CHECK(ros_visualizer_);
+  }
 
   vio_pipeline_ = nullptr;
   switch (vio_params_->frontend_type_) {
     case VIO::FrontendType::kMonoImu: {
-      vio_pipeline_ = VIO::make_unique<VIO::MonoImuPipeline>(
+      vio_pipeline_ = VIO::make_unique<MonoImuPipeline>(
           *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
     } break;
     case VIO::FrontendType::kStereoImu: {
-      vio_pipeline_ = VIO::make_unique<VIO::StereoImuPipeline>(
+      vio_pipeline_ = VIO::make_unique<StereoImuPipeline>(
           *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
     } break;
     default: {
