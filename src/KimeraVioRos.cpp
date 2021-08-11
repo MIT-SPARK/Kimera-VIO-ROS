@@ -20,6 +20,7 @@
 
 // Dependencies from VIO
 #include <kimera-vio/pipeline/MonoImuPipeline.h>
+#include <kimera-vio/pipeline/RgbdImuPipeline.h>
 #include <kimera-vio/pipeline/StereoImuPipeline.h>
 #include <kimera-vio/utils/Timer.h>
 
@@ -69,6 +70,9 @@ KimeraVioRos::KimeraVioRos()
         MAKE_CONFIG_FILEPATH(sensor_params_path, ImuFilename),
         MAKE_CONFIG_FILEPATH(sensor_params_path, LeftCameraFilename),
         MAKE_CONFIG_FILEPATH(sensor_params_path, RightCameraFilename),
+        // note that the depth camera config isn't specific to a particular
+        // camera instance
+        MAKE_CONFIG_FILEPATH(params_path, DepthCameraFilename),
         MAKE_CONFIG_FILEPATH(params_path, FrontendFilename),
         MAKE_CONFIG_FILEPATH(params_path, BackendFilename),
         MAKE_CONFIG_FILEPATH(params_path, LcdFilename),
@@ -151,6 +155,10 @@ bool KimeraVioRos::runKimeraVio() {
                                               std::move(ros_visualizer_),
                                               std::move(ros_display_),
                                               std::move(preloaded_vocab));
+    } break;
+    case VIO::FrontendType::kRgbdImu: {
+      vio_pipeline_ = VIO::make_unique<RgbdImuPipeline>(
+          *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
     } break;
     default: {
       LOG(FATAL) << "Unrecognized frontend type: "
@@ -313,6 +321,13 @@ void KimeraVioRos::connectVIO() {
 
     vio_pipeline_ = VIO::safeCast<VIO::StereoImuPipeline, VIO::Pipeline>(
         std::move(stereo_pipeline));
+  }
+
+  if (vio_params_->frontend_type_ == VIO::FrontendType::kRgbdImu) {
+    data_provider_->registerDepthFrameCallback(std::bind(
+        &VIO::RgbdImuPipeline::fillDepthFrameQueue,
+        CHECK_NOTNULL(dynamic_cast<RgbdImuPipeline*>(vio_pipeline_.get())),
+        std::placeholders::_1));
   }
 }
 

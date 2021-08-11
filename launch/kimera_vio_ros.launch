@@ -55,6 +55,7 @@
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"                    default="/cam0/image_raw"/>
   <arg name="right_cam_topic"                   default="/cam1/image_raw"/>
+  <arg name="depth_cam_topic"                   default=""/>
   <arg name="imu_topic"                         default="/imu0"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
@@ -144,6 +145,8 @@
     <remap from="left_cam/image_raw"  to="$(arg left_cam_topic)"      if="$(arg online)"/>
     <remap from="right_cam/image_raw" to="$(arg right_cam_topic)"
            if="$(eval arg('online') and arg('right_cam_topic') != '')"/>
+    <remap from="depth_cam/image_raw" to="$(arg depth_cam_topic)"
+           if="$(eval arg('online') and arg('depth_cam_topic') != '')"/>
     <remap from="imu"                 to="$(arg imu_topic)"           if="$(arg online)"/>
     <remap from="external_odom"       to="$(arg external_odom_topic)"
            if="$(eval arg('online') and arg('external_odom_topic') != '')"/>
@@ -154,6 +157,7 @@
     <param name="rosbag_path"            value="$(arg rosbag_path)"     unless="$(arg online)"/>
     <param name="left_cam_rosbag_topic"  value="$(arg left_cam_topic)"  unless="$(arg online)"/>
     <param name="right_cam_rosbag_topic" value="$(arg right_cam_topic)" unless="$(arg online)"/>
+    <param name="depth_cam_rosbag_topic" value="$(arg depth_cam_topic)" unless="$(arg online)"/>
     <param name="imu_rosbag_topic"       value="$(arg imu_topic)"       unless="$(arg online)"/>
     <param name="ground_truth_odometry_rosbag_topic"
            value="$(arg gt_topic)"                   unless="$(arg online)"/>

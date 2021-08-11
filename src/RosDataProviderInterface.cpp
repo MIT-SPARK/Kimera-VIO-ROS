@@ -63,15 +63,15 @@ const cv::Mat RosDataProviderInterface::readRosImage(
   const cv::Mat img_const = cv_ptr->image;  // Don't modify shared image in ROS.
   cv::Mat converted_img(img_const.size(), CV_8U);
   if (img_msg->encoding == sensor_msgs::image_encodings::BGR8) {
-    LOG_EVERY_N(WARNING, 10) << "Converting image...";
+    VLOG_EVERY_N(1, 10) << "Converting image...";
     cv::cvtColor(img_const, converted_img, cv::COLOR_BGR2GRAY);
     return converted_img;
   } else if (img_msg->encoding == sensor_msgs::image_encodings::RGB8) {
-    LOG_EVERY_N(WARNING, 10) << "Converting image...";
+    VLOG_EVERY_N(1, 10) << "Converting image...";
     cv::cvtColor(img_const, converted_img, cv::COLOR_RGB2GRAY);
     return converted_img;
   } else if (img_msg->encoding == sensor_msgs::image_encodings::BGRA8) {
-    LOG_EVERY_N(WARNING, 10) << "Converting image...";
+    VLOG_EVERY_N(1, 10) << "Converting image...";
     cv::cvtColor(img_const, converted_img, cv::COLOR_BGRA2GRAY);
     return converted_img;
   } else {
@@ -93,6 +93,7 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
     ROS_FATAL("cv_bridge exception: %s", exception.what());
     ros::shutdown();
   }
+
   cv::Mat img_depth = cv_ptr->image;
   CHECK_EQ(img_depth.channels(), 1) << "Depth image must have a single channel";
 

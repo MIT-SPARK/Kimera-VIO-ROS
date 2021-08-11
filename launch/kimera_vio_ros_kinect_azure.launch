@@ -1,0 +1,46 @@
+<launch>
+  <arg name="dataset_name" value="KinectAzure"/>
+
+  <arg name="online" default="true" />
+  <arg name="log_output" default="true"/>
+  <arg name="verbosity" default="0"/>
+  <arg name="debug" default="false"/>
+  <arg name="should_use_sim_time" default="true"/>
+
+  <arg name="camera_ns" default="/azure"/>
+  <arg name="use_lcd" default="true"/>
+  <arg name="lcd_no_optimize" default="true"/>
+  <arg name="lcd_no_detection" default="true"/>
+  <arg name="use_external_odom" default="true"/>
+
+  <arg unless="$(arg online)" name="bag_to_use"/>
+  <arg name="dataset_folder" default="$(env HOME)/datasets/kimera_rig"/>
+  <arg name="log_path" value="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"/>
+
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch" pass_all_args="true">
+      <!-- Options -->
+      <arg name="include_pipeline_flags" value="true"/>
+      <arg name="viz_type" value="1"/>
+      <arg name="use_rviz" value="true"/>
+      <!-- Other settings -->
+      <arg name="log_gt_data" value="true"/>
+      <arg unless="$(arg online)" name="rosbag_path" value="$(arg dataset_folder)/$(arg bag_to_use)"/>
+      <arg if="$(arg log_output)" name="log_output_path" value="$(arg log_path)"/>
+      <!-- Subscribed Topics -->
+      <arg name="left_cam_topic" value="$(arg camera_ns)/rgb/image_raw"/>
+      <arg name="depth_cam_topic" value="$(arg camera_ns)/depth_to_rgb/image_raw"/>
+      <arg name="imu_topic"  value="$(arg camera_ns)/imu"/>
+      <arg name="external_odom_topic" value="/camera/odom/sample"/>
+      <arg name="gt_topic" value="/camera/odom/sample"/>
+      <!-- Only used when parsing a rosbag -->
+      <!-- TODO(nathan) update -->
+      <arg name="world_frame_id"     value="world"/>
+      <arg name="base_link_frame_id" value="base_link"/>
+      <arg name="map_frame_id"       value="map"/>
+      <arg name="left_cam_frame_id"  value="left_cam"/>
+      <arg name="right_cam_frame_id" value="right_cam"/>
+  </include>
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="t265_to_kimera"
+        args="1 0 0 0 0 0 1 world camera_odom_frame" />
+</launch>

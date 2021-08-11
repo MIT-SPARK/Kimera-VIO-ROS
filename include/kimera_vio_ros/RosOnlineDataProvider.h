@@ -74,7 +74,10 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
  private:
   // Helpers to subscribe to relevant input image topics
   void subscribeMono(const size_t& kMaxImagesQueueSize);
+
   void subscribeStereo(const size_t& kMaxImagesQueueSize);
+
+  void subscribeRgbd(const size_t& kMaxImagesQueueSize);
 
   // Mono image callback
   void callbackMonoImage(const sensor_msgs::ImageConstPtr& img_msg);
@@ -82,6 +85,10 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Stereo image callback
   void callbackStereoImages(const sensor_msgs::ImageConstPtr& left_msg,
                             const sensor_msgs::ImageConstPtr& right_msg);
+
+  // Rgbd image callback
+  void callbackRgbdImages(const sensor_msgs::ImageConstPtr& left_msg,
+                          const sensor_msgs::ImageConstPtr& right_msg);
 
   // IMU callback
   void callbackIMU(const sensor_msgs::ImuConstPtr& imu_msg);
@@ -111,6 +118,7 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   typedef image_transport::SubscriberFilter ImageSubscriber;
   ImageSubscriber left_img_subscriber_;
   ImageSubscriber right_img_subscriber_;
+  ImageSubscriber depth_img_subscriber_;
 
   // Declare Approx Synchronization Policy and Synchronizer for stereo images.
   // TODO(Toni): should be exact sync policy
@@ -131,6 +139,9 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   // Define subscriber for Reinit data
   ros::Subscriber reinit_flag_subscriber_;
   ros::Subscriber reinit_pose_subscriber_;
+
+  // use the left image timestamp for the depth image
+  bool use_left_timestamp_ = true;
 
   // Ground-truth initialization pose received flag
   bool gt_init_pose_received_ = false;
