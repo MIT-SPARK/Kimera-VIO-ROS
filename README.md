@@ -173,7 +173,7 @@ rosservice call /kimera_vio_ros/kimera_vio_ros_node/restart_kimera_vio
 This will run OpenCV's StereoBM algorithm, more info can be found [here](http://wiki.ros.org/stereo_image_proc) (also checkout this to [choose good parameters](http://wiki.ros.org/stereo_image_proc/Tutorials/ChoosingGoodStereoParameters)):
 
 ```bash
-roslaunch kimera_vio_ros kimera_vio_ros_euroc run_stereo_dense:=1
+roslaunch kimera_vio_ros kimera_vio_ros_euroc.launch run_stereo_dense:=1
 ```
 
 This will publish a `/stereo_gray/points2` topic, which you can visualize in Rviz as a 3D pointcloud.
