@@ -70,9 +70,14 @@ const cv::Mat RosDataProviderInterface::readRosImage(
     LOG_EVERY_N(WARNING, 10) << "Converting image...";
     cv::cvtColor(img_const, converted_img, cv::COLOR_RGB2GRAY);
     return converted_img;
+  } else if (img_msg->encoding == sensor_msgs::image_encodings::BGRA8) {
+    LOG_EVERY_N(WARNING, 10) << "Converting image...";
+    cv::cvtColor(img_const, converted_img, cv::COLOR_BGRA2GRAY);
+    return converted_img;
   } else {
-    CHECK_EQ(cv_ptr->encoding, sensor_msgs::image_encodings::MONO8)
-        << "Expected image with MONO8, BGR8, or RGB8 encoding."
+    CHECK(cv_ptr->encoding == sensor_msgs::image_encodings::MONO8 ||
+          cv_ptr->encoding == sensor_msgs::image_encodings::TYPE_8UC1)
+        << "Expected image with MONO8, 8UC1, BGR8, or RGB8 encoding."
            "Add in here more conversions if you wish.";
     return img_const;
   }
@@ -83,16 +88,20 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
   cv_bridge::CvImagePtr cv_ptr;
   try {
     // TODO(Toni): here we should consider using toCvShare...
-    cv_ptr =
-        cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::TYPE_16UC1);
+    cv_ptr = cv_bridge::toCvCopy(img_msg);
   } catch (cv_bridge::Exception& exception) {
     ROS_FATAL("cv_bridge exception: %s", exception.what());
     ros::shutdown();
   }
   cv::Mat img_depth = cv_ptr->image;
-  if (img_depth.type() != CV_16UC1) {
-    LOG_EVERY_N(WARNING, 10) << "Converting depth image...";
-    img_depth.convertTo(img_depth, CV_16UC1);
+  CHECK_EQ(img_depth.channels(), 1) << "Depth image must have a single channel";
+
+  if (img_depth.type() != CV_32FC1 && img_depth.type() != CV_16UC1) {
+    LOG_FIRST_N(WARNING, 10)
+        << "Converting depth image to CV_32FC1. Consider supplementing "
+           "DepthFrame if this causes loss of precision";
+    // floating point depth makes things easier later
+    img_depth.convertTo(img_depth, CV_32FC1);
   }
   return img_depth;
 }

@@ -33,6 +33,7 @@ cs_add_library(${PROJECT_NAME}
   src/RosDisplay.cpp
   src/RosVisualizer.cpp
   src/RosLoopClosureVisualizer.cpp
+  src/LcdRegistrationServer.cpp
   src/utils/UtilsRos.cpp
   src/utils/CsvPublisher.cpp
 )

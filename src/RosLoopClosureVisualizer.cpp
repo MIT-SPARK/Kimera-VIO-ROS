@@ -10,6 +10,7 @@
 
 #include <glog/logging.h>
 
+#include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
@@ -17,6 +18,7 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <tf/transform_broadcaster.h>
 #include <tf2/buffer_core.h>
+#include "pose_graph_tools/BowQuery.h"
 
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>
@@ -27,30 +29,43 @@ namespace VIO {
 
 RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
   // Get ROS params
-  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
-  CHECK(!world_frame_id_.empty());
+  CHECK(nh_private_.getParam("odom_frame_id", odom_frame_id_));
+  CHECK(!odom_frame_id_.empty());
   CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
   CHECK(!base_link_frame_id_.empty());
   CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
   CHECK(!map_frame_id_.empty());
+  int robot_id_in_;
+  CHECK(nh_private_.getParam("robot_id", robot_id_in_));
+  CHECK(robot_id_in_ >= 0);
+  robot_id_ = robot_id_in_;
 
   // Publishers
   trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
   posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1);
-  posegraph_incremental_pub_ =
-      nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph_incremental", 1);
+  posegraph_incremental_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>(
+      "pose_graph_incremental", 1000);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
+  bow_query_pub_ = nh_.advertise<pose_graph_tools::BowQuery>("bow_query", 1000);
+  // Service
+  vlc_frame_server_ = nh_.advertiseService(
+      "vlc_frame_query", &RosLoopClosureVisualizer::VLCServiceCallback, this);
 }
 
 void RosLoopClosureVisualizer::publishLcdOutput(
     const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
+  frames_.push_back(lcd_frame(lcd_output->keypoints_3d_,
+                              lcd_output->bow_vec_,
+                              lcd_output->descriptors_mat_));
 
+  publishBowQuery();
   publishTf(lcd_output);
   if (trajectory_pub_.getNumSubscribers() > 0) {
     publishOptimizedTrajectory(lcd_output);
   }
-  if (posegraph_pub_.getNumSubscribers() > 0) {
+  if (posegraph_pub_.getNumSubscribers() > 0 ||
+      posegraph_incremental_pub_.getNumSubscribers() > 0) {
     publishPoseGraph(lcd_output);
   }
 }
@@ -61,6 +76,7 @@ void RosLoopClosureVisualizer::publishOptimizedTrajectory(
 
   // Get pgo-optimized trajectory
   const Timestamp& ts = lcd_output->timestamp_;
+  const FrameIDTimestampMap& times = lcd_output->timestamp_map_;
   const gtsam::Values& trajectory = lcd_output->states_;
   // Create message type
   nav_msgs::Path path;
@@ -73,7 +89,9 @@ void RosLoopClosureVisualizer::publishOptimizedTrajectory(
     gtsam::Quaternion quat = pose.rotation().toQuaternion();
 
     geometry_msgs::PoseStamped ps_msg;
-    ps_msg.header.frame_id = world_frame_id_;
+    CHECK(times.count(i));
+    ps_msg.header.stamp.fromNSec(times.at(i));
+    ps_msg.header.frame_id = map_frame_id_;
     ps_msg.pose.position.x = trans.x();
     ps_msg.pose.position.y = trans.y();
     ps_msg.pose.position.z = trans.z();
@@ -87,7 +105,7 @@ void RosLoopClosureVisualizer::publishOptimizedTrajectory(
 
   // Publish path message
   path.header.stamp.fromNSec(ts);
-  path.header.frame_id = world_frame_id_;
+  path.header.frame_id = map_frame_id_;
   trajectory_pub_.publish(path);
 
   // publish odometry also
@@ -102,7 +120,7 @@ void RosLoopClosureVisualizer::publishOptimizedTrajectory(
 
   // Create header.
   odometry_msg.header.stamp.fromNSec(ts);
-  odometry_msg.header.frame_id = world_frame_id_;
+  odometry_msg.header.frame_id = map_frame_id_;
   odometry_msg.child_frame_id = base_link_frame_id_;
 
   // Position
@@ -160,6 +178,7 @@ void RosLoopClosureVisualizer::updateRejectedEdges() {
 }
 
 void RosLoopClosureVisualizer::updateNodesAndEdges(
+    const FrameIDTimestampMap& times,
     const gtsam::NonlinearFactorGraph& nfg,
     const gtsam::Values& values) {
   inlier_edges_.clear();
@@ -175,9 +194,11 @@ void RosLoopClosureVisualizer::updateNodesAndEdges(
               nfg[i]);
       // convert between factor to PoseGraphEdge type
       pose_graph_tools::PoseGraphEdge edge;
-      edge.header.frame_id = world_frame_id_;
+      edge.header.frame_id = map_frame_id_;
       edge.key_from = factor.front();
       edge.key_to = factor.back();
+      edge.robot_from = robot_id_;
+      edge.robot_to = robot_id_;
       if (edge.key_to == edge.key_from + 1) {  // check if odom
         edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
       } else {
@@ -214,6 +235,11 @@ void RosLoopClosureVisualizer::updateNodesAndEdges(
   for (size_t i = 0; i < key_list.size(); i++) {
     pose_graph_tools::PoseGraphNode node;
     node.key = key_list[i];
+    node.robot_id = robot_id_;
+
+    const uint64_t frame_id = gtsam::Symbol(node.key).index();
+    CHECK(times.count(frame_id));
+    node.header.stamp.fromNSec(times.at(frame_id));
 
     const gtsam::Pose3& value = values.at<gtsam::Pose3>(i);
     const gtsam::Point3& translation = value.translation();
@@ -257,10 +283,10 @@ void RosLoopClosureVisualizer::publishPoseGraph(
   const Timestamp& ts = lcd_output->timestamp_;
   const gtsam::NonlinearFactorGraph& nfg = lcd_output->nfg_;
   const gtsam::Values& values = lcd_output->states_;
-  updateNodesAndEdges(nfg, values);
+  updateNodesAndEdges(lcd_output->timestamp_map_, nfg, values);
   pose_graph_tools::PoseGraph graph = getPosegraphMsg();
   graph.header.stamp.fromNSec(ts);
-  graph.header.frame_id = world_frame_id_;
+  graph.header.frame_id = map_frame_id_;
   posegraph_pub_.publish(graph);
 
   // Construct and publish incremental pose graph
@@ -274,6 +300,9 @@ void RosLoopClosureVisualizer::publishPoseGraph(
     pose_graph_tools::PoseGraphEdge last_odom_edge =
         odometry_edges_.at(odometry_edges_.size() - 1);
     last_odom_edge.header.stamp.fromNSec(ts);
+    last_odom_edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
+    last_odom_edge.robot_from = robot_id_;
+    last_odom_edge.robot_to = robot_id_;
     incremental_graph.edges.push_back(last_odom_edge);
     incremental_graph.nodes.push_back(
         pose_graph_nodes_.at(pose_graph_nodes_.size() - 2));
@@ -289,6 +318,8 @@ void RosLoopClosureVisualizer::publishPoseGraph(
           lc_transform.rotation().toQuaternion();
       last_lc_edge.key_from = lcd_output->id_match_,
       last_lc_edge.key_to = lcd_output->id_recent_;
+      last_lc_edge.robot_from = robot_id_;
+      last_lc_edge.robot_to = robot_id_;
       last_lc_edge.pose.position.x = translation.x();
       last_lc_edge.pose.position.y = translation.y();
       last_lc_edge.pose.position.z = translation.z();
@@ -297,10 +328,13 @@ void RosLoopClosureVisualizer::publishPoseGraph(
       last_lc_edge.pose.orientation.z = quaternion.z();
       last_lc_edge.pose.orientation.w = quaternion.w();
       last_lc_edge.header.stamp.fromNSec(ts);
+      last_lc_edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
+      incremental_graph.edges.push_back(last_lc_edge);
+      loop_closure_edges_.push_back(last_lc_edge);
       incremental_graph.edges.push_back(last_lc_edge);
     }
     incremental_graph.header.stamp.fromNSec(ts);
-    incremental_graph.header.frame_id = world_frame_id_;
+    incremental_graph.header.frame_id = map_frame_id_;
     posegraph_incremental_pub_.publish(incremental_graph);
   }
 }
@@ -310,15 +344,80 @@ void RosLoopClosureVisualizer::publishTf(
   CHECK(lcd_output);
 
   const Timestamp& ts = lcd_output->timestamp_;
-  const gtsam::Pose3& w_Pose_map = lcd_output->W_Pose_Map_;
-  const gtsam::Quaternion& w_Quat_map = w_Pose_map.rotation().toQuaternion();
+  const gtsam::Pose3& map_Pose_odom = lcd_output->Map_Pose_Odom_;
   // Publish map TF.
   geometry_msgs::TransformStamped map_tf;
   map_tf.header.stamp.fromNSec(ts);
-  map_tf.header.frame_id = world_frame_id_;
-  map_tf.child_frame_id = map_frame_id_;
-  utils::gtsamPoseToRosTf(w_Pose_map, &map_tf.transform);
+  map_tf.header.frame_id = map_frame_id_;
+  map_tf.child_frame_id = odom_frame_id_;
+  utils::gtsamPoseToRosTf(map_Pose_odom, &map_tf.transform);
   tf_broadcaster_.sendTransform(map_tf);
+}
+
+void RosLoopClosureVisualizer::publishBowQuery() {
+  if (frames_.size() == 0) return;
+  pose_graph_tools::BowVector bow_vec_msg;
+
+  for (auto it = frames_.back().bow_vec_.begin();
+       it != frames_.back().bow_vec_.end();
+       ++it) {
+    bow_vec_msg.word_ids.push_back(it->first);
+    bow_vec_msg.word_values.push_back(it->second);
+  }
+
+  pose_graph_tools::BowQuery msg;
+  msg.robot_id = robot_id_;
+  msg.pose_id = frames_.size() - 1;
+  msg.bow_vector = bow_vec_msg;
+
+  bow_query_pub_.publish(msg);
+
+  next_pose_id_++;
+}
+
+bool RosLoopClosureVisualizer::VLCServiceCallback(
+    pose_graph_tools::VLCFrameQuery::Request& request,
+    pose_graph_tools::VLCFrameQuery::Response& response) {
+  // Check requested frames belong to this robot
+  CHECK(request.robot_id == robot_id_);
+  response.frames.clear();
+
+  // Loop through requested pose ids
+  for (const auto& pose_id : request.pose_ids) {
+    // If requested frame does not exist, print error message
+    if (pose_id >= frames_.size()) {
+      ROS_ERROR_STREAM("Requested frame " << pose_id << " does not exist!");
+      continue;
+    }
+    const auto& frame = frames_[pose_id];
+
+    // Initialize message for this frame
+    pose_graph_tools::VLCFrameMsg frame_msg;
+    frame_msg.robot_id = robot_id_;
+    frame_msg.pose_id = pose_id;
+
+    // Convert keypoints
+    pcl::PointCloud<pcl::PointXYZ> keypoints;
+    for (size_t i = 0; i < frame.keypoints_3d_.size(); ++i) {
+      gtsam::Vector3 p_ = frame.keypoints_3d_[i];
+      pcl::PointXYZ p(p_(0), p_(1), p_(2));
+      keypoints.push_back(p);
+    }
+    pcl::toROSMsg(keypoints, frame_msg.keypoints);
+
+    // Convert descriptors
+    cv_bridge::CvImage cv_img;
+    // cv_img.header   = in_msg->header; // Yulun: need to set header
+    // explicitly?
+    cv_img.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
+    cv_img.image = frame.descriptors_mat_;
+    cv_img.toImageMsg(frame_msg.descriptors_mat);
+
+    // Push frame to response
+    response.frames.push_back(frame_msg);
+  }
+
+  return true;
 }
 
 }  // namespace VIO
