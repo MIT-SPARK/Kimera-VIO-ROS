@@ -67,7 +67,7 @@
   <arg name="right_cam_frame_id" default="right_cam"/>
 
   <!-- General parameters -->
-  <arg name="verbosity"    default="2"/>
+  <arg name="verbosity"    default="0"/>
   <arg name="minloglevel" default="0"/>
   <!-- Publish pipeline output to ROS. -->
   <!-- Note that this is duplicated from the flags file -->

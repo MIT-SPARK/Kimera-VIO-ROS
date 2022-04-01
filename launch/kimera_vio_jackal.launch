@@ -5,6 +5,7 @@
   <arg name="log_output"  default="true"/>
   <arg name="use_d455"    default="true" />
   <arg name="replay"      default="false" />
+  <arg name="verbosity"   default="0"/>
 
   <arg name="do_coarse_temporal_sync" default="false"/>
   <arg name="do_fine_temporal_sync"   default="false"/>
