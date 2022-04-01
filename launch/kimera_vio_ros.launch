@@ -1,4 +1,6 @@
 <launch>
+  <!-- Unique integer id of this robot. -->
+  <arg name="robot_id" default="0"/>
   <!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
   file and include this one to launch KimeraVIO on the dataset of your choice -->
   <arg name="dataset_name" default=""/>
@@ -18,11 +20,16 @@
   <!-- If true, log ground-truth poses to a csv file using the
        Logger utils (if online is true) or rosbag (if online is false),
        and processing data from the gt_topic rostopic -->
-  <arg name="log_gt_data" default="false"/>
-  <arg name="gt_topic"    default=""/>
+  <arg name="log_gt_data" default="true"/>
+  <arg name="log_imu_data" default="true"/>
+  <arg name="gt_topic"    default="ground_truth_odometry_topic"/>
 
   <!-- If true, KimeraVIO will enable the LoopClosureDetector module. -->
   <arg name="use_lcd" default="false"/>
+  <!-- If true, KimeraVIO will disabling PGO for the LoopClosureDetector module. -->
+  <arg name="lcd_no_optimize" default="false"/>
+  <!-- If true, KimeraVIO will not call detection LoopClosureDetector module. -->
+  <arg name="lcd_no_detection" default="false"/>
 
   <arg name="use_external_odom" default="false"/>
   <!-- If true, KimeraVIO will compute a static offset between the
@@ -50,33 +57,53 @@
   <arg name="imu_topic"                         default="/imu0"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
-  <arg name="external_odom_topic"               default=""/>
+  <arg name="external_odom_topic"               default="/dev/null"/>
 
   <!-- Frame IDs -->
-  <arg name="world_frame_id"     default="world"/>
+  <arg name="odom_frame_id"      default="odom"/>
   <arg name="base_link_frame_id" default="base_link"/>
   <arg name="map_frame_id"       default="map"/>
   <arg name="left_cam_frame_id"  default="left_cam"/>
   <arg name="right_cam_frame_id" default="right_cam"/>
 
   <!-- General parameters -->
-  <arg name="verbosity"    default="0" />
+  <arg name="verbosity"    default="2"/>
+  <arg name="minloglevel" default="0"/>
   <!-- Publish pipeline output to ROS. -->
   <!-- Note that this is duplicated from the flags file -->
   <arg name="visualize"    default="true" />
   <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
-  <arg name="viz_type"     default="0" />
+  <arg name="viz_type"     default="1" />
   <!-- Use Rviz for visualization or OpenCV -->
-  <arg name="use_rviz"     default="false"/>
+  <arg name="use_rviz"     default="true"/>
 
   <!-- Only here for convenience -->
   <arg name="run_stereo_dense"     default="false"/>
 
+  <arg name="close_on_error" default="true"/>
+  <arg name="debug" default="false"/>
+  <arg name="launch_prefix" value="catchsegv" unless="$(arg debug)"/>
+  <arg name="launch_prefix" value="gdb -ex run --args" if="$(arg debug)"/>
+
+  <arg name="include_pipeline_flags" default="false"/>
+  <arg name="pipeline_flag_args" value="--flagfile=$(arg params_folder)/flags/Pipeline.flags"
+       if="$(arg include_pipeline_flags)"/>
+  <arg name="pipeline_flag_args" value=""
+       unless="$(arg include_pipeline_flags)"/>
+
+  <arg name="glog_dir" default=""/>
+  <arg name="glog_to_dir" default="false"/>
+  <arg name="glog_args" value="--logtostderr=0 --log_dir=$(arg glog_dir)" if="$(arg glog_to_dir)"/>
+  <arg name="glog_args" value="--logtostderr=1" unless="$(arg glog_to_dir)"/>
+
   <!-- Launch main node  -->
   <node name="kimera_vio_ros_node" pkg="kimera_vio_ros" type="kimera_vio_ros_node"
         output="screen" ns="kimera_vio_ros"
+        launch-prefix="$(arg launch_prefix)"
+        required="$(arg close_on_error)"
         args="--use_lcd=$(arg use_lcd)
               --vocabulary_path=$(arg path_to_vocab)
+              $(arg pipeline_flag_args)
               --flagfile=$(arg params_folder)/flags/Mesher.flags
               --flagfile=$(arg params_folder)/flags/VioBackend.flags
               --flagfile=$(arg params_folder)/flags/RegularVioBackend.flags
@@ -84,24 +111,30 @@
               --use_external_odometry=$(arg use_external_odom)
               --do_coarse_imu_camera_temporal_sync=$(arg do_coarse_temporal_sync)
               --do_fine_imu_camera_temporal_sync=$(arg do_fine_temporal_sync)
-              --logtostderr=1
+              --lcd_no_optimize=$(arg lcd_no_optimize)
+              --lcd_no_detection=$(arg lcd_no_detection)
+              $(arg glog_args)
               --colorlogtostderr=1
               --log_prefix=1
+              --minloglevel=$(arg minloglevel)
               --v=$(arg verbosity)
               --log_output=$(arg log_output)
               --log_euroc_gt_data=$(arg log_output)
               --output_path=$(arg log_output_path)
               --viz_type=$(arg viz_type)
               --visualize=$(arg visualize)">
+    <param name="robot_id" value="$(arg robot_id)" />
+
     <param name="params_folder_path"    value="$(arg params_folder)"/>
     <param name="sensor_params_folder_path" value="$(arg sensor_folder)"/>
 
     <param name="online_run"            value="$(arg online)"/>
     <param name="use_lcd"               value="$(arg use_lcd)"/>
+    <param name="robot_id"              value="$(arg robot_id)"/>
     <param name="use_external_odom"     value="$(arg use_external_odom)"/>
 
     <!-- Frame IDs for Odometry -->
-    <param name="world_frame_id"     value="$(arg world_frame_id)"/>
+    <param name="odom_frame_id"     value="$(arg odom_frame_id)"/>
     <param name="base_link_frame_id" value="$(arg base_link_frame_id)"/>
     <param name="map_frame_id"       value="$(arg map_frame_id)"/>
     <param name="left_cam_frame_id"  value="$(arg left_cam_frame_id)"/>
@@ -125,10 +158,11 @@
     <param name="imu_rosbag_topic"       value="$(arg imu_topic)"       unless="$(arg online)"/>
     <param name="ground_truth_odometry_rosbag_topic"
            value="$(arg gt_topic)"                   unless="$(arg online)"/>
+    <param name="log_gt_data"            value="$(arg log_gt_data)"     />
+    <param name="log_imu_data"           value="$(arg log_imu_data)"    />
     <param name="external_odometry_rosbag_topic"
            value="$(arg external_odom_topic)"
            unless="$(arg online)"/>
-    <param name="log_gt_data"            value="$(arg log_gt_data)"/>
 
     <!-- Other subscription topics -->
     <remap from="reinit_flag" to="reinit_flag"/>
@@ -155,13 +189,17 @@
     <!-- Visualize in Rviz or in OpenCV -->
     <param name="use_rviz"                value="$(arg use_rviz)"/>
 
+    <!-- TODO(nathan) consider not linking directly to arg -->
+    <!-- Enable external processes to ask for a registration between two frames -->
+    <param name="use_lcd_registration_server" value="$(arg lcd_no_detection)"/>
+
     <!-- Load calibration -->
     <!-- <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/> -->
   </node>
 
   <!-- Launch visualizer -->
-  <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
-    <arg name="frame_id"      value="$(arg world_frame_id)" />
+  <include unless="$(arg multirobot)" file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
+    <arg name="frame_id"      value="$(arg map_frame_id)" />
     <arg name="graph_topic"   value="pose_graph" />
     <arg name="ns"            value="kimera_vio_ros"/>
   </include>
