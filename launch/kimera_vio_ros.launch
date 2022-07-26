@@ -49,6 +49,9 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
   <!-- you can optionally specify an alternative location -->
   <arg name="sensor_folder" default=""/>
 
+  <!-- the rgbd pipeline allows for a mask for depth images -->
+  <arg name="depth_image_mask" default=""/>
+
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
   <arg name="path_to_vocab" default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
@@ -116,6 +119,7 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
               --do_fine_imu_camera_temporal_sync=$(arg do_fine_temporal_sync)
               --lcd_no_optimize=$(arg lcd_no_optimize)
               --lcd_no_detection=$(arg lcd_no_detection)
+              --depth_image_mask=$(arg depth_image_mask)
               $(arg glog_args)
               --colorlogtostderr=1
               --log_prefix=1
