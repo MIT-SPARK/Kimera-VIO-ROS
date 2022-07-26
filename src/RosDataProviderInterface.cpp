@@ -143,8 +143,10 @@ void RosDataProviderInterface::printParsedParams() const {
   static constexpr int kSeparatorWidth = 40;
   LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Left camera info:";
   vio_params_.camera_params_.at(0).print();
-  LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Right camera info:";
-  vio_params_.camera_params_.at(1).print();
+  if (vio_params_.camera_params_.size() > 1) {
+    LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Right camera info:";
+    vio_params_.camera_params_.at(1).print();
+  }
   LOG(INFO) << std::string(kSeparatorWidth, '=') << " - Frontend params:";
   vio_params_.frontend_params_.print();
   LOG(INFO) << std::string(kSeparatorWidth, '=') << " - IMU params:";

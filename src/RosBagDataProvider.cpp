@@ -48,6 +48,9 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
   if (vio_params_.frontend_type_ == FrontendType::kStereoImu) {
     CHECK(nh_private_.getParam("right_cam_rosbag_topic", right_imgs_topic_));
   }
+  if (vio_params_.frontend_type_ == FrontendType::kRgbdImu) {
+    CHECK(nh_private_.getParam("depth_cam_rosbag_topic", depth_imgs_topic_));
+  }
   CHECK(nh_private_.getParam("imu_rosbag_topic", imu_topic_));
   CHECK(nh_private_.getParam("ground_truth_odometry_rosbag_topic",
                              gt_odom_topic_));
@@ -60,6 +63,7 @@ RosbagDataProvider::RosbagDataProvider(const VioParams& vio_params)
             << "With ROS topics: \n"
             << " - Left cam: " << left_imgs_topic_.c_str() << '\n'
             << " - Right cam: " << right_imgs_topic_.c_str() << '\n'
+            << " - Depth cam: " << depth_imgs_topic_ << '\n'
             << " - IMU: " << imu_topic_.c_str() << '\n'
             << " - GT odom: " << gt_odom_topic_.c_str() << '\n'
             << " - External odom: " << external_odom_topic_.c_str();
@@ -162,8 +166,6 @@ bool RosbagDataProvider::spin() {
 
       static const CameraParams& left_cam_info =
           vio_params_.camera_params_.at(0);
-      static const CameraParams& right_cam_info =
-          vio_params_.camera_params_.at(1);
 
       if (timestamp_frame_k > timestamp_last_frame_) {
         // Send left frame data to Kimera:
@@ -179,11 +181,22 @@ bool RosbagDataProvider::spin() {
         if (vio_params_.frontend_type_ == VIO::FrontendType::kStereoImu) {
           CHECK(right_frame_callback_)
               << "Did you forget to register the right frame callback?";
+          static const CameraParams& right_cam_info =
+              vio_params_.camera_params_.at(1);
           right_frame_callback_(VIO::make_unique<Frame>(
               k_,
               timestamp_frame_k,
               right_cam_info,
               readRosImage(rosbag_data_.right_imgs_.at(k_))));
+        }
+
+        if (vio_params_.frontend_type_ == VIO::FrontendType::kRgbdImu) {
+          CHECK(depth_frame_callback_)
+              << "Did you forget to register the depth frame callback?";
+          depth_frame_callback_(VIO::make_unique<DepthFrame>(
+              k_,
+              timestamp_frame_k,
+              readRosDepthImage(rosbag_data_.depth_imgs_.at(k_))));
         }
 
         VLOG(10) << "Sent left/right images to VIO for frame k = " << k_;
@@ -251,6 +264,10 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
   if (vio_params_.frontend_type_ == FrontendType::kStereoImu) {
     topics.push_back(right_imgs_topic_);
   }
+  if (vio_params_.frontend_type_ == FrontendType::kRgbdImu) {
+    topics.push_back(depth_imgs_topic_);
+  }
+
   topics.push_back(imu_topic_);
   if (!gt_odom_topic_.empty()) {
     LOG_IF(WARNING, vio_params_.backend_params_->autoInitialize_ != 0)
@@ -327,6 +344,9 @@ bool RosbagDataProvider::parseRosbag(const std::string& bag_path,
         } else if (vio_params_.frontend_type_ == FrontendType::kStereoImu &&
                    msg_topic == right_imgs_topic_) {
           rosbag_data->right_imgs_.push_back(img_msg);
+        } else if (vio_params_.frontend_type_ == FrontendType::kRgbdImu &&
+                   msg_topic == depth_imgs_topic_) {
+          rosbag_data->depth_imgs_.push_back(img_msg);
         } else {
           LOG(WARNING) << "Img with unexpected topic: " << msg_topic;
         }
@@ -435,12 +455,13 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
 
   // Publish external odometry data if available:
   if (k_last_odom_ < rosbag_data_.external_odom_.size()) {
-    while (timestamp_last_odom_ < timestamp_kf && 
+    while (timestamp_last_odom_ < timestamp_kf &&
            k_last_odom_ < rosbag_data_.external_odom_.size()) {
-      external_odometry_pub_.publish(rosbag_data_.external_odom_.at(k_last_odom_));
+      external_odometry_pub_.publish(
+          rosbag_data_.external_odom_.at(k_last_odom_));
       timestamp_last_odom_ =
           rosbag_data_.external_odom_.at(k_last_odom_)->header.stamp.toNSec();
-      k_last_odom_++;         
+      k_last_odom_++;
     }
   }
 
@@ -454,6 +475,9 @@ void RosbagDataProvider::publishInputs(const Timestamp& timestamp_kf) {
     case FrontendType::kStereoImu: {
       // Publish left and right images:
       publishStereoImages(timestamp_kf);
+      break;
+    }
+    case FrontendType::kRgbdImu: {
       break;
     }
     default: {
