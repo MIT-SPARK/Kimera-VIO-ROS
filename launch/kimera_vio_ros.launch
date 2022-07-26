@@ -1,10 +1,11 @@
+<!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
+file and include this one to launch KimeraVIO on the dataset of your choice -->
 <launch>
   <!-- Unique integer id of this robot. -->
   <arg name="robot_id" default="0"/>
   <!-- Whether or not there are other robots being run -->
   <arg name="multirobot" default="false"/>
-  <!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
-  file and include this one to launch KimeraVIO on the dataset of your choice -->
+  <!-- Dataset name (used to load params) -->
   <arg name="dataset_name" default=""/>
   <!-- If False, parses the given rosbag, otw it plays the rosbage -->
   <arg name="online" default="true" />
