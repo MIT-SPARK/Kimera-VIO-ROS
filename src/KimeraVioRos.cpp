@@ -155,8 +155,11 @@ bool KimeraVioRos::runKimeraVio() {
                                               std::move(preloaded_vocab));
     } break;
     case VIO::FrontendType::kRgbdImu: {
-      vio_pipeline_ = VIO::make_unique<RgbdImuPipeline>(
-          *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
+      vio_pipeline_ =
+          VIO::make_unique<RgbdImuPipeline>(*vio_params_,
+                                            std::move(ros_visualizer_),
+                                            std::move(ros_display_),
+                                            std::move(preloaded_vocab));
     } break;
     default: {
       LOG(FATAL) << "Unrecognized frontend type: "
@@ -192,6 +195,7 @@ bool KimeraVioRos::spin() {
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (vio_params_->parallel_run_) {
+    LOG(WARNING) << "Running in parallel!";
     // TODO(Toni): Technically, we can spare a thread with online dataprovider
     // since we can simply call .start() on the async spinners at the ctor level
     std::future<bool> data_provider_handle =
@@ -207,13 +211,17 @@ bool KimeraVioRos::spin() {
                    &VIO::Pipeline::spin,
                    std::ref(*CHECK_NOTNULL(vio_pipeline_.get())));
     // Run while ROS is ok and vio pipeline is not shutdown.
-    ros::Rate rate(20);  // 20 Hz
+    ros::WallRate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {
       // Print stats at 1hz
       LOG_EVERY_N(INFO, 20) << vio_pipeline_->printStatistics();
       // Mind that if ROS is using sim_time, this will block if /clock
       // is not published (i.e. when pausing the rosbag).
       rate.sleep();
+
+      if (vio_pipeline_->hasFinished() && data_provider_->isShutdown()) {
+        break;
+      }
     }
 
     if (!restart_vio_pipeline_) {

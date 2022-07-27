@@ -33,13 +33,14 @@ class RosDataProviderInterface : public DataProviderInterface {
   virtual ~RosDataProviderInterface();
 
  public:
-  //virtual bool spin();
+  // virtual bool spin();
 
   void shutdown() override {
     DataProviderInterface::shutdown();
     LOG(INFO) << "RosDataProviderInterface shutdown.";
   }
 
+  inline bool isShutdown() const { return shutdown_; }
 
  protected:
   const cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;

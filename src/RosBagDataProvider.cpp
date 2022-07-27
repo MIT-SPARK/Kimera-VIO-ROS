@@ -246,6 +246,7 @@ bool RosbagDataProvider::spin() {
   }  // End of for loop over rosbag images.
   LOG(INFO) << "Rosbag processing finished.";
 
+  shutdown();
   return true;
 }
 
