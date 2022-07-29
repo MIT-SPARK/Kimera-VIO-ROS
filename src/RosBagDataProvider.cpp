@@ -167,6 +167,18 @@ bool RosbagDataProvider::spin() {
       static const CameraParams& left_cam_info =
           vio_params_.camera_params_.at(0);
 
+      if (vio_params_.frontend_type_ == VIO::FrontendType::kRgbdImu) {
+        if (k_ >= rosbag_data_.depth_imgs_.size()) {
+          break;
+        }
+      }
+
+      if (vio_params_.frontend_type_ == VIO::FrontendType::kStereoImu) {
+        if (k_ >= rosbag_data_.right_imgs_.size()) {
+          break;
+        }
+      }
+
       if (timestamp_frame_k > timestamp_last_frame_) {
         // Send left frame data to Kimera:
         CHECK(left_frame_callback_)
