@@ -159,10 +159,20 @@ bool RosbagDataProvider::spin() {
     }
   }
 
+  const Timestamp last_imu =
+      rosbag_data_.imu_msgs_.back()->header.stamp.toNSec();
+
   // We break the while loop (but increase k_!) if we run in sequential mode.
   while (k_ < rosbag_data_.left_imgs_.size()) {
     if (nh_.ok() && ros::ok() && !ros::isShuttingDown() && !shutdown_) {
       const Timestamp& timestamp_frame_k = rosbag_data_.timestamps_.at(k_);
+      if (timestamp_frame_k > last_imu) {
+        const auto num_left = rosbag_data_.left_imgs_.size() - k_;
+        LOG(WARNING) << "Discarding " << num_left
+                     << " images past last IMU message";
+        k_ = rosbag_data_.left_imgs_.size();
+        break;
+      }
 
       static const CameraParams& left_cam_info =
           vio_params_.camera_params_.at(0);
