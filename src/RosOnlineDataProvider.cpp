@@ -49,15 +49,17 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   }
 
   // Define ground truth odometry Subsrciber
-  static constexpr size_t kMaxGtOdomQueueSize = 1u;
-  if (vio_params_.backend_params_->autoInitialize_ == 0) {
-    LOG(INFO) << "Requested initialization from ground-truth. "
-              << "Initializing ground-truth odometry one-shot subscriber.";
+  static constexpr size_t kMaxGtOdomQueueSize = 10u;
+  if (vio_params_.backend_params_->autoInitialize_ == 0 || log_gt_data_) {
     gt_odom_subscriber_ = nh_.subscribe("gt_odom",
                                         kMaxGtOdomQueueSize,
                                         &RosOnlineDataProvider::callbackGtOdom,
                                         this);
+  }
 
+  if (vio_params_.backend_params_->autoInitialize_ == 0) {
+    LOG(INFO) << "Requested initialization from ground-truth. "
+              << "Initializing ground-truth odometry one-shot subscriber.";
     // We wait for the gt pose.
     LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO "
                  << "on ros topic: " << gt_odom_subscriber_.getTopic().c_str();
