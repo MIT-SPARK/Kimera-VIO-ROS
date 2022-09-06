@@ -231,7 +231,11 @@ void RosOnlineDataProvider::subscribeRgbd(const size_t& kMaxImagesQueueSize) {
   left_img_subscriber_.subscribe(
       *it_, "left_cam/image_raw", kMaxImagesQueueSize);
   depth_img_subscriber_.subscribe(
-      *it_, "depth_cam/image_raw", kMaxImagesQueueSize);
+      *it_,
+      "depth_cam/image_raw",
+      kMaxImagesQueueSize,
+      image_transport::TransportHints(
+          "raw", ros::TransportHints(), nh_private_, "image_transport_depth"));
   static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
   sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
       sync_pol_img(kMaxImageSynchronizerQueueSize),
