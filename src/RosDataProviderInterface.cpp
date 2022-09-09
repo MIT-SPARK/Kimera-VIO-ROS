@@ -27,11 +27,14 @@ RosDataProviderInterface::RosDataProviderInterface(const VioParams& vio_params)
       nh_private_("~"),
       vio_params_(vio_params),
       is_header_written_poses_vio_(false),
-      output_gt_poses_csv_("traj_gt.csv"),
       log_gt_data_(false) {
   VLOG(1) << "Initializing RosDataProviderInterface.";
 
   CHECK(nh_private_.getParam("log_gt_data", log_gt_data_));
+  if (log_gt_data_) {
+    output_gt_poses_csv_.reset(new OfstreamWrapper("traj_gt.csv"));
+  }
+
   if (VLOG_IS_ON(1)) printParsedParams();  // Print parameters to check.
 }
 
@@ -110,8 +113,13 @@ const cv::Mat RosDataProviderInterface::readRosDepthImage(
 void RosDataProviderInterface::logGtData(
     const nav_msgs::OdometryConstPtr& odometry) {
   CHECK(odometry);
+  if (!output_gt_poses_csv_) {
+    LOG(ERROR) << "GT pose file not initialized!";
+    return;
+  }
+
   // We log the poses in csv format for later alignement and analysis.
-  std::ofstream& output_stream = output_gt_poses_csv_.ofstream_;
+  std::ofstream& output_stream = output_gt_poses_csv_->ofstream_;
   bool& is_header_written = is_header_written_poses_vio_;
 
   // First, write header, but only once.

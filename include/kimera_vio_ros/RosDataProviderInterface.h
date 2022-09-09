@@ -63,7 +63,7 @@ class RosDataProviderInterface : public DataProviderInterface {
 
   bool log_gt_data_;
   bool is_header_written_poses_vio_;
-  OfstreamWrapper output_gt_poses_csv_;
+  OfstreamWrapper::Ptr output_gt_poses_csv_;
 
  private:
   void printParsedParams() const;
