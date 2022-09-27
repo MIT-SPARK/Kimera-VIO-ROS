@@ -17,12 +17,10 @@
 
   <!-- Other settings -->
   <arg name="log_gt_data" default="true"/>
-  <arg name="log_imu_data" default="true"/>
   <arg name="should_use_sim_time" default="true"/>
   <arg name="params_folder" value="$(find kimera_vio)/params/$(arg config_type)"/>
   <arg if="$(arg log_output)" name="log_output_path" value="$(find kimera_vio_ros)/output_logs/$(arg config_type)"/>
   <!-- <remap from="/kimera_vio_ros/gt_odom"        to="/$(arg robot_name)/jackal_velocity_controller/odom"/> -->
-  
 
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic" value="/$(arg robot_name)/$(arg camera_name)/infra1/image_rect_raw"/>
