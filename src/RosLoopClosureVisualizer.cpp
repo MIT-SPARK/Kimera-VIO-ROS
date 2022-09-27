@@ -55,9 +55,7 @@ RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
 void RosLoopClosureVisualizer::publishLcdOutput(
     const LcdOutput::ConstPtr& lcd_output) {
   CHECK(lcd_output);
-  frames_.push_back(lcd_frame(lcd_output->keypoints_3d_,
-                              lcd_output->bow_vec_,
-                              lcd_output->descriptors_mat_));
+  frames_.push_back(lcd_frame(*lcd_output));
 
   publishBowQuery();
   publishTf(lcd_output);
