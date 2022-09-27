@@ -119,8 +119,7 @@ bool KimeraVioRos::runKimeraVio() {
   data_provider_.reset();
 
   std::unique_ptr<OrbVocabulary> preloaded_vocab;
-  if (vio_params_->frontend_type_ != VIO::FrontendType::kMonoImu &&
-      FLAGS_use_lcd) {
+  if (FLAGS_use_lcd) {
     preloaded_vocab = loadOrbVocabulary();
   }
 
