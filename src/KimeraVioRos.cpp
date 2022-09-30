@@ -118,9 +118,9 @@ bool KimeraVioRos::runKimeraVio() {
   VLOG(1) << "Destroy Data Provider.";
   data_provider_.reset();
 
-  std::unique_ptr<OrbVocabulary> preloaded_vocab;
+  std::unique_ptr<PreloadedVocab> preloaded_vocab;
   if (FLAGS_use_lcd) {
-    preloaded_vocab = loadOrbVocabulary();
+    preloaded_vocab.reset(new PreloadedVocab());
   }
 
   // Then, create dataset parser. This must be before vio pipeline bcs
