@@ -395,13 +395,25 @@ bool RosLoopClosureVisualizer::VLCServiceCallback(
     frame_msg.pose_id = pose_id;
 
     // Convert keypoints
-    pcl::PointCloud<pcl::PointXYZ> keypoints;
+    pcl::PointCloud<pcl::PointXYZ> versors;
     for (size_t i = 0; i < frame.keypoints_3d_.size(); ++i) {
+      // Push bearing vector
+      gtsam::Vector3 v_ = frame.versors_[i];
+      pcl::PointXYZ v(v_(0), v_(1), v_(2));
+      versors.push_back(v);
+      // Push keypoint depth
       gtsam::Vector3 p_ = frame.keypoints_3d_[i];
-      pcl::PointXYZ p(p_(0), p_(1), p_(2));
-      keypoints.push_back(p);
+      if (p_.norm() < 1e-3) {
+        // This 3D keypoint is not valid
+        frame_msg.depths.push_back(0);
+      } else {
+        // We have valid 3D keypoint and the depth is given by the z component
+        // See sparseStereoReconstruction function in Stereo Matcher in
+        // Kimera-VIO.
+        frame_msg.depths.push_back(p_[2]);
+      }
     }
-    pcl::toROSMsg(keypoints, frame_msg.keypoints);
+    pcl::toROSMsg(versors, frame_msg.versors);
 
     // Convert descriptors
     cv_bridge::CvImage cv_img;

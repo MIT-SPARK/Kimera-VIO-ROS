@@ -99,11 +99,13 @@ class RosLoopClosureVisualizer {
 
   struct lcd_frame {
     Landmarks keypoints_3d_;
+    BearingVectors versors_;
     decltype(LcdOutput::bow_vec_) bow_vec_;
     VIO::OrbDescriptor descriptors_mat_;
 
     explicit lcd_frame(const LcdOutput& lcd_output)
         : keypoints_3d_(lcd_output.keypoints_3d_),
+          versors_(lcd_output.versors_),
           bow_vec_(lcd_output.bow_vec_),
           descriptors_mat_(lcd_output.descriptors_mat_) {}
   };
