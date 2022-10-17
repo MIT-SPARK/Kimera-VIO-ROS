@@ -6,7 +6,6 @@
   <arg name="rosbag_path" default="path" />
   <arg name="config_type" default="D455" />
   <arg name="robot_id" default="0" />
-  <arg name="multirobot" default="false" />
 
   <arg name="do_coarse_temporal_sync" default="false"/>
   <arg name="do_fine_temporal_sync" default="false"/>
