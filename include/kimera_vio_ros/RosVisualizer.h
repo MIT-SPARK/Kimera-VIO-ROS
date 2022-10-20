@@ -114,7 +114,7 @@ class RosVisualizer : public Visualizer3D {
 
  private:
   //! Define frame ids for odometry message
-  std::string world_frame_id_;
+  std::string odom_frame_id_;
   std::string base_link_frame_id_;
   std::string map_frame_id_;
 

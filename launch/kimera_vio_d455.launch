@@ -1,0 +1,34 @@
+<launch>
+  <arg name="robot_name" default="robot0" />
+  <arg name="camera_name" default="camera"/>
+  <arg name="online" default="true" />
+  <arg name="log_output" default="true"/>
+  <arg name="rosbag_path" default="path" />
+  <arg name="config_type" default="D455" />
+  <arg name="robot_id" default="0" />
+
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
+  <arg name="use_external_odom" default="false"/>
+  <arg name="use_lcd" default="true"/>
+  <arg name="lcd_no_optimize" default="false"/>
+  <arg name="lcd_no_detection" default="false"/>
+
+  <!-- Other settings -->
+  <arg name="log_gt_data" default="true"/>
+  <arg name="should_use_sim_time" default="true"/>
+  <arg name="params_folder" value="$(find kimera_vio)/params/$(arg config_type)"/>
+  <arg if="$(arg log_output)" name="log_output_path" value="$(find kimera_vio_ros)/output_logs/$(arg config_type)"/>
+
+  <!-- Subscribed Topics -->
+  <arg name="left_cam_topic" value="/$(arg robot_name)/$(arg camera_name)/infra1/image_rect_raw"/>
+  <arg name="right_cam_topic" value="/$(arg robot_name)/$(arg camera_name)/infra2/image_rect_raw"/>
+  <arg name="imu_topic"  value="/$(arg robot_name)/$(arg camera_name)/imu"/>
+  <!-- Only used when parsing a rosbag -->
+  <arg name="external_odom_topic" value="/$(arg robot_name)/jackal_velocity_controller/odom"/>
+
+  <!-- Launch actual pipeline -->
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"
+    pass_all_args="true"/>
+
+</launch>

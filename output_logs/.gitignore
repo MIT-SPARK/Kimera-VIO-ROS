@@ -1,0 +1,3 @@
+# Ignore all pipeline results, but not this folder
+# We will store all output logs in this folder
+*.csv

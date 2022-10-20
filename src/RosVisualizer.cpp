@@ -53,8 +53,8 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
   // Get ROS params
   CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
   CHECK(!base_link_frame_id_.empty());
-  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
-  CHECK(!world_frame_id_.empty());
+  CHECK(nh_private_.getParam("odom_frame_id", odom_frame_id_));
+  CHECK(!odom_frame_id_.empty());
   CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
   CHECK(!map_frame_id_.empty());
 
@@ -120,7 +120,7 @@ void RosVisualizer::publishTimeHorizonPointCloud(
       output->lmk_id_to_lmk_type_map_;
 
   PointCloudXYZRGB::Ptr msg(new PointCloudXYZRGB);
-  msg->header.frame_id = world_frame_id_;
+  msg->header.frame_id = odom_frame_id_;
   msg->is_dense = true;
   msg->height = 1;
   msg->width = points_with_id.size();
@@ -207,7 +207,7 @@ void RosVisualizer::publishPerFrameMesh3D(
 
   pcl_msgs::PolygonMesh::Ptr msg(new pcl_msgs::PolygonMesh());
   msg->header.stamp.fromNSec(output->timestamp_);
-  msg->header.frame_id = world_frame_id_;
+  msg->header.frame_id = odom_frame_id_;
 
   // Create point cloud to hold vertices.
   pcl::PointCloud<PointNormalUV> cloud;
@@ -312,7 +312,7 @@ void RosVisualizer::publishState(const BackendOutput::ConstPtr& output) const {
 
   // Create header.
   odometry_msg.header.stamp.fromNSec(ts);
-  odometry_msg.header.frame_id = world_frame_id_;
+  odometry_msg.header.frame_id = odom_frame_id_;
   odometry_msg.child_frame_id = base_link_frame_id_;
 
   // Position
@@ -514,7 +514,7 @@ void RosVisualizer::publishTf(const BackendOutput::ConstPtr& output) {
   // Publish base_link TF.
   geometry_msgs::TransformStamped odom_tf;
   odom_tf.header.stamp.fromNSec(timestamp);
-  odom_tf.header.frame_id = world_frame_id_;
+  odom_tf.header.frame_id = odom_frame_id_;
   odom_tf.child_frame_id = base_link_frame_id_;
 
   utils::gtsamPoseToRosTf(pose, &odom_tf.transform);

@@ -37,6 +37,7 @@ KimeraVioRos::KimeraVioRos()
     : nh_private_("~"),
       vio_params_(nullptr),
       vio_pipeline_(nullptr),
+      use_lcd_registration_server_(false),
       ros_display_(nullptr),
       ros_visualizer_(nullptr),
       data_provider_(nullptr),
@@ -47,6 +48,9 @@ KimeraVioRos::KimeraVioRos()
       "restart_kimera_vio", &KimeraVioRos::restartKimeraVio, this);
 
   CHECK(nh_private_.getParam("use_rviz", use_rviz_));
+
+  nh_private_.getParam("use_lcd_registration_server",
+                       use_lcd_registration_server_);
 
   // Parse VIO parameters
   std::string params_path;
@@ -79,6 +83,15 @@ KimeraVioRos::KimeraVioRos()
 
 #undef MAKE_CONFIG_FILEPATH
 
+KimeraVioRos::~KimeraVioRos() {
+  // necessary to clean this before the pipeline disappears (contains a bare
+  // pointer to memory that the pipline owns)
+  if (lcd_registration_server_) {
+    lcd_registration_server_->stop();
+    lcd_registration_server_.reset();
+  }
+}
+
 bool KimeraVioRos::runKimeraVio() {
   // First, destroy VIO pipeline, this will in turn call the shutdown of
   // the data provider.
@@ -105,6 +118,11 @@ bool KimeraVioRos::runKimeraVio() {
   VLOG(1) << "Destroy Data Provider.";
   data_provider_.reset();
 
+  std::unique_ptr<PreloadedVocab> preloaded_vocab;
+  if (FLAGS_use_lcd) {
+    preloaded_vocab.reset(new PreloadedVocab());
+  }
+
   // Then, create dataset parser. This must be before vio pipeline bcs
   // the data provider may modify the init gt pose.
   VLOG(1) << "Creating Data Provider.";
@@ -121,12 +139,18 @@ bool KimeraVioRos::runKimeraVio() {
   vio_pipeline_ = nullptr;
   switch (vio_params_->frontend_type_) {
     case VIO::FrontendType::kMonoImu: {
-      vio_pipeline_ = VIO::make_unique<MonoImuPipeline>(
-          *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
+      vio_pipeline_ =
+          VIO::make_unique<MonoImuPipeline>(*vio_params_,
+                                            std::move(ros_visualizer_),
+                                            std::move(ros_display_),
+                                            std::move(preloaded_vocab));
     } break;
     case VIO::FrontendType::kStereoImu: {
-      vio_pipeline_ = VIO::make_unique<StereoImuPipeline>(
-          *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
+      vio_pipeline_ =
+          VIO::make_unique<StereoImuPipeline>(*vio_params_,
+                                              std::move(ros_visualizer_),
+                                              std::move(ros_display_),
+                                              std::move(preloaded_vocab));
     } break;
     default: {
       LOG(FATAL) << "Unrecognized frontend type: "
@@ -136,6 +160,15 @@ bool KimeraVioRos::runKimeraVio() {
   }
 
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
+  if (use_lcd_registration_server_) {
+    LcdModule* lcd = vio_pipeline_->getLcdModule();
+    if (!lcd) {
+      LOG(ERROR)
+          << "LCD module isn't valid: will not start registration server.";
+    } else {
+      lcd_registration_server_.reset(new LcdRegistrationServer(lcd));
+    }
+  }
 
   // Finally, connect data_provider and vio_pipeline
   VLOG(1) << "Connecting Vio Pipeline and Data Provider.";
