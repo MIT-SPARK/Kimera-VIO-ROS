@@ -62,7 +62,11 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
     // We wait for the gt pose.
     LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO "
                  << "on ros topic: " << gt_odom_subscriber_.getTopic().c_str();
-    static const ros::Duration kMaxTimeSecsForGtPose(10.0);
+
+    double gt_pose_wait_time_s = 10.0;
+    nh_private_.getParam("gt_pose_wait_time_s", gt_pose_wait_time_s);
+    const ros::Duration kMaxTimeSecsForGtPose(gt_pose_wait_time_s);
+
     ros::Time start = ros::Time::now();
     ros::Time current = ros::Time::now();
     while (!gt_init_pose_received_ &&
