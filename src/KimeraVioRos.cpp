@@ -70,7 +70,6 @@ KimeraVioRos::KimeraVioRos()
         MAKE_CONFIG_FILEPATH(sensor_params_path, ImuFilename),
         MAKE_CONFIG_FILEPATH(sensor_params_path, LeftCameraFilename),
         MAKE_CONFIG_FILEPATH(sensor_params_path, RightCameraFilename),
-        MAKE_CONFIG_FILEPATH(sensor_params_path, DepthCameraFilename),
         MAKE_CONFIG_FILEPATH(params_path, FrontendFilename),
         MAKE_CONFIG_FILEPATH(params_path, BackendFilename),
         MAKE_CONFIG_FILEPATH(params_path, LcdFilename),
