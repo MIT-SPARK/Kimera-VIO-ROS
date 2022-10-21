@@ -194,7 +194,6 @@ bool KimeraVioRos::spin() {
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (vio_params_->parallel_run_) {
-    LOG(WARNING) << "Running in parallel!";
     // TODO(Toni): Technically, we can spare a thread with online dataprovider
     // since we can simply call .start() on the async spinners at the ctor level
     std::future<bool> data_provider_handle =
