@@ -18,7 +18,7 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <tf/transform_broadcaster.h>
 #include <tf2/buffer_core.h>
-#include "pose_graph_tools/BowQuery.h"
+#include <pose_graph_tools/BowQueries.h>
 
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>
@@ -46,7 +46,7 @@ RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
   posegraph_incremental_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>(
       "pose_graph_incremental", 1000);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
-  bow_query_pub_ = nh_.advertise<pose_graph_tools::BowQuery>("bow_query", 1000);
+  bow_query_pub_ = nh_.advertise<pose_graph_tools::BowQueries>("bow_query", 1000);
   // Service
   vlc_frame_server_ = nh_.advertiseService(
       "vlc_frame_query", &RosLoopClosureVisualizer::VLCServiceCallback, this);
@@ -355,20 +355,19 @@ void RosLoopClosureVisualizer::publishTf(
 void RosLoopClosureVisualizer::publishBowQuery() {
   if (frames_.size() == 0) return;
   pose_graph_tools::BowVector bow_vec_msg;
-
   for (auto it = frames_.back().bow_vec_.begin();
        it != frames_.back().bow_vec_.end();
        ++it) {
     bow_vec_msg.word_ids.push_back(it->first);
     bow_vec_msg.word_values.push_back(it->second);
   }
-
-  pose_graph_tools::BowQuery msg;
-  msg.robot_id = robot_id_;
-  msg.pose_id = frames_.size() - 1;
-  msg.bow_vector = bow_vec_msg;
-
-  bow_query_pub_.publish(msg);
+  pose_graph_tools::BowQueries query_msg;
+  pose_graph_tools::BowQuery bow_msg;
+  bow_msg.robot_id = robot_id_;
+  bow_msg.pose_id = frames_.size() - 1;
+  bow_msg.bow_vector = bow_vec_msg;
+  query_msg.queries.push_back(bow_msg);
+  bow_query_pub_.publish(query_msg);
 
   next_pose_id_++;
 }
