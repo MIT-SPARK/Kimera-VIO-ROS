@@ -15,10 +15,10 @@
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <ros/ros.h>
+#include <ros/console.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <tf/transform_broadcaster.h>
 #include <tf2/buffer_core.h>
-#include <pose_graph_tools/BowQueries.h>
 
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>
@@ -27,7 +27,11 @@
 
 namespace VIO {
 
-RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
+RosLoopClosureVisualizer::RosLoopClosureVisualizer() : 
+  nh_(), 
+  nh_private_("~"),
+  bow_batch_size_(5),
+  bow_skip_num_(1) {
   // Get ROS params
   CHECK(nh_private_.getParam("odom_frame_id", odom_frame_id_));
   CHECK(!odom_frame_id_.empty());
@@ -39,6 +43,10 @@ RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
   CHECK(nh_private_.getParam("robot_id", robot_id_in_));
   CHECK(robot_id_in_ >= 0);
   robot_id_ = robot_id_in_;
+  nh_private_.param("bow_batch_size", bow_batch_size_, 5);
+  nh_private_.param("bow_skip_num", bow_skip_num_, 1);
+  ROS_INFO("BoW vector batch size: %d", bow_batch_size_);
+  ROS_INFO("BoW vector skip num: %d", bow_skip_num_);
 
   // Publishers
   trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
@@ -353,7 +361,12 @@ void RosLoopClosureVisualizer::publishTf(
 }
 
 void RosLoopClosureVisualizer::publishBowQuery() {
-  if (frames_.size() == 0) return;
+  if (frames_.size() == 0) 
+    return;
+  size_t pose_id = frames_.size() - 1;
+  if (pose_id % bow_skip_num_ != 0)
+    return;
+
   pose_graph_tools::BowVector bow_vec_msg;
   for (auto it = frames_.back().bow_vec_.begin();
        it != frames_.back().bow_vec_.end();
@@ -361,15 +374,16 @@ void RosLoopClosureVisualizer::publishBowQuery() {
     bow_vec_msg.word_ids.push_back(it->first);
     bow_vec_msg.word_values.push_back(it->second);
   }
-  pose_graph_tools::BowQueries query_msg;
   pose_graph_tools::BowQuery bow_msg;
   bow_msg.robot_id = robot_id_;
-  bow_msg.pose_id = frames_.size() - 1;
+  bow_msg.pose_id = pose_id;
   bow_msg.bow_vector = bow_vec_msg;
-  query_msg.queries.push_back(bow_msg);
-  bow_query_pub_.publish(query_msg);
+  query_msg_.queries.push_back(bow_msg);
 
-  next_pose_id_++;
+  if (query_msg_.queries.size() >= bow_batch_size_) {
+    bow_query_pub_.publish(query_msg_);
+    query_msg_.queries.clear();
+  }
 }
 
 bool RosLoopClosureVisualizer::VLCServiceCallback(

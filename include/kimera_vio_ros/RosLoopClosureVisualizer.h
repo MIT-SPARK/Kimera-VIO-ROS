@@ -25,6 +25,7 @@
 #include <pose_graph_tools/PoseGraphEdge.h>
 #include <pose_graph_tools/PoseGraphNode.h>
 #include <pose_graph_tools/VLCFrameQuery.h>
+#include <pose_graph_tools/BowQueries.h>
 
 #include <kimera-vio/backend/VioBackend-definitions.h>
 #include <kimera-vio/frontend/StereoVisionImuFrontend-definitions.h>
@@ -118,8 +119,14 @@ class RosLoopClosureVisualizer {
   std::string base_link_frame_id_;
   std::string map_frame_id_;
 
-  // ID of next frame to publish Bow query
-  uint32_t next_pose_id_;
+  // Number of BoW vectors published in each query msg
+  int bow_batch_size_;
+  // Include every bow_skip_num_ BoW vectors
+  // bow_skip_num=1 means publish all vectors
+  int bow_skip_num_;
+
+  pose_graph_tools::BowQueries query_msg_;
+
 };
 
 }  // namespace VIO

@@ -16,6 +16,9 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
   <arg name="rosbag_path" unless="$(arg online)"/>
 
   <arg name="rgb_image_transport" default="raw"/>
+  <!-- BoW vector publishing for Kimera-Multi -->
+  <arg name="bow_batch_size" default="5" />
+  <arg name="bow_skip_num"   default="1" />
 
   <!-- If true, KimeraVIO will log output of all modules to the
        'log_output_path' location. -->
@@ -145,6 +148,9 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
     <param name="robot_id"              value="$(arg robot_id)"/>
     <param name="use_external_odom"     value="$(arg use_external_odom)"/>
     <param name="force_same_image_timestamp" value="$(arg force_same_image_timestamp)"/>
+    <!-- BoW publishing for Kimera-Multi -->
+    <param name="bow_batch_size"        value="$(arg bow_batch_size)" />
+    <param name="bow_skip_num"          value="$(arg bow_skip_num)" />
 
     <!-- Frame IDs for Odometry -->
     <param name="odom_frame_id"      value="$(arg odom_frame_id)"/>
