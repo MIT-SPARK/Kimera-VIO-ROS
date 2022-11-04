@@ -63,8 +63,10 @@ class RosLoopClosureVisualizer {
 
   pose_graph_tools::PoseGraph getPosegraphMsg();
 
-  // Publish bag-of-word vector associated to latest frame
-  void publishBowQuery();
+  // Process bag-of-word vector associated to latest frame
+  void processBowQuery();
+  // Timer to periodically publish BoW vectors
+  void publishBoWTimerCallback(const ros::TimerEvent &event);
 
   // Service callback to send VLCFrame
   bool VLCServiceCallback(pose_graph_tools::VLCFrameQuery::Request& request,
@@ -125,7 +127,11 @@ class RosLoopClosureVisualizer {
   // bow_skip_num=1 means publish all vectors
   int bow_skip_num_;
 
-  pose_graph_tools::BowQueries query_msg_;
+  // BoW queries to different robots
+  std::map<uint16_t, pose_graph_tools::BowQueries> bow_queries_;
+
+  // ROS timer
+  ros::Timer bow_publish_timer_;
 
 };
 

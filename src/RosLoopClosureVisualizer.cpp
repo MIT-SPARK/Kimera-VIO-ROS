@@ -58,6 +58,17 @@ RosLoopClosureVisualizer::RosLoopClosureVisualizer() :
   // Service
   vlc_frame_server_ = nh_.advertiseService(
       "vlc_frame_query", &RosLoopClosureVisualizer::VLCServiceCallback, this);
+
+  // Initialize BoW queries
+  for (uint16_t robot_id = 0; robot_id <= robot_id_; ++robot_id) {
+    pose_graph_tools::BowQueries msg;
+    msg.destination_robot_id = robot_id;
+    bow_queries_[robot_id] = msg;
+  }
+
+  bow_publish_timer_ = nh_.createTimer(ros::Duration(1.0),
+                                       &RosLoopClosureVisualizer::publishBoWTimerCallback,
+                                       this);
 }
 
 void RosLoopClosureVisualizer::publishLcdOutput(
@@ -65,7 +76,7 @@ void RosLoopClosureVisualizer::publishLcdOutput(
   CHECK(lcd_output);
   frames_.push_back(lcd_frame(*lcd_output));
 
-  publishBowQuery();
+  processBowQuery();
   publishTf(lcd_output);
   if (trajectory_pub_.getNumSubscribers() > 0) {
     publishOptimizedTrajectory(lcd_output);
@@ -360,7 +371,7 @@ void RosLoopClosureVisualizer::publishTf(
   tf_broadcaster_.sendTransform(map_tf);
 }
 
-void RosLoopClosureVisualizer::publishBowQuery() {
+void RosLoopClosureVisualizer::processBowQuery() {
   if (frames_.size() == 0) 
     return;
   size_t pose_id = frames_.size() - 1;
@@ -378,12 +389,35 @@ void RosLoopClosureVisualizer::publishBowQuery() {
   bow_msg.robot_id = robot_id_;
   bow_msg.pose_id = pose_id;
   bow_msg.bow_vector = bow_vec_msg;
-  query_msg_.queries.push_back(bow_msg);
-
-  if (query_msg_.queries.size() >= bow_batch_size_) {
-    bow_query_pub_.publish(query_msg_);
-    query_msg_.queries.clear();
+  for (uint16_t robot_id = 0; robot_id <= robot_id_; ++robot_id) {
+    bow_queries_[robot_id].queries.push_back(bow_msg);
   }
+}
+
+void RosLoopClosureVisualizer::publishBoWTimerCallback(const ros::TimerEvent& event) {
+  // Publish new BoW vectors to myself
+  // This won't incur any real communication
+  if (bow_queries_[robot_id_].queries.size() >= bow_batch_size_) {
+    bow_query_pub_.publish(bow_queries_[robot_id_]);
+    bow_queries_[robot_id_].queries.clear();
+  }
+
+  // Select a peer robot to publish BoW
+  uint16_t selected_robot_id = 0;
+  size_t selected_batch_size = 0;
+  for (uint16_t robot_id = 0; robot_id < robot_id_; ++robot_id) {
+    if (bow_queries_[robot_id].queries.size() >= selected_batch_size) {
+      selected_robot_id = robot_id;
+      selected_batch_size = bow_queries_[robot_id].queries.size();
+    }
+  }
+
+  if (selected_batch_size >= bow_batch_size_) {
+    ROS_INFO("Published %zu BoW vectors to robot %hu.", selected_batch_size, selected_robot_id);
+    bow_query_pub_.publish(bow_queries_[selected_robot_id]);
+    bow_queries_[selected_robot_id].queries.clear();
+  }
+
 }
 
 bool RosLoopClosureVisualizer::VLCServiceCallback(
