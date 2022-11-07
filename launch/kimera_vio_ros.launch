@@ -54,6 +54,9 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
   <!-- the rgbd pipeline allows for a mask for depth images -->
   <arg name="depth_image_mask" default=""/>
 
+  <!-- disable to force strict timestamp checks on the input images -->
+  <arg name="force_same_image_timestamp" default="true"/>
+
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
   <arg name="path_to_vocab" default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
@@ -140,6 +143,7 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
     <param name="use_lcd"               value="$(arg use_lcd)"/>
     <param name="robot_id"              value="$(arg robot_id)"/>
     <param name="use_external_odom"     value="$(arg use_external_odom)"/>
+    <param name="force_same_image_timestamp" value="$(arg force_same_image_timestamp)"/>
 
     <!-- Frame IDs for Odometry -->
     <param name="odom_frame_id"      value="$(arg odom_frame_id)"/>

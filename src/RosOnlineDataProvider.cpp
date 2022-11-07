@@ -95,7 +95,8 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   }
 
   // decide whether or not to force timestamp synchronization
-  nh_private_.getParam("use_left_timestamp", use_left_timestamp_);
+  nh_private_.getParam("force_same_image_timestamp",
+                       force_same_image_timestamp_);
 
   //! IMU Subscription
   // Create a dedicated queue for the Imu callback so that we can use an async
@@ -334,40 +335,41 @@ void RosOnlineDataProvider::callbackStereoImages(
     if (vio_params_.frontend_type_ == VIO::FrontendType::kStereoImu) {
       CHECK(right_frame_callback_)
           << "Did you forget to register the right frame callback?";
-      right_frame_callback_(VIO::make_unique<Frame>(frame_count_,
-                                                    timestamp_right,
-                                                    right_cam_info,
-                                                    readRosImage(right_msg)));
+      right_frame_callback_(VIO::make_unique<Frame>(
+          frame_count_,
+          force_same_image_timestamp_ ? timestamp_left : timestamp_right,
+          right_cam_info,
+          readRosImage(right_msg)));
     }
     frame_count_++;
   }
 }
 
 void RosOnlineDataProvider::callbackRgbdImages(
-    const sensor_msgs::ImageConstPtr& left_msg,
+    const sensor_msgs::ImageConstPtr& color_msg,
     const sensor_msgs::ImageConstPtr& depth_msg) {
   CHECK_GE(vio_params_.camera_params_.size(), 1u);
-  const CameraParams& left_cam_info = vio_params_.camera_params_.at(0);
+  const CameraParams& cam_info = vio_params_.camera_params_.at(0);
 
-  CHECK(left_msg);
+  CHECK(color_msg);
   CHECK(depth_msg);
-  const Timestamp& timestamp_left = left_msg->header.stamp.toNSec();
-  // TODO(nathan) consider forcing synchronization here...
+  const Timestamp& timestamp_color = color_msg->header.stamp.toNSec();
   const Timestamp& timestamp_depth = depth_msg->header.stamp.toNSec();
 
   if (!shutdown_) {
     CHECK(left_frame_callback_)
-        << "Did you forget to register the left frame callback?";
+        << "Did you forget to register the color frame callback?";
     left_frame_callback_(VIO::make_unique<Frame>(
-        frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
+        frame_count_, timestamp_color, cam_info, readRosImage(color_msg)));
 
     CHECK(depth_frame_callback_)
         << "Did you forget to register the depth frame callback?";
     depth_frame_callback_(VIO::make_unique<DepthFrame>(
         frame_count_,
-        use_left_timestamp_ ? timestamp_left : timestamp_depth,
+        force_same_image_timestamp_ ? timestamp_color : timestamp_depth,
         readRosDepthImage(depth_msg)));
   }
+
   frame_count_++;
 }
 

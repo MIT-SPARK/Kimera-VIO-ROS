@@ -140,8 +140,8 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
   ros::Subscriber reinit_flag_subscriber_;
   ros::Subscriber reinit_pose_subscriber_;
 
-  // use the left image timestamp for the depth image
-  bool use_left_timestamp_ = true;
+  // use a common timestamp for all images, regardless of message time
+  bool force_same_image_timestamp_ = true;
 
   // Ground-truth initialization pose received flag
   bool gt_init_pose_received_ = false;
