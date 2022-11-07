@@ -87,8 +87,8 @@ class RosOnlineDataProvider : public RosDataProviderInterface {
                             const sensor_msgs::ImageConstPtr& right_msg);
 
   // Rgbd image callback
-  void callbackRgbdImages(const sensor_msgs::ImageConstPtr& left_msg,
-                          const sensor_msgs::ImageConstPtr& right_msg);
+  void callbackRgbdImages(const sensor_msgs::ImageConstPtr& rgb_msg,
+                          const sensor_msgs::ImageConstPtr& depth_msg);
 
   // IMU callback
   void callbackIMU(const sensor_msgs::ImuConstPtr& imu_msg);
