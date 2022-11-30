@@ -25,6 +25,7 @@
 #include <pose_graph_tools/PoseGraphEdge.h>
 #include <pose_graph_tools/PoseGraphNode.h>
 #include <pose_graph_tools/VLCFrameQuery.h>
+#include <pose_graph_tools/VLCFrames.h>
 #include <pose_graph_tools/BowQueries.h>
 
 #include <kimera-vio/backend/VioBackend-definitions.h>
@@ -65,8 +66,9 @@ class RosLoopClosureVisualizer {
 
   // Process bag-of-word vector associated to latest frame
   void processBowQuery();
+
   // Timer to periodically publish BoW vectors
-  void publishBoWTimerCallback(const ros::TimerEvent &event);
+  void publishTimerCallback(const ros::TimerEvent &event);
 
   // Service callback to send VLCFrame
   bool VLCServiceCallback(pose_graph_tools::VLCFrameQuery::Request& request,
@@ -86,6 +88,7 @@ class RosLoopClosureVisualizer {
   ros::Publisher odometry_pub_;
   ros::Publisher posegraph_incremental_pub_;
   ros::Publisher bow_query_pub_;
+  ros::Publisher vlc_frame_pub_;
 
   // ROS service
   ros::ServiceServer vlc_frame_server_;
@@ -126,12 +129,20 @@ class RosLoopClosureVisualizer {
   // Include every bow_skip_num_ BoW vectors
   // bow_skip_num=1 means publish all vectors
   int bow_skip_num_;
+  // Publish VLC frames
+  bool publish_vlc_frames_;
 
   // BoW queries to different robots
   std::map<uint16_t, pose_graph_tools::BowQueries> bow_queries_;
 
+  // New VLC frames
+  pose_graph_tools::VLCFrames new_frames_msg_;
+
   // ROS timer
-  ros::Timer bow_publish_timer_;
+  ros::Timer publish_timer_;
+
+  // Helper function to convert a VLC frame into a ROS message
+  bool getFrameMsg(int pose_id, pose_graph_tools::VLCFrameMsg& frame_msg) const;
 
 };
 

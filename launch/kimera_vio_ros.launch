@@ -19,6 +19,7 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
   <!-- BoW vector publishing for Kimera-Multi -->
   <arg name="bow_batch_size" default="5" />
   <arg name="bow_skip_num"   default="1" />
+  <arg name="publish_vlc_frames"       default="true"/>
 
   <!-- If true, KimeraVIO will log output of all modules to the
        'log_output_path' location. -->
@@ -151,6 +152,7 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
     <!-- BoW publishing for Kimera-Multi -->
     <param name="bow_batch_size"        value="$(arg bow_batch_size)" />
     <param name="bow_skip_num"          value="$(arg bow_skip_num)" />
+    <param name="publish_vlc_frames"    value="$(arg publish_vlc_frames)" />
 
     <!-- Frame IDs for Odometry -->
     <param name="odom_frame_id"      value="$(arg odom_frame_id)"/>
