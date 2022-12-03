@@ -96,8 +96,9 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
   <arg name="launch_prefix" value="" unless="$(arg debug)"/>
   <arg name="launch_prefix" value="gdb -ex run --args" if="$(arg debug)"/>
 
+  <arg name="flags_folder" default="$(arg params_folder)/flags"/>
   <arg name="include_pipeline_flags" default="false"/>
-  <arg name="pipeline_flag_args" value="--flagfile=$(arg params_folder)/flags/Pipeline.flags"
+  <arg name="pipeline_flag_args" value="--flagfile=$(arg flags_folder)/Pipeline.flags"
        if="$(arg include_pipeline_flags)"/>
   <arg name="pipeline_flag_args" value=""
        unless="$(arg include_pipeline_flags)"/>
@@ -115,10 +116,10 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
         args="--use_lcd=$(arg use_lcd)
               --vocabulary_path=$(arg path_to_vocab)
               $(arg pipeline_flag_args)
-              --flagfile=$(arg params_folder)/flags/Mesher.flags
-              --flagfile=$(arg params_folder)/flags/VioBackend.flags
-              --flagfile=$(arg params_folder)/flags/RegularVioBackend.flags
-              --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+              --flagfile=$(arg flags_folder)/Mesher.flags
+              --flagfile=$(arg flags_folder)/VioBackend.flags
+              --flagfile=$(arg flags_folder)/RegularVioBackend.flags
+              --flagfile=$(arg flags_folder)/Visualizer3D.flags
               --use_external_odometry=$(arg use_external_odom)
               --do_coarse_imu_camera_temporal_sync=$(arg do_coarse_temporal_sync)
               --do_fine_imu_camera_temporal_sync=$(arg do_fine_temporal_sync)
