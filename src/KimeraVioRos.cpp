@@ -20,6 +20,7 @@
 
 // Dependencies from VIO
 #include <kimera-vio/pipeline/MonoImuPipeline.h>
+#include <kimera-vio/pipeline/RgbdImuPipeline.h>
 #include <kimera-vio/pipeline/StereoImuPipeline.h>
 #include <kimera-vio/utils/Timer.h>
 
@@ -152,6 +153,13 @@ bool KimeraVioRos::runKimeraVio() {
                                               std::move(ros_display_),
                                               std::move(preloaded_vocab));
     } break;
+    case VIO::FrontendType::kRgbdImu: {
+      vio_pipeline_ =
+          VIO::make_unique<RgbdImuPipeline>(*vio_params_,
+                                            std::move(ros_visualizer_),
+                                            std::move(ros_display_),
+                                            std::move(preloaded_vocab));
+    } break;
     default: {
       LOG(FATAL) << "Unrecognized frontend type: "
                  << VIO::to_underlying(vio_params_->frontend_type_)
@@ -201,13 +209,15 @@ bool KimeraVioRos::spin() {
                    &VIO::Pipeline::spin,
                    std::ref(*CHECK_NOTNULL(vio_pipeline_.get())));
     // Run while ROS is ok and vio pipeline is not shutdown.
-    ros::Rate rate(20);  // 20 Hz
+    ros::WallRate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {
       // Print stats at 1hz
       LOG_EVERY_N(INFO, 20) << vio_pipeline_->printStatistics();
-      // Mind that if ROS is using sim_time, this will block if /clock
-      // is not published (i.e. when pausing the rosbag).
       rate.sleep();
+
+      if (vio_pipeline_->hasFinished() && data_provider_->isShutdown()) {
+        break;
+      }
     }
 
     if (!restart_vio_pipeline_) {
@@ -313,6 +323,13 @@ void KimeraVioRos::connectVIO() {
 
     vio_pipeline_ = VIO::safeCast<VIO::StereoImuPipeline, VIO::Pipeline>(
         std::move(stereo_pipeline));
+  }
+
+  if (vio_params_->frontend_type_ == VIO::FrontendType::kRgbdImu) {
+    data_provider_->registerDepthFrameCallback(std::bind(
+        &VIO::RgbdImuPipeline::fillDepthFrameQueue,
+        CHECK_NOTNULL(dynamic_cast<RgbdImuPipeline*>(vio_pipeline_.get())),
+        std::placeholders::_1));
   }
 }
 

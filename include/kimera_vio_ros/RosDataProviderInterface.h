@@ -33,13 +33,14 @@ class RosDataProviderInterface : public DataProviderInterface {
   virtual ~RosDataProviderInterface();
 
  public:
-  //virtual bool spin();
+  // virtual bool spin();
 
   void shutdown() override {
     DataProviderInterface::shutdown();
     LOG(INFO) << "RosDataProviderInterface shutdown.";
   }
 
+  inline bool isShutdown() const { return shutdown_; }
 
  protected:
   const cv::Mat readRosImage(const sensor_msgs::ImageConstPtr& img_msg) const;
@@ -62,7 +63,7 @@ class RosDataProviderInterface : public DataProviderInterface {
 
   bool log_gt_data_;
   bool is_header_written_poses_vio_;
-  OfstreamWrapper output_gt_poses_csv_;
+  OfstreamWrapper::Ptr output_gt_poses_csv_;
 
  private:
   void printParsedParams() const;

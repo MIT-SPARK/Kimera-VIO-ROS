@@ -1,0 +1,34 @@
+<launch>
+  <arg name="dataset_name" value="KinectAzure"/>
+
+  <arg name="online" default="true" />
+  <arg name="log_output" default="true"/>
+  <arg name="verbosity" default="0"/>
+  <arg name="debug" default="false"/>
+  <arg name="should_use_sim_time" default="true"/>
+
+  <arg name="camera_ns" default="/azure"/>
+  <arg name="use_lcd" default="true"/>
+
+  <arg name="log_path" value="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"/>
+
+  <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch" pass_all_args="true">
+      <!-- Options -->
+      <arg name="include_pipeline_flags" value="true"/>
+      <arg name="viz_type" value="1"/>
+      <arg name="use_rviz" value="false"/>
+      <!-- Other settings -->
+      <arg name="log_gt_data" value="false"/>
+      <arg if="$(arg log_output)" name="log_output_path" value="$(arg log_path)"/>
+      <!-- Subscribed Topics -->
+      <arg name="left_cam_topic" value="$(arg camera_ns)/rgb/image_raw"/>
+      <arg name="depth_cam_topic" value="$(arg camera_ns)/depth_to_rgb/image_raw"/>
+      <arg name="imu_topic"  value="$(arg camera_ns)/imu"/>
+      <!-- Only used when parsing a rosbag -->
+      <arg name="odom_frame_id"     value="world"/>
+      <arg name="base_link_frame_id" value="base_link"/>
+      <arg name="map_frame_id"       value="map"/>
+      <arg name="left_cam_frame_id"  value="left_cam"/>
+      <arg name="right_cam_frame_id" value="right_cam"/>
+  </include>
+</launch>

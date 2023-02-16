@@ -49,16 +49,17 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   }
 
   // Define ground truth odometry Subsrciber
-  static constexpr size_t kMaxGtOdomQueueSize = 1u;
+  static constexpr size_t kMaxGtOdomQueueSize = 10u;
+  if (vio_params_.backend_params_->autoInitialize_ == 0 || log_gt_data_) {
+    gt_odom_subscriber_ = nh_.subscribe("gt_odom",
+                                        kMaxGtOdomQueueSize,
+                                        &RosOnlineDataProvider::callbackGtOdom,
+                                        this);
+  }
+
   if (vio_params_.backend_params_->autoInitialize_ == 0) {
     LOG(INFO) << "Requested initialization from ground-truth. "
               << "Initializing ground-truth odometry one-shot subscriber.";
-    gt_odom_subscriber_ =
-        nh_.subscribe("gt_odom",
-                      kMaxGtOdomQueueSize,
-                      &RosOnlineDataProvider::callbackGtOdom,
-                      this);
-
     // We wait for the gt pose.
     LOG(WARNING) << "Waiting for ground-truth pose to initialize VIO "
                  << "on ros topic: " << gt_odom_subscriber_.getTopic().c_str();
@@ -88,7 +89,14 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
              "pose.";
       vio_params_.backend_params_->autoInitialize_ = true;
     }
+  } else {
+    // disable message about using gt odom for init when only logging gt odom
+    gt_init_pose_received_ = true;
   }
+
+  // decide whether or not to force timestamp synchronization
+  nh_private_.getParam("force_same_image_timestamp",
+                       force_same_image_timestamp_);
 
   //! IMU Subscription
   // Create a dedicated queue for the Imu callback so that we can use an async
@@ -121,9 +129,12 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
       subscribeStereo(kMaxImagesQueueSize);
       break;
     }
-    default: {
-      LOG(FATAL) << "Frontend type not recognized.";
+    case FrontendType::kRgbdImu: {
+      subscribeRgbd(kMaxImagesQueueSize);
+      break;
     }
+
+    default: { LOG(FATAL) << "Frontend type not recognized."; }
   }
 
   // Define Reinitializer Subscriber
@@ -160,9 +171,11 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   publishStaticTf(vio_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
                   left_cam_frame_id_);
-  publishStaticTf(vio_params_.camera_params_.at(1).body_Pose_cam_,
-                  base_link_frame_id_,
-                  right_cam_frame_id_);
+  if (vio_params_.camera_params_.size() == 2) {
+    publishStaticTf(vio_params_.camera_params_.at(1).body_Pose_cam_,
+                    base_link_frame_id_,
+                    right_cam_frame_id_);
+  }
 
   //! IMU Spinner
   if (vio_params_.parallel_run_) {
@@ -213,6 +226,26 @@ void RosOnlineDataProvider::subscribeStereo(const size_t& kMaxImagesQueueSize) {
   DCHECK(sync_img_);
   sync_img_->registerCallback(
       boost::bind(&RosOnlineDataProvider::callbackStereoImages, this, _1, _2));
+}
+
+void RosOnlineDataProvider::subscribeRgbd(const size_t& kMaxImagesQueueSize) {
+  left_img_subscriber_.subscribe(
+      *it_, "left_cam/image_raw", kMaxImagesQueueSize);
+  depth_img_subscriber_.subscribe(
+      *it_,
+      "depth_cam/image_raw",
+      kMaxImagesQueueSize,
+      image_transport::TransportHints(
+          "raw", ros::TransportHints(), nh_private_, "image_transport_depth"));
+  static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
+  sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
+      sync_pol_img(kMaxImageSynchronizerQueueSize),
+      left_img_subscriber_,
+      depth_img_subscriber_);
+
+  DCHECK(sync_img_);
+  sync_img_->registerCallback(
+      boost::bind(&RosOnlineDataProvider::callbackRgbdImages, this, _1, _2));
 }
 
 bool RosOnlineDataProvider::spin() {
@@ -302,13 +335,42 @@ void RosOnlineDataProvider::callbackStereoImages(
     if (vio_params_.frontend_type_ == VIO::FrontendType::kStereoImu) {
       CHECK(right_frame_callback_)
           << "Did you forget to register the right frame callback?";
-      right_frame_callback_(VIO::make_unique<Frame>(frame_count_,
-                                                    timestamp_right,
-                                                    right_cam_info,
-                                                    readRosImage(right_msg)));
+      right_frame_callback_(VIO::make_unique<Frame>(
+          frame_count_,
+          force_same_image_timestamp_ ? timestamp_left : timestamp_right,
+          right_cam_info,
+          readRosImage(right_msg)));
     }
     frame_count_++;
   }
+}
+
+void RosOnlineDataProvider::callbackRgbdImages(
+    const sensor_msgs::ImageConstPtr& color_msg,
+    const sensor_msgs::ImageConstPtr& depth_msg) {
+  CHECK_GE(vio_params_.camera_params_.size(), 1u);
+  const CameraParams& cam_info = vio_params_.camera_params_.at(0);
+
+  CHECK(color_msg);
+  CHECK(depth_msg);
+  const Timestamp& timestamp_color = color_msg->header.stamp.toNSec();
+  const Timestamp& timestamp_depth = depth_msg->header.stamp.toNSec();
+
+  if (!shutdown_) {
+    CHECK(left_frame_callback_)
+        << "Did you forget to register the color frame callback?";
+    left_frame_callback_(VIO::make_unique<Frame>(
+        frame_count_, timestamp_color, cam_info, readRosImage(color_msg)));
+
+    CHECK(depth_frame_callback_)
+        << "Did you forget to register the depth frame callback?";
+    depth_frame_callback_(VIO::make_unique<DepthFrame>(
+        frame_count_,
+        force_same_image_timestamp_ ? timestamp_color : timestamp_depth,
+        readRosDepthImage(depth_msg)));
+  }
+
+  frame_count_++;
 }
 
 void RosOnlineDataProvider::callbackIMU(
@@ -362,10 +424,7 @@ void RosOnlineDataProvider::callbackExternalOdom(
     const nav_msgs::Odometry::ConstPtr& odom_msg) {
   CHECK(odom_msg);
   VIO::VioNavState kimera_odom;
-  utils::rosOdometryToVioNavState(
-      *odom_msg,
-      nh_private_,
-      &kimera_odom);
+  utils::rosOdometryToVioNavState(*odom_msg, nh_private_, &kimera_odom);
   external_odom_callback_(ExternalOdomMeasurement(
       odom_msg->header.stamp.toNSec(),
       gtsam::NavState(kimera_odom.pose_, kimera_odom.velocity_)));

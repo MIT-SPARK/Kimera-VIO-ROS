@@ -1,10 +1,11 @@
+<!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
+file and include this one to launch KimeraVIO on the dataset of your choice -->
 <launch>
   <!-- Unique integer id of this robot. -->
   <arg name="robot_id" default="0"/>
   <!-- Whether or not there are other robots being run -->
   <arg name="multirobot" default="false"/>
-  <!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
-  file and include this one to launch KimeraVIO on the dataset of your choice -->
+  <!-- Dataset name (used to load params) -->
   <arg name="dataset_name" default=""/>
   <!-- If False, parses the given rosbag, otw it plays the rosbage -->
   <arg name="online" default="true" />
@@ -13,6 +14,8 @@
   <arg name="should_use_sim_time" default="true"/>
   <param name="use_sim_time" value="$(arg should_use_sim_time)"/>
   <arg name="rosbag_path" unless="$(arg online)"/>
+
+  <arg name="rgb_image_transport" default="raw"/>
 
   <!-- If true, KimeraVIO will log output of all modules to the
        'log_output_path' location. -->
@@ -48,6 +51,12 @@
   <!-- you can optionally specify an alternative location -->
   <arg name="sensor_folder" default=""/>
 
+  <!-- the rgbd pipeline allows for a mask for depth images -->
+  <arg name="depth_image_mask" default=""/>
+
+  <!-- disable to force strict timestamp checks on the input images -->
+  <arg name="force_same_image_timestamp" default="true"/>
+
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
   <arg name="path_to_vocab" default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
@@ -55,6 +64,7 @@
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"                    default="/cam0/image_raw"/>
   <arg name="right_cam_topic"                   default="/cam1/image_raw"/>
+  <arg name="depth_cam_topic"                   default=""/>
   <arg name="imu_topic"                         default="/imu0"/>
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
@@ -86,8 +96,9 @@
   <arg name="launch_prefix" value="" unless="$(arg debug)"/>
   <arg name="launch_prefix" value="gdb -ex run --args" if="$(arg debug)"/>
 
+  <arg name="flags_folder" default="$(arg params_folder)/flags"/>
   <arg name="include_pipeline_flags" default="false"/>
-  <arg name="pipeline_flag_args" value="--flagfile=$(arg params_folder)/flags/Pipeline.flags"
+  <arg name="pipeline_flag_args" value="--flagfile=$(arg flags_folder)/Pipeline.flags"
        if="$(arg include_pipeline_flags)"/>
   <arg name="pipeline_flag_args" value=""
        unless="$(arg include_pipeline_flags)"/>
@@ -105,15 +116,16 @@
         args="--use_lcd=$(arg use_lcd)
               --vocabulary_path=$(arg path_to_vocab)
               $(arg pipeline_flag_args)
-              --flagfile=$(arg params_folder)/flags/Mesher.flags
-              --flagfile=$(arg params_folder)/flags/VioBackend.flags
-              --flagfile=$(arg params_folder)/flags/RegularVioBackend.flags
-              --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+              --flagfile=$(arg flags_folder)/Mesher.flags
+              --flagfile=$(arg flags_folder)/VioBackend.flags
+              --flagfile=$(arg flags_folder)/RegularVioBackend.flags
+              --flagfile=$(arg flags_folder)/Visualizer3D.flags
               --use_external_odometry=$(arg use_external_odom)
               --do_coarse_imu_camera_temporal_sync=$(arg do_coarse_temporal_sync)
               --do_fine_imu_camera_temporal_sync=$(arg do_fine_temporal_sync)
               --lcd_no_optimize=$(arg lcd_no_optimize)
               --lcd_no_detection=$(arg lcd_no_detection)
+              --depth_image_mask=$(arg depth_image_mask)
               $(arg glog_args)
               --colorlogtostderr=1
               --log_prefix=1
@@ -124,6 +136,7 @@
               --output_path=$(arg log_output_path)
               --viz_type=$(arg viz_type)
               --visualize=$(arg visualize)">
+    <param name="image_transport" value="$(arg rgb_image_transport)"/>
     <param name="params_folder_path"    value="$(arg params_folder)"/>
     <param name="sensor_params_folder_path" value="$(arg sensor_folder)"/>
 
@@ -131,6 +144,7 @@
     <param name="use_lcd"               value="$(arg use_lcd)"/>
     <param name="robot_id"              value="$(arg robot_id)"/>
     <param name="use_external_odom"     value="$(arg use_external_odom)"/>
+    <param name="force_same_image_timestamp" value="$(arg force_same_image_timestamp)"/>
 
     <!-- Frame IDs for Odometry -->
     <param name="odom_frame_id"      value="$(arg odom_frame_id)"/>
@@ -142,8 +156,16 @@
     <!-- Subscriber topics -->
     <!-- if we run online, use remap -->
     <remap from="left_cam/image_raw"  to="$(arg left_cam_topic)"      if="$(arg online)"/>
+    <remap from="left_cam/image_raw/compressed"  to="$(arg left_cam_topic)/compressed"      if="$(arg online)"/>
+
     <remap from="right_cam/image_raw" to="$(arg right_cam_topic)"
            if="$(eval arg('online') and arg('right_cam_topic') != '')"/>
+
+       <remap from="right_cam/image_raw/compressed" to="$(arg right_cam_topic)/compressed"
+           if="$(eval arg('online') and arg('right_cam_topic') != '')"/>
+
+    <remap from="depth_cam/image_raw" to="$(arg depth_cam_topic)"
+           if="$(eval arg('online') and arg('depth_cam_topic') != '')"/>
     <remap from="imu"                 to="$(arg imu_topic)"           if="$(arg online)"/>
     <remap from="external_odom"       to="$(arg external_odom_topic)"
            if="$(eval arg('online') and arg('external_odom_topic') != '')"/>
@@ -154,6 +176,7 @@
     <param name="rosbag_path"            value="$(arg rosbag_path)"     unless="$(arg online)"/>
     <param name="left_cam_rosbag_topic"  value="$(arg left_cam_topic)"  unless="$(arg online)"/>
     <param name="right_cam_rosbag_topic" value="$(arg right_cam_topic)" unless="$(arg online)"/>
+    <param name="depth_cam_rosbag_topic" value="$(arg depth_cam_topic)" unless="$(arg online)"/>
     <param name="imu_rosbag_topic"       value="$(arg imu_topic)"       unless="$(arg online)"/>
     <param name="ground_truth_odometry_rosbag_topic"
            value="$(arg gt_topic)"                   unless="$(arg online)"/>

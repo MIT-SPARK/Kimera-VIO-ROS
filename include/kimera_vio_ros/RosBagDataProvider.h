@@ -32,6 +32,8 @@ struct RosbagData {
   std::vector<sensor_msgs::ImageConstPtr> left_imgs_;
   /// The names of the images from right camera
   std::vector<sensor_msgs::ImageConstPtr> right_imgs_;
+  /// The names of the images from depth camera
+  std::vector<sensor_msgs::ImageConstPtr> depth_imgs_;
   /// Vector of timestamps see issue in .cpp file
   std::vector<Timestamp> timestamps_;
   /// Ground-truth Odometry (only if available)
@@ -97,6 +99,7 @@ class RosbagDataProvider : public RosDataProviderInterface {
   std::string rosbag_path_;
   std::string left_imgs_topic_;
   std::string right_imgs_topic_;
+  std::string depth_imgs_topic_;
   std::string imu_topic_;
   std::string gt_odom_topic_;
   std::string external_odom_topic_;
