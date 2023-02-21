@@ -17,7 +17,7 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
 
   <arg name="rgb_image_transport" default="raw"/>
   <!-- BoW vector publishing for Kimera-Multi -->
-  <arg name="bow_batch_size" default="5" />
+  <arg name="bow_batch_size" default="1" />
   <arg name="bow_skip_num"   default="1" />
   <arg name="publish_vlc_frames"       default="true"/>
 
