@@ -61,6 +61,12 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
   <!-- disable to force strict timestamp checks on the input images -->
   <arg name="force_same_image_timestamp" default="true"/>
 
+  <!-- diable stereo depth checks for LCD feature matching -->
+  <arg name="lcd_disable_stereo_match_depth_check" default="false"/>
+
+  <!-- diable backend using incremental pose -->
+  <arg name="no_incremental_pose" default="false"/>
+
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
   <arg name="path_to_vocab" default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
@@ -138,6 +144,8 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
               --log_output=$(arg log_output)
               --log_euroc_gt_data=$(arg log_output)
               --output_path=$(arg log_output_path)
+              --lcd_disable_stereo_match_depth_check=$(arg lcd_disable_stereo_match_depth_check)
+              --no_incremental_pose=$(arg no_incremental_pose)
               --viz_type=$(arg viz_type)
               --visualize=$(arg visualize)">
     <param name="image_transport" value="$(arg rgb_image_transport)"/>
