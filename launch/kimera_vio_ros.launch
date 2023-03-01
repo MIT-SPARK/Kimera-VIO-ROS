@@ -16,6 +16,10 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
   <arg name="rosbag_path" unless="$(arg online)"/>
 
   <arg name="rgb_image_transport" default="raw"/>
+  <!-- BoW vector publishing for Kimera-Multi -->
+  <arg name="bow_batch_size" default="1" />
+  <arg name="bow_skip_num"   default="1" />
+  <arg name="publish_vlc_frames"       default="true"/>
 
   <!-- If true, KimeraVIO will log output of all modules to the
        'log_output_path' location. -->
@@ -56,6 +60,12 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
 
   <!-- disable to force strict timestamp checks on the input images -->
   <arg name="force_same_image_timestamp" default="true"/>
+
+  <!-- diable stereo depth checks for LCD feature matching -->
+  <arg name="lcd_disable_stereo_match_depth_check" default="false"/>
+
+  <!-- diable backend using incremental pose -->
+  <arg name="no_incremental_pose" default="false"/>
 
   <!-- Specify the absolute path to the vocabulary file. -->
   <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
@@ -134,6 +144,8 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
               --log_output=$(arg log_output)
               --log_euroc_gt_data=$(arg log_output)
               --output_path=$(arg log_output_path)
+              --lcd_disable_stereo_match_depth_check=$(arg lcd_disable_stereo_match_depth_check)
+              --no_incremental_pose=$(arg no_incremental_pose)
               --viz_type=$(arg viz_type)
               --visualize=$(arg visualize)">
     <param name="image_transport" value="$(arg rgb_image_transport)"/>
@@ -145,6 +157,10 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
     <param name="robot_id"              value="$(arg robot_id)"/>
     <param name="use_external_odom"     value="$(arg use_external_odom)"/>
     <param name="force_same_image_timestamp" value="$(arg force_same_image_timestamp)"/>
+    <!-- BoW publishing for Kimera-Multi -->
+    <param name="bow_batch_size"        value="$(arg bow_batch_size)" />
+    <param name="bow_skip_num"          value="$(arg bow_skip_num)" />
+    <param name="publish_vlc_frames"    value="$(arg publish_vlc_frames)" />
 
     <!-- Frame IDs for Odometry -->
     <param name="odom_frame_id"      value="$(arg odom_frame_id)"/>

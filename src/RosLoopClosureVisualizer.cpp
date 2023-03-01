@@ -15,10 +15,10 @@
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <ros/ros.h>
+#include <ros/console.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <tf/transform_broadcaster.h>
 #include <tf2/buffer_core.h>
-#include "pose_graph_tools/BowQuery.h"
 
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>
@@ -27,7 +27,12 @@
 
 namespace VIO {
 
-RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
+RosLoopClosureVisualizer::RosLoopClosureVisualizer() : 
+  nh_(), 
+  nh_private_("~"),
+  bow_batch_size_(5),
+  bow_skip_num_(1),
+  publish_vlc_frames_(true) {
   // Get ROS params
   CHECK(nh_private_.getParam("odom_frame_id", odom_frame_id_));
   CHECK(!odom_frame_id_.empty());
@@ -39,6 +44,12 @@ RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
   CHECK(nh_private_.getParam("robot_id", robot_id_in_));
   CHECK(robot_id_in_ >= 0);
   robot_id_ = robot_id_in_;
+  nh_private_.param("bow_batch_size", bow_batch_size_, 5);
+  nh_private_.param("bow_skip_num", bow_skip_num_, 1);
+  nh_private_.param("publish_vlc_frames", publish_vlc_frames_, true);
+  ROS_INFO("BoW vector batch size: %d", bow_batch_size_);
+  ROS_INFO("BoW vector skip num: %d", bow_skip_num_);
+  ROS_INFO("Publish VLC frames: %d", publish_vlc_frames_);
 
   // Publishers
   trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
@@ -46,10 +57,24 @@ RosLoopClosureVisualizer::RosLoopClosureVisualizer() : nh_(), nh_private_("~") {
   posegraph_incremental_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>(
       "pose_graph_incremental", 1000);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
-  bow_query_pub_ = nh_.advertise<pose_graph_tools::BowQuery>("bow_query", 1000);
+  bow_query_pub_ = nh_.advertise<pose_graph_tools::BowQueries>("bow_query", 1000);
+  vlc_frame_pub_ = nh_.advertise<pose_graph_tools::VLCFrames>("vlc_frames", 100);
   // Service
   vlc_frame_server_ = nh_.advertiseService(
       "vlc_frame_query", &RosLoopClosureVisualizer::VLCServiceCallback, this);
+
+  // Initialize BoW queries
+  for (uint16_t robot_id = 0; robot_id <= robot_id_; ++robot_id) {
+    pose_graph_tools::BowQueries msg;
+    msg.destination_robot_id = robot_id;
+    bow_queries_[robot_id] = msg;
+  }
+
+  publish_timer_ = nh_.createTimer(ros::Duration(1.0),
+                                   &RosLoopClosureVisualizer::publishTimerCallback,
+                                   this);
+
+  new_frames_msg_.destination_robot_id = robot_id_;
 }
 
 void RosLoopClosureVisualizer::publishLcdOutput(
@@ -57,7 +82,15 @@ void RosLoopClosureVisualizer::publishLcdOutput(
   CHECK(lcd_output);
   frames_.push_back(lcd_frame(*lcd_output));
 
-  publishBowQuery();
+  processBowQuery();
+  if (publish_vlc_frames_) {
+    size_t pose_id = frames_.size() - 1;
+    pose_graph_tools::VLCFrameMsg frame_msg;
+    if (getFrameMsg(pose_id, frame_msg)) {
+      new_frames_msg_.frames.push_back(frame_msg);
+    }
+  }
+
   publishTf(lcd_output);
   if (trajectory_pub_.getNumSubscribers() > 0) {
     publishOptimizedTrajectory(lcd_output);
@@ -352,25 +385,57 @@ void RosLoopClosureVisualizer::publishTf(
   tf_broadcaster_.sendTransform(map_tf);
 }
 
-void RosLoopClosureVisualizer::publishBowQuery() {
-  if (frames_.size() == 0) return;
-  pose_graph_tools::BowVector bow_vec_msg;
+void RosLoopClosureVisualizer::processBowQuery() {
+  if (frames_.size() == 0) 
+    return;
+  size_t pose_id = frames_.size() - 1;
+  if (pose_id % bow_skip_num_ != 0)
+    return;
 
+  pose_graph_tools::BowVector bow_vec_msg;
   for (auto it = frames_.back().bow_vec_.begin();
        it != frames_.back().bow_vec_.end();
        ++it) {
     bow_vec_msg.word_ids.push_back(it->first);
     bow_vec_msg.word_values.push_back(it->second);
   }
+  pose_graph_tools::BowQuery bow_msg;
+  bow_msg.robot_id = robot_id_;
+  bow_msg.pose_id = pose_id;
+  bow_msg.bow_vector = bow_vec_msg;
+  for (uint16_t robot_id = 0; robot_id <= robot_id_; ++robot_id) {
+    bow_queries_[robot_id].queries.push_back(bow_msg);
+  }
+}
 
-  pose_graph_tools::BowQuery msg;
-  msg.robot_id = robot_id_;
-  msg.pose_id = frames_.size() - 1;
-  msg.bow_vector = bow_vec_msg;
+void RosLoopClosureVisualizer::publishTimerCallback(const ros::TimerEvent& event) {
+  // Publish new BoW vectors to myself
+  // This won't incur any real communication
+  if (bow_queries_[robot_id_].queries.size() >= bow_batch_size_) {
+    bow_query_pub_.publish(bow_queries_[robot_id_]);
+    bow_queries_[robot_id_].queries.clear();
+  }
 
-  bow_query_pub_.publish(msg);
+  // Select a peer robot to publish BoW
+  uint16_t selected_robot_id = 0;
+  size_t selected_batch_size = 0;
+  for (uint16_t robot_id = 0; robot_id < robot_id_; ++robot_id) {
+    if (bow_queries_[robot_id].queries.size() >= selected_batch_size) {
+      selected_robot_id = robot_id;
+      selected_batch_size = bow_queries_[robot_id].queries.size();
+    }
+  }
 
-  next_pose_id_++;
+  if (selected_batch_size >= bow_batch_size_) {
+    ROS_INFO("Published %zu BoW vectors to robot %hu.", selected_batch_size, selected_robot_id);
+    bow_query_pub_.publish(bow_queries_[selected_robot_id]);
+    bow_queries_[selected_robot_id].queries.clear();
+  }
+
+  if (new_frames_msg_.frames.size() >= 50) {
+    vlc_frame_pub_.publish(new_frames_msg_);
+    new_frames_msg_.frames.clear();
+  }
 }
 
 bool RosLoopClosureVisualizer::VLCServiceCallback(
@@ -382,38 +447,55 @@ bool RosLoopClosureVisualizer::VLCServiceCallback(
 
   // Loop through requested pose ids
   for (const auto& pose_id : request.pose_ids) {
-    // If requested frame does not exist, print error message
-    if (pose_id >= frames_.size()) {
+    pose_graph_tools::VLCFrameMsg frame_msg;
+    if (!getFrameMsg(pose_id, frame_msg)) {
       ROS_ERROR_STREAM("Requested frame " << pose_id << " does not exist!");
       continue;
     }
-    const auto& frame = frames_[pose_id];
-
-    // Initialize message for this frame
-    pose_graph_tools::VLCFrameMsg frame_msg;
-    frame_msg.robot_id = robot_id_;
-    frame_msg.pose_id = pose_id;
-
-    // Convert keypoints
-    pcl::PointCloud<pcl::PointXYZ> keypoints;
-    for (size_t i = 0; i < frame.keypoints_3d_.size(); ++i) {
-      gtsam::Vector3 p_ = frame.keypoints_3d_[i];
-      pcl::PointXYZ p(p_(0), p_(1), p_(2));
-      keypoints.push_back(p);
-    }
-    pcl::toROSMsg(keypoints, frame_msg.keypoints);
-
-    // Convert descriptors
-    cv_bridge::CvImage cv_img;
-    // cv_img.header   = in_msg->header; // Yulun: need to set header
-    // explicitly?
-    cv_img.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
-    cv_img.image = frame.descriptors_mat_;
-    cv_img.toImageMsg(frame_msg.descriptors_mat);
-
-    // Push frame to response
     response.frames.push_back(frame_msg);
   }
+
+  return true;
+}
+
+bool RosLoopClosureVisualizer::getFrameMsg(int pose_id, 
+                                           pose_graph_tools::VLCFrameMsg& frame_msg) const {
+  if (pose_id >= frames_.size()) {
+    return false;
+  }
+  const auto& frame = frames_[pose_id];
+
+  frame_msg.robot_id = robot_id_;
+  frame_msg.pose_id = pose_id;
+
+  // Convert keypoints
+  pcl::PointCloud<pcl::PointXYZ> versors;
+  for (size_t i = 0; i < frame.keypoints_3d_.size(); ++i) {
+    // Push bearing vector
+    gtsam::Vector3 v_ = frame.versors_[i];
+    pcl::PointXYZ v(v_(0), v_(1), v_(2));
+    versors.push_back(v);
+    // Push keypoint depth
+    gtsam::Vector3 p_ = frame.keypoints_3d_[i];
+    if (p_.norm() < 1e-3) {
+      // This 3D keypoint is not valid
+      frame_msg.depths.push_back(0);
+    } else {
+      // We have valid 3D keypoint and the depth is given by the z component
+      // See sparseStereoReconstruction function in Stereo Matcher in
+      // Kimera-VIO.
+      frame_msg.depths.push_back(p_[2]);
+    }
+  }
+  pcl::toROSMsg(versors, frame_msg.versors);
+
+  // Convert descriptors
+  cv_bridge::CvImage cv_img;
+  // cv_img.header   = in_msg->header; // Yulun: need to set header
+  // explicitly?
+  cv_img.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
+  cv_img.image = frame.descriptors_mat_;
+  cv_img.toImageMsg(frame_msg.descriptors_mat);
 
   return true;
 }
