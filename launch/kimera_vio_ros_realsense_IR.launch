@@ -13,7 +13,7 @@
 
   <!-- Only used when parsing a rosbag -->
   <arg name="rosbag_path" default="default.bag"
-       unless="$(arg online)"/>"/>
+       unless="$(arg online)"/>
 
   <!-- Frame IDs. These DO NOT match frame id's on the video streams, as the 
 	RealSense and Kimera publish conflicting Tf's -->
