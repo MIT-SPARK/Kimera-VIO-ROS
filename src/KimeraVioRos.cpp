@@ -65,20 +65,7 @@ KimeraVioRos::KimeraVioRos()
     vio_params_ = std::make_shared<VioParams>(params_path);
   } else {
     VLOG(1) << "Using split parameter paths for general and sensor parameters";
-    vio_params_ = std::make_shared<VioParams>(
-        MAKE_CONFIG_FILEPATH(params_path, PipelineFilename),
-        MAKE_CONFIG_FILEPATH(sensor_params_path, ImuFilename),
-        MAKE_CONFIG_FILEPATH(sensor_params_path, LeftCameraFilename),
-        MAKE_CONFIG_FILEPATH(sensor_params_path, RightCameraFilename),
-        MAKE_CONFIG_FILEPATH(params_path, FrontendFilename),
-        MAKE_CONFIG_FILEPATH(params_path, BackendFilename),
-        MAKE_CONFIG_FILEPATH(params_path, LcdFilename),
-        MAKE_CONFIG_FILEPATH(params_path, DisplayFilename),
-        FLAGS_use_external_odometry
-            ? boost::optional<std::string>(
-                  MAKE_CONFIG_FILEPATH(sensor_params_path, OdometryFilename))
-            : boost::none,
-        true);
+    vio_params_ = std::make_shared<VioParams>(params_path, sensor_params_path);
   }
 }
 
