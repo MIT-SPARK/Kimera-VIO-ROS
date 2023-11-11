@@ -198,8 +198,11 @@ bool KimeraVioRos::spin() {
     // Run while ROS is ok and vio pipeline is not shutdown.
     ros::WallRate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {
-      // Print stats at 1hz
-      LOG_EVERY_N(INFO, 20) << vio_pipeline_->printStatistics();
+      const auto stats = vio_pipeline_->printStatistics();
+      if (!stats.empty()) {
+        LOG_EVERY_N(INFO, 20) << stats;
+      }
+
       rate.sleep();
 
       if (vio_pipeline_->hasFinished() && data_provider_->isShutdown()) {
