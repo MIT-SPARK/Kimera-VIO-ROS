@@ -99,6 +99,8 @@ bool KimeraVioRos::runKimeraVio() {
     ros_visualizer_ = nullptr;
   }
 
+  ros_lcd_visualizer_.reset(new RosLoopClosureVisualizer());
+
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
 
@@ -320,6 +322,14 @@ void KimeraVioRos::connectVIO() {
         &VIO::RgbdImuPipeline::fillDepthFrameQueue,
         CHECK_NOTNULL(dynamic_cast<RgbdImuPipeline*>(vio_pipeline_.get())),
         std::placeholders::_1));
+  }
+
+  if (ros_lcd_visualizer_) {
+    vio_pipeline_->registerLcdOutputCallback([&](const auto& msg) {
+      if (msg) {
+        ros_lcd_visualizer_->publishLcdOutput(msg);
+      }
+    });
   }
 }
 
