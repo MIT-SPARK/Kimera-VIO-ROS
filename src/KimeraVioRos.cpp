@@ -92,8 +92,8 @@ bool KimeraVioRos::runKimeraVio() {
 
     VLOG(1) << "Creating Ros Display.";
     CHECK(vio_params_);
-    ros_display_ = VIO::make_unique<RosDisplay>();
-    ros_visualizer_ = VIO::make_unique<RosVisualizer>(*vio_params_);
+    ros_display_ = std::make_unique<RosDisplay>();
+    ros_visualizer_ = std::make_unique<RosVisualizer>(*vio_params_);
   } else {
     ros_display_ = nullptr;
     ros_visualizer_ = nullptr;
@@ -130,21 +130,21 @@ bool KimeraVioRos::runKimeraVio() {
   switch (vio_params_->frontend_type_) {
     case VIO::FrontendType::kMonoImu: {
       vio_pipeline_ =
-          VIO::make_unique<MonoImuPipeline>(*vio_params_,
+          std::make_unique<MonoImuPipeline>(*vio_params_,
                                             std::move(ros_visualizer_),
                                             std::move(ros_display_),
                                             std::move(preloaded_vocab));
     } break;
     case VIO::FrontendType::kStereoImu: {
       vio_pipeline_ =
-          VIO::make_unique<StereoImuPipeline>(*vio_params_,
+          std::make_unique<StereoImuPipeline>(*vio_params_,
                                               std::move(ros_visualizer_),
                                               std::move(ros_display_),
                                               std::move(preloaded_vocab));
     } break;
     case VIO::FrontendType::kRgbdImu: {
       vio_pipeline_ =
-          VIO::make_unique<RgbdImuPipeline>(*vio_params_,
+          std::make_unique<RgbdImuPipeline>(*vio_params_,
                                             std::move(ros_visualizer_),
                                             std::move(ros_display_),
                                             std::move(preloaded_vocab));
@@ -262,11 +262,11 @@ RosDataProviderInterface::UniquePtr KimeraVioRos::createDataProvider(
   CHECK(nh_private_.getParam("online_run", online_run));
   if (online_run) {
     // Running ros online.
-    return VIO::make_unique<RosOnlineDataProvider>(vio_params);
+    return std::make_unique<RosOnlineDataProvider>(vio_params);
   } else {
     // Parse rosbag.
     auto rosbag_data_provider =
-        VIO::make_unique<RosbagDataProvider>(vio_params);
+        std::make_unique<RosbagDataProvider>(vio_params);
     rosbag_data_provider->initialize();
     return rosbag_data_provider;
   }
@@ -304,17 +304,13 @@ void KimeraVioRos::connectVIO() {
                 std::placeholders::_1));
 
   if (vio_params_->frontend_type_ == VIO::FrontendType::kStereoImu) {
-    VIO::StereoImuPipeline::UniquePtr stereo_pipeline =
-        VIO::safeCast<VIO::Pipeline, VIO::StereoImuPipeline>(
-            std::move(vio_pipeline_));
+    auto stereo_pipeline = dynamic_cast<StereoImuPipeline*>(vio_pipeline_.get());
+    CHECK(stereo_pipeline);
 
     data_provider_->registerRightFrameCallback(
         std::bind(&VIO::StereoImuPipeline::fillRightFrameQueue,
-                  std::ref(*CHECK_NOTNULL(stereo_pipeline.get())),
+                  std::ref(*stereo_pipeline),
                   std::placeholders::_1));
-
-    vio_pipeline_ = VIO::safeCast<VIO::StereoImuPipeline, VIO::Pipeline>(
-        std::move(stereo_pipeline));
   }
 
   if (vio_params_->frontend_type_ == VIO::FrontendType::kRgbdImu) {

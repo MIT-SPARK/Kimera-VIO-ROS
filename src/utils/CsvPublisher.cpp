@@ -19,7 +19,7 @@ CsvPublisher::CsvPublisher()
   CHECK(!world_frame_id_.empty());
 
   // We assume Euroc csv format (and re-use the EurocDataProvider parser).
-  euroc_data_provider_ = VIO::make_unique<EurocDataProvider>(vio_params_);
+  euroc_data_provider_ = std::make_unique<EurocDataProvider>(vio_params_);
   CHECK(euroc_data_provider_);
   // If parsed csv odometry is empty, nothing to do...
   if (euroc_data_provider_->gt_data_.map_to_gt_.empty()) {

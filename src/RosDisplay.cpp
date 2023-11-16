@@ -23,7 +23,7 @@ namespace VIO {
 
 RosDisplay::RosDisplay()
     : DisplayBase(VIO::DisplayType::kOpenCV), nh_private_("~"), image_publishers_(nullptr) {
-  image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
+  image_publishers_ = std::make_unique<ImagePublishers>(nh_private_);
 }
 
 void RosDisplay::spinOnce(DisplayInputBase::UniquePtr&& viz_output) {

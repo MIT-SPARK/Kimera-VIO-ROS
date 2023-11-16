@@ -45,7 +45,7 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
       image_size_(vio_params.camera_params_.at(0).image_size_),
       image_publishers_(nullptr) {
   //! To publish 2d images
-  image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
+  image_publishers_ = std::make_unique<ImagePublishers>(nh_private_);
 
   // Get ROS params
   CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
@@ -81,7 +81,7 @@ VisualizerOutput::UniquePtr RosVisualizer::spinOnce(
   }
 
   // Return empty output, since in ROS, we only publish, not display...
-  return VIO::make_unique<VisualizerOutput>();
+  return std::make_unique<VisualizerOutput>();
 }
 
 void RosVisualizer::publishBackendOutput(
