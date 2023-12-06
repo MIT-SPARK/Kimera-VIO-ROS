@@ -119,7 +119,7 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   // We set the queue to only 1, since we prefer to drop messages to reach
   // real-time than to be delayed...
   static constexpr size_t kMaxImagesQueueSize = 1u;
-  it_ = VIO::make_unique<image_transport::ImageTransport>(nh_);
+  it_ = std::make_unique<image_transport::ImageTransport>(nh_);
   switch (vio_params_.frontend_type_) {
     case FrontendType::kMonoImu: {
       subscribeMono(kMaxImagesQueueSize);
@@ -184,12 +184,12 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
     // queue. A value of 0 means to use the number of processor cores.
     static constexpr size_t kImuSpinnerThreads = 2u;
     imu_async_spinner_ =
-        VIO::make_unique<ros::AsyncSpinner>(kImuSpinnerThreads, &imu_queue_);
+        std::make_unique<ros::AsyncSpinner>(kImuSpinnerThreads, &imu_queue_);
 
     //! Vision Spinner
     // This async spinner will process the regular Global callback queue of ROS.
     static constexpr size_t kGlobalSpinnerThreads = 2u;
-    async_spinner_ = VIO::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
+    async_spinner_ = std::make_unique<ros::AsyncSpinner>(kGlobalSpinnerThreads);
   } else {
     LOG(INFO) << "RosOnlineDataProvider running in sequential mode.";
   }
@@ -218,7 +218,7 @@ void RosOnlineDataProvider::subscribeStereo(const size_t& kMaxImagesQueueSize) {
   right_img_subscriber_.subscribe(
       *it_, "right_cam/image_raw", kMaxImagesQueueSize);
   static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
-  sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
+  sync_img_ = std::make_unique<message_filters::Synchronizer<sync_pol_img>>(
       sync_pol_img(kMaxImageSynchronizerQueueSize),
       left_img_subscriber_,
       right_img_subscriber_);
@@ -238,7 +238,7 @@ void RosOnlineDataProvider::subscribeRgbd(const size_t& kMaxImagesQueueSize) {
       image_transport::TransportHints(
           "raw", ros::TransportHints(), nh_private_, "image_transport_depth"));
   static constexpr size_t kMaxImageSynchronizerQueueSize = 10u;
-  sync_img_ = VIO::make_unique<message_filters::Synchronizer<sync_pol_img>>(
+  sync_img_ = std::make_unique<message_filters::Synchronizer<sync_pol_img>>(
       sync_pol_img(kMaxImageSynchronizerQueueSize),
       left_img_subscriber_,
       depth_img_subscriber_);
@@ -306,7 +306,7 @@ void RosOnlineDataProvider::callbackMonoImage(
   if (!shutdown_) {
     CHECK(left_frame_callback_)
         << "Did you forget to register the left frame callback?";
-    left_frame_callback_(VIO::make_unique<Frame>(
+    left_frame_callback_(std::make_unique<Frame>(
         frame_count_, timestamp, cam_info, readRosImage(img_msg)));
     frame_count_++;
   }
@@ -329,13 +329,13 @@ void RosOnlineDataProvider::callbackStereoImages(
   if (!shutdown_) {
     CHECK(left_frame_callback_)
         << "Did you forget to register the left frame callback?";
-    left_frame_callback_(VIO::make_unique<Frame>(
+    left_frame_callback_(std::make_unique<Frame>(
         frame_count_, timestamp_left, left_cam_info, readRosImage(left_msg)));
 
     if (vio_params_.frontend_type_ == VIO::FrontendType::kStereoImu) {
       CHECK(right_frame_callback_)
           << "Did you forget to register the right frame callback?";
-      right_frame_callback_(VIO::make_unique<Frame>(
+      right_frame_callback_(std::make_unique<Frame>(
           frame_count_,
           force_same_image_timestamp_ ? timestamp_left : timestamp_right,
           right_cam_info,
@@ -359,12 +359,12 @@ void RosOnlineDataProvider::callbackRgbdImages(
   if (!shutdown_) {
     CHECK(left_frame_callback_)
         << "Did you forget to register the color frame callback?";
-    left_frame_callback_(VIO::make_unique<Frame>(
+    left_frame_callback_(std::make_unique<Frame>(
         frame_count_, timestamp_color, cam_info, readRosImage(color_msg)));
 
     CHECK(depth_frame_callback_)
         << "Did you forget to register the depth frame callback?";
-    depth_frame_callback_(VIO::make_unique<DepthFrame>(
+    depth_frame_callback_(std::make_unique<DepthFrame>(
         frame_count_,
         force_same_image_timestamp_ ? timestamp_color : timestamp_depth,
         readRosDepthImage(depth_msg)));

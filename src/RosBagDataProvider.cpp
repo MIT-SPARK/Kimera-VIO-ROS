@@ -193,7 +193,7 @@ bool RosbagDataProvider::spin() {
         // Send left frame data to Kimera:
         CHECK(left_frame_callback_)
             << "Did you forget to register the left frame callback?";
-        left_frame_callback_(VIO::make_unique<Frame>(
+        left_frame_callback_(std::make_unique<Frame>(
             k_,
             timestamp_frame_k,
             left_cam_info,
@@ -205,7 +205,7 @@ bool RosbagDataProvider::spin() {
               << "Did you forget to register the right frame callback?";
           static const CameraParams& right_cam_info =
               vio_params_.camera_params_.at(1);
-          right_frame_callback_(VIO::make_unique<Frame>(
+          right_frame_callback_(std::make_unique<Frame>(
               k_,
               timestamp_frame_k,
               right_cam_info,
@@ -215,7 +215,7 @@ bool RosbagDataProvider::spin() {
         if (vio_params_.frontend_type_ == VIO::FrontendType::kRgbdImu) {
           CHECK(depth_frame_callback_)
               << "Did you forget to register the depth frame callback?";
-          depth_frame_callback_(VIO::make_unique<DepthFrame>(
+          depth_frame_callback_(std::make_unique<DepthFrame>(
               k_,
               timestamp_frame_k,
               readRosDepthImage(rosbag_data_.depth_imgs_.at(k_))));

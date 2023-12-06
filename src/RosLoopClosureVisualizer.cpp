@@ -208,6 +208,8 @@ void RosLoopClosureVisualizer::updateRejectedEdges() {
   }
 }
 
+using PoseBetween = gtsam::BetweenFactor<gtsam::Pose3>;
+
 void RosLoopClosureVisualizer::updateNodesAndEdges(
     const FrameIDTimestampMap& times,
     const gtsam::NonlinearFactorGraph& nfg,
@@ -216,18 +218,14 @@ void RosLoopClosureVisualizer::updateNodesAndEdges(
   odometry_edges_.clear();
   // first store the factors as edges
   for (size_t i = 0; i < nfg.size(); i++) {
+    const auto factor = dynamic_cast<const PoseBetween*>(nfg[i].get());
     // check if between factor
-    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
-            nfg[i])) {
-      // convert to between factor
-      const gtsam::BetweenFactor<gtsam::Pose3>& factor =
-          *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
-              nfg[i]);
+    if (factor) {
       // convert between factor to PoseGraphEdge type
       pose_graph_tools::PoseGraphEdge edge;
       edge.header.frame_id = map_frame_id_;
-      edge.key_from = factor.front();
-      edge.key_to = factor.back();
+      edge.key_from = factor->front();
+      edge.key_to = factor->back();
       edge.robot_from = robot_id_;
       edge.robot_to = robot_id_;
       if (edge.key_to == edge.key_from + 1) {  // check if odom
@@ -236,13 +234,13 @@ void RosLoopClosureVisualizer::updateNodesAndEdges(
         edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
       }
       // transforms - translation
-      const gtsam::Point3& translation = factor.measured().translation();
+      const gtsam::Point3& translation = factor->measured().translation();
       edge.pose.position.x = translation.x();
       edge.pose.position.y = translation.y();
       edge.pose.position.z = translation.z();
       // transforms - rotation (to quaternion)
       const gtsam::Quaternion& quaternion =
-          factor.measured().rotation().toQuaternion();
+          factor->measured().rotation().toQuaternion();
       edge.pose.orientation.x = quaternion.x();
       edge.pose.orientation.y = quaternion.y();
       edge.pose.orientation.z = quaternion.z();
