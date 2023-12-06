@@ -6,24 +6,10 @@
  */
 #include "kimera_vio_ros/RosVisualizer.h"
 
-#include <string>
-
-#include <glog/logging.h>
-
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl_msgs/PolygonMesh.h>
-#include <pcl_ros/point_cloud.h>
-
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <glog/logging.h>
 #include <image_transport/image_transport.h>
-#include <nav_msgs/Odometry.h>
-#include <nav_msgs/Path.h>
-#include <ros/ros.h>
-#include <std_msgs/Float64MultiArray.h>
-#include <tf/transform_broadcaster.h>
-#include <tf2/buffer_core.h>
-
 #include <kimera-vio/backend/VioBackend-definitions.h>
 #include <kimera-vio/frontend/StereoVisionImuFrontend-definitions.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
@@ -31,6 +17,17 @@
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>
 #include <kimera-vio/visualizer/Visualizer3D.h>
+#include <nav_msgs/Odometry.h>
+#include <nav_msgs/Path.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_msgs/PolygonMesh.h>
+#include <pcl_ros/point_cloud.h>
+#include <ros/ros.h>
+#include <std_msgs/Float64MultiArray.h>
+#include <tf/transform_broadcaster.h>
+#include <tf2/buffer_core.h>
+
+#include <string>
 
 #include "kimera_vio_ros/utils/UtilsRos.h"
 
@@ -41,8 +38,8 @@ namespace VIO {
 RosVisualizer::RosVisualizer(const VioParams& vio_params)
     // I'm not sure we use this flag in ROS?
     : Visualizer3D(vio_params.frontend_type_ == FrontendType::kMonoImu
-                   ? VisualizationType::kNone
-                   : static_cast<VisualizationType>(FLAGS_viz_type)),
+                       ? VisualizationType::kNone
+                       : static_cast<VisualizationType>(FLAGS_viz_type)),
       nh_(),
       nh_private_("~"),
       image_size_(vio_params.camera_params_.at(0).image_size_),
@@ -71,11 +68,18 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
 
 VisualizerOutput::UniquePtr RosVisualizer::spinOnce(
     const VisualizerInput& viz_input) {
-  publishBackendOutput(viz_input.backend_output_);
-  publishFrontendOutput(viz_input.frontend_output_);
-  if (viz_input.mesher_output_) publishMesherOutput(viz_input.mesher_output_);
-  if (viz_input.lcd_output_)
-    lcd_visualizer_.publishLcdOutput(viz_input.lcd_output_);
+  if (viz_input.frontend_output_) {
+    publishFrontendOutput(viz_input.frontend_output_);
+  }
+
+  if (viz_input.backend_output_) {
+    publishBackendOutput(viz_input.backend_output_);
+  }
+
+  if (viz_input.mesher_output_) {
+    publishMesherOutput(viz_input.mesher_output_);
+  }
+
   // Return empty output, since in ROS, we only publish, not display...
   return VIO::make_unique<VisualizerOutput>();
 }

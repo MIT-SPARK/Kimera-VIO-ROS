@@ -13,6 +13,7 @@
 #include "kimera_vio_ros/RosDataProviderInterface.h"
 #include "kimera_vio_ros/RosDisplay.h"
 #include "kimera_vio_ros/RosVisualizer.h"
+#include "kimera_vio_ros/RosLoopClosureVisualizer.h"
 #include "kimera_vio_ros/LcdRegistrationServer.h"
 
 namespace VIO {
@@ -64,6 +65,7 @@ class KimeraVioRos {
   bool use_rviz_;  //! whether we want to use rviz for visualization or opencv.
   RosDisplay::UniquePtr ros_display_;
   RosVisualizer::UniquePtr ros_visualizer_;
+  RosLoopClosureVisualizer::Ptr ros_lcd_visualizer_;
 
   //! ROS Services
   ros::ServiceServer restart_vio_pipeline_srv_;

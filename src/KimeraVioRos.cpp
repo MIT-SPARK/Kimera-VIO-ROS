@@ -99,6 +99,8 @@ bool KimeraVioRos::runKimeraVio() {
     ros_visualizer_ = nullptr;
   }
 
+  ros_lcd_visualizer_.reset(new RosLoopClosureVisualizer());
+
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
 
@@ -198,8 +200,11 @@ bool KimeraVioRos::spin() {
     // Run while ROS is ok and vio pipeline is not shutdown.
     ros::WallRate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {
-      // Print stats at 1hz
-      LOG_EVERY_N(INFO, 20) << vio_pipeline_->printStatistics();
+      const auto stats = vio_pipeline_->printStatistics();
+      if (!stats.empty()) {
+        LOG_EVERY_N(INFO, 20) << stats;
+      }
+
       rate.sleep();
 
       if (vio_pipeline_->hasFinished() && data_provider_->isShutdown()) {
@@ -317,6 +322,14 @@ void KimeraVioRos::connectVIO() {
         &VIO::RgbdImuPipeline::fillDepthFrameQueue,
         CHECK_NOTNULL(dynamic_cast<RgbdImuPipeline*>(vio_pipeline_.get())),
         std::placeholders::_1));
+  }
+
+  if (ros_lcd_visualizer_) {
+    vio_pipeline_->registerLcdOutputCallback([&](const auto& msg) {
+      if (msg) {
+        ros_lcd_visualizer_->publishLcdOutput(msg);
+      }
+    });
   }
 }
 
