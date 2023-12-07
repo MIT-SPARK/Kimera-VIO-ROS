@@ -15,10 +15,6 @@
     uri: git@github.com:borglab/gtsam.git
     version: develop
 - git:
-    local-name: opencv3_catkin
-    uri: git@github.com:ethz-asl/opencv3_catkin.git
-    version: master
-- git:
     local-name: opengv_catkin
     uri: git@github.com:MIT-SPARK/opengv_catkin.git
     version: master
@@ -57,9 +53,5 @@
 - git:
     local-name: disparity_image_proc
     uri: git@github.com:MIT-SPARK/disparity_image_proc.git
-    version: master
-- git:
-    local-name: image_undistort
-    uri: git@github.com:ethz-asl/image_undistort.git
     version: master
 

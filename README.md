@@ -29,24 +29,25 @@ We kindly ask to cite our paper if you find this library useful:
 
 - Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
 
-- ROS non-default dependencies for [mesh_rviz_plugins](https://github.com/MIT-SPARK/mesh_rviz_plugins) (change `melodic` for your ROS distribution):
+- ROS non-default dependencies for [mesh_rviz_plugins](https://github.com/MIT-SPARK/mesh_rviz_plugins) (change `noetic` for your ROS distribution):
 ```bash
-sudo apt-get install ros-melodic-image-geometry ros-melodic-pcl-ros ros-melodic-cv-bridge
+sudo apt-get install ros-noetic-image-geometry ros-noetic-pcl-ros ros-noetic-cv-bridge
 ```
 
 - System dependencies:
 First, update package list: `sudo apt-get update`
 ```bash
+# For 20.04 (noetic)
 sudo apt-get install -y --no-install-recommends apt-utils
 sudo apt-get install -y \
       cmake build-essential unzip pkg-config autoconf \
       libboost-all-dev \
       libjpeg-dev libpng-dev libtiff-dev \
 # Use libvtk5-dev, libgtk2.0-dev in ubuntu 16.04 \
-      libvtk6-dev libgtk-3-dev \
+      libvtk7-dev libgtk-3-dev \
       libatlas-base-dev gfortran \
       libparmetis-dev \
-      python-wstool python-catkin-tools \
+      python3-wstool python3-catkin-tools \
 ```
 
 - GTSAM's Optional dependencies (highly recommended for speed)
@@ -125,7 +126,7 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
 
   > Note that you will need to both source ROS and your `catkin_ws` for each new terminal unless you added the following lines to your `~/.bashrc` file:
   > ```bash
-  > source /opt/ros/melodic/setup.bash  # Change `melodic` for your ROS distribution.
+  > source /opt/ros/noetic/setup.bash  # Change `noetic` for your ROS distribution.
   > source ~/catkin_ws/devel/setup.bash # Change `bash` to the shell you use.
   > ```
 
