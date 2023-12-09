@@ -4,23 +4,19 @@
     version: master
 - git:
     local-name: mesh_rviz_plugins
-    uri: git@github.com:ToniRV/mesh_rviz_plugins.git
+    uri: git@github.com:MIT-SPARK/mesh_rviz_plugins.git
     version: master
 - git:
     local-name: kimera_rviz_markers
-    uri: git@github.com:ToniRV/kimera_rviz_markers.git
+    uri: git@github.com:MIT-SPARK/kimera_rviz_markers.git
     version: master
 - git:
     local-name: gtsam
     uri: git@github.com:borglab/gtsam.git
     version: develop
 - git:
-    local-name: opencv3_catkin
-    uri: git@github.com:ethz-asl/opencv3_catkin.git
-    version: master
-- git:
     local-name: opengv_catkin
-    uri: git@github.com:ToniRV/opengv_catkin.git
+    uri: git@github.com:MIT-SPARK/opengv_catkin.git
     version: master
 - git:
     local-name: pose_graph_tools
@@ -28,7 +24,7 @@
     version: master
 - git:
     local-name: dbow2_catkin
-    uri: git@github.com:marcusabate/dbow2_catkin.git
+    uri: git@github.com:MIT-SPARK/dbow2_catkin.git
     version: master
 - git:
     local-name: cmake_external_project_catkin
@@ -56,10 +52,6 @@
     version: master
 - git:
     local-name: disparity_image_proc
-    uri: git@github.com:ToniRV/disparity_image_proc.git
-    version: master
-- git:
-    local-name: image_undistort
-    uri: git@github.com:ethz-asl/image_undistort.git
+    uri: git@github.com:MIT-SPARK/disparity_image_proc.git
     version: master
 

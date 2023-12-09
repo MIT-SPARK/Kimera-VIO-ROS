@@ -20,6 +20,7 @@
 
 // Dependencies from VIO
 #include <kimera-vio/pipeline/MonoImuPipeline.h>
+#include <kimera-vio/pipeline/RgbdImuPipeline.h>
 #include <kimera-vio/pipeline/StereoImuPipeline.h>
 #include <kimera-vio/utils/Timer.h>
 
@@ -30,10 +31,14 @@
 
 namespace VIO {
 
+#define MAKE_CONFIG_FILEPATH(dir_to_use, config_name) \
+  dir_to_use + '/' + VioParams::k##config_name
+
 KimeraVioRos::KimeraVioRos()
     : nh_private_("~"),
       vio_params_(nullptr),
       vio_pipeline_(nullptr),
+      use_lcd_registration_server_(false),
       ros_display_(nullptr),
       ros_visualizer_(nullptr),
       data_provider_(nullptr),
@@ -43,11 +48,36 @@ KimeraVioRos::KimeraVioRos()
   restart_vio_pipeline_srv_ = nh_private_.advertiseService(
       "restart_kimera_vio", &KimeraVioRos::restartKimeraVio, this);
 
+  CHECK(nh_private_.getParam("use_rviz", use_rviz_));
+
+  nh_private_.getParam("use_lcd_registration_server",
+                       use_lcd_registration_server_);
+
   // Parse VIO parameters
-  std::string params_folder_path;
-  CHECK(nh_private_.getParam("params_folder_path", params_folder_path));
-  CHECK(!params_folder_path.empty());
-  vio_params_ = std::make_shared<VioParams>(params_folder_path);
+  std::string params_path;
+  CHECK(nh_private_.getParam("params_folder_path", params_path));
+  CHECK(!params_path.empty());
+
+  std::string sensor_params_path;
+  nh_private_.getParam("sensor_params_folder_path", sensor_params_path);
+  if (sensor_params_path.empty()) {
+    VLOG(1) << "Using provided parameter path for every configuration file";
+    vio_params_ = std::make_shared<VioParams>(params_path);
+  } else {
+    VLOG(1) << "Using split parameter paths for general and sensor parameters";
+    vio_params_ = std::make_shared<VioParams>(params_path, sensor_params_path);
+  }
+}
+
+#undef MAKE_CONFIG_FILEPATH
+
+KimeraVioRos::~KimeraVioRos() {
+  // necessary to clean this before the pipeline disappears (contains a bare
+  // pointer to memory that the pipline owns)
+  if (lcd_registration_server_) {
+    lcd_registration_server_->stop();
+    lcd_registration_server_.reset();
+  }
 }
 
 bool KimeraVioRos::runKimeraVio() {
@@ -55,14 +85,21 @@ bool KimeraVioRos::runKimeraVio() {
   // the data provider.
   // NOTE: had the data provider been destroyed before, the vio would be calling
   // the shutdown function of a deleted object, aka segfault.
-  VLOG(1) << "Destroy Ros Display.";
-  ros_display_.reset();
-  ros_visualizer_.reset();
+  if (use_rviz_) {
+    VLOG(1) << "Destroy Ros Display.";
+    ros_display_.reset();
+    ros_visualizer_.reset();
 
-  VLOG(1) << "Creating Ros Display.";
-  CHECK(vio_params_);
-  ros_display_ = VIO::make_unique<RosDisplay>();
-  ros_visualizer_ = VIO::make_unique<RosVisualizer>(*vio_params_);
+    VLOG(1) << "Creating Ros Display.";
+    CHECK(vio_params_);
+    ros_display_ = std::make_unique<RosDisplay>();
+    ros_visualizer_ = std::make_unique<RosVisualizer>(*vio_params_);
+  } else {
+    ros_display_ = nullptr;
+    ros_visualizer_ = nullptr;
+  }
+
+  ros_lcd_visualizer_.reset(new RosLoopClosureVisualizer());
 
   VLOG(1) << "Destroy Vio Pipeline.";
   vio_pipeline_.reset();
@@ -70,6 +107,11 @@ bool KimeraVioRos::runKimeraVio() {
   // Second, destroy dataset parser.
   VLOG(1) << "Destroy Data Provider.";
   data_provider_.reset();
+
+  std::unique_ptr<PreloadedVocab> preloaded_vocab;
+  if (FLAGS_use_lcd) {
+    preloaded_vocab.reset(new PreloadedVocab());
+  }
 
   // Then, create dataset parser. This must be before vio pipeline bcs
   // the data provider may modify the init gt pose.
@@ -79,17 +121,33 @@ bool KimeraVioRos::runKimeraVio() {
 
   // Then, create Kimera-VIO from scratch.
   VLOG(1) << "Creating Kimera-VIO.";
-  CHECK(ros_display_);
+  if (use_rviz_) {
+    CHECK(ros_display_);
+    CHECK(ros_visualizer_);
+  }
 
   vio_pipeline_ = nullptr;
   switch (vio_params_->frontend_type_) {
     case VIO::FrontendType::kMonoImu: {
-      vio_pipeline_ = VIO::make_unique<VIO::MonoImuPipeline>(
-          *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
+      vio_pipeline_ =
+          std::make_unique<MonoImuPipeline>(*vio_params_,
+                                            std::move(ros_visualizer_),
+                                            std::move(ros_display_),
+                                            std::move(preloaded_vocab));
     } break;
     case VIO::FrontendType::kStereoImu: {
-      vio_pipeline_ = VIO::make_unique<VIO::StereoImuPipeline>(
-          *vio_params_, std::move(ros_visualizer_), std::move(ros_display_));
+      vio_pipeline_ =
+          std::make_unique<StereoImuPipeline>(*vio_params_,
+                                              std::move(ros_visualizer_),
+                                              std::move(ros_display_),
+                                              std::move(preloaded_vocab));
+    } break;
+    case VIO::FrontendType::kRgbdImu: {
+      vio_pipeline_ =
+          std::make_unique<RgbdImuPipeline>(*vio_params_,
+                                            std::move(ros_visualizer_),
+                                            std::move(ros_display_),
+                                            std::move(preloaded_vocab));
     } break;
     default: {
       LOG(FATAL) << "Unrecognized frontend type: "
@@ -97,8 +155,17 @@ bool KimeraVioRos::runKimeraVio() {
                  << ". 0: Mono, 1: Stereo.";
     } break;
   }
-  
+
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
+  if (use_lcd_registration_server_) {
+    LcdModule* lcd = vio_pipeline_->getLcdModule();
+    if (!lcd) {
+      LOG(ERROR)
+          << "LCD module isn't valid: will not start registration server.";
+    } else {
+      lcd_registration_server_.reset(new LcdRegistrationServer(lcd));
+    }
+  }
 
   // Finally, connect data_provider and vio_pipeline
   VLOG(1) << "Connecting Vio Pipeline and Data Provider.";
@@ -131,13 +198,18 @@ bool KimeraVioRos::spin() {
                    &VIO::Pipeline::spin,
                    CHECK_NOTNULL(vio_pipeline_.get()));
     // Run while ROS is ok and vio pipeline is not shutdown.
-    ros::Rate rate(20);  // 20 Hz
+    ros::WallRate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {
-      // Print stats at 1hz
-      LOG_EVERY_N(INFO, 20) << vio_pipeline_->printStatistics();
-      // Mind that if ROS is using sim_time, this will block if /clock
-      // is not published (i.e. when pausing the rosbag).
+      const auto stats = vio_pipeline_->printStatistics();
+      if (!stats.empty()) {
+        LOG_EVERY_N(INFO, 20) << stats;
+      }
+
       rate.sleep();
+
+      if (vio_pipeline_->hasFinished() && data_provider_->isShutdown()) {
+        break;
+      }
     }
 
     if (!restart_vio_pipeline_) {
@@ -190,11 +262,11 @@ RosDataProviderInterface::UniquePtr KimeraVioRos::createDataProvider(
   CHECK(nh_private_.getParam("online_run", online_run));
   if (online_run) {
     // Running ros online.
-    return VIO::make_unique<RosOnlineDataProvider>(vio_params);
+    return std::make_unique<RosOnlineDataProvider>(vio_params);
   } else {
     // Parse rosbag.
     auto rosbag_data_provider =
-        VIO::make_unique<RosbagDataProvider>(vio_params);
+        std::make_unique<RosbagDataProvider>(vio_params);
     rosbag_data_provider->initialize();
     return rosbag_data_provider;
   }
@@ -226,18 +298,34 @@ void KimeraVioRos::connectVIO() {
                 std::ref(*CHECK_NOTNULL(vio_pipeline_.get())),
                 std::placeholders::_1));
 
+  data_provider_->registerExternalOdomCallback(
+      std::bind(&VIO::Pipeline::fillExternalOdomQueue,
+                std::ref(*CHECK_NOTNULL(vio_pipeline_.get())),
+                std::placeholders::_1));
+
   if (vio_params_->frontend_type_ == VIO::FrontendType::kStereoImu) {
-    VIO::StereoImuPipeline::UniquePtr stereo_pipeline =
-        VIO::safeCast<VIO::Pipeline, VIO::StereoImuPipeline>(
-            std::move(vio_pipeline_));
+    auto stereo_pipeline = dynamic_cast<StereoImuPipeline*>(vio_pipeline_.get());
+    CHECK(stereo_pipeline);
 
     data_provider_->registerRightFrameCallback(
         std::bind(&VIO::StereoImuPipeline::fillRightFrameQueue,
-                  std::ref(*CHECK_NOTNULL(stereo_pipeline.get())),
+                  std::ref(*stereo_pipeline),
                   std::placeholders::_1));
+  }
 
-    vio_pipeline_ = VIO::safeCast<VIO::StereoImuPipeline, VIO::Pipeline>(
-        std::move(stereo_pipeline));
+  if (vio_params_->frontend_type_ == VIO::FrontendType::kRgbdImu) {
+    data_provider_->registerDepthFrameCallback(std::bind(
+        &VIO::RgbdImuPipeline::fillDepthFrameQueue,
+        CHECK_NOTNULL(dynamic_cast<RgbdImuPipeline*>(vio_pipeline_.get())),
+        std::placeholders::_1));
+  }
+
+  if (ros_lcd_visualizer_) {
+    vio_pipeline_->registerLcdOutputCallback([&](const auto& msg) {
+      if (msg) {
+        ros_lcd_visualizer_->publishLcdOutput(msg);
+      }
+    });
   }
 }
 

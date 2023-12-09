@@ -13,7 +13,6 @@
 #include <geometry_msgs/Transform.h>
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
-#include <sensor_msgs/CameraInfo.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -69,8 +68,14 @@ void msgCamInfoToCameraParams(const sensor_msgs::CameraInfoConstPtr& cam_info,
   cam_params->camera_id_ = cam_info->header.frame_id;
   CHECK(!cam_params->camera_id_.empty());
 
-  cam_params->distortion_model_ =
-      CameraParams::stringToDistortion(cam_info->distortion_model, "pinhole");
+  VIO::CameraModel cam_model;
+  if (cam_info->distortion_model == "omni") {
+    cam_model = VIO::CameraModel::OMNI;
+  } else {
+    cam_model = VIO::CameraModel::PINHOLE;
+  }
+  cam_params->distortion_model_ = CameraParams::stringToDistortionModel(
+      cam_info->distortion_model, cam_model);
 
   const std::vector<double>& distortion_coeffs = cam_info->D;
   CHECK_EQ(distortion_coeffs.size(), 4);
@@ -114,11 +119,14 @@ void rosOdometryToVioNavState(const nav_msgs::Odometry& odom,
 
   rosOdometryToGtsamPose(odom, &vio_navstate->pose_);
 
-  // World to Body rotation
-  gtsam::Vector3 velocity(odom.twist.twist.linear.x,
+  // velocity of body frame w.r.t. world frame in body frame
+  gtsam::Vector3 body_world_Vel_body(odom.twist.twist.linear.x,
                           odom.twist.twist.linear.y,
                           odom.twist.twist.linear.z);
-  vio_navstate->velocity_ = velocity;
+  // velocity of body frame w.r.t world frame in world frame
+  const gtsam::Rot3 world_R_body = vio_navstate->pose_.rotation();
+  gtsam::Vector3 body_world_Vel_world = world_R_body * body_world_Vel_body;
+  vio_navstate->velocity_ = body_world_Vel_world;
 
   // Get acceleration and gyro biases. Default is 0.
   std::vector<double> parsed_acc_bias = {0.0, 0.0, 0.0};

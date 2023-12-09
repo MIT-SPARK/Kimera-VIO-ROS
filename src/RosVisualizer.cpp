@@ -6,24 +6,10 @@
  */
 #include "kimera_vio_ros/RosVisualizer.h"
 
-#include <string>
-
-#include <glog/logging.h>
-
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl_msgs/PolygonMesh.h>
-#include <pcl_ros/point_cloud.h>
-
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <glog/logging.h>
 #include <image_transport/image_transport.h>
-#include <nav_msgs/Odometry.h>
-#include <nav_msgs/Path.h>
-#include <ros/ros.h>
-#include <std_msgs/Float64MultiArray.h>
-#include <tf/transform_broadcaster.h>
-#include <tf2/buffer_core.h>
-
 #include <kimera-vio/backend/VioBackend-definitions.h>
 #include <kimera-vio/frontend/StereoVisionImuFrontend-definitions.h>
 #include <kimera-vio/loopclosure/LoopClosureDetector-definitions.h>
@@ -31,28 +17,41 @@
 #include <kimera-vio/mesh/Mesher-definitions.h>
 #include <kimera-vio/pipeline/QueueSynchronizer.h>
 #include <kimera-vio/visualizer/Visualizer3D.h>
+#include <nav_msgs/Odometry.h>
+#include <nav_msgs/Path.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_msgs/PolygonMesh.h>
+#include <pcl_ros/point_cloud.h>
+#include <ros/ros.h>
+#include <std_msgs/Float64MultiArray.h>
+#include <tf/transform_broadcaster.h>
+#include <tf2/buffer_core.h>
+
+#include <string>
 
 #include "kimera_vio_ros/utils/UtilsRos.h"
+
+DECLARE_int32(viz_type);
 
 namespace VIO {
 
 RosVisualizer::RosVisualizer(const VioParams& vio_params)
     // I'm not sure we use this flag in ROS?
     : Visualizer3D(vio_params.frontend_type_ == FrontendType::kMonoImu
-                   ? VisualizationType::kNone
-                   : VisualizationType::kMesh2dTo3dSparse),
+                       ? VisualizationType::kNone
+                       : static_cast<VisualizationType>(FLAGS_viz_type)),
       nh_(),
       nh_private_("~"),
       image_size_(vio_params.camera_params_.at(0).image_size_),
       image_publishers_(nullptr) {
   //! To publish 2d images
-  image_publishers_ = VIO::make_unique<ImagePublishers>(nh_private_);
+  image_publishers_ = std::make_unique<ImagePublishers>(nh_private_);
 
   // Get ROS params
   CHECK(nh_private_.getParam("base_link_frame_id", base_link_frame_id_));
   CHECK(!base_link_frame_id_.empty());
-  CHECK(nh_private_.getParam("world_frame_id", world_frame_id_));
-  CHECK(!world_frame_id_.empty());
+  CHECK(nh_private_.getParam("odom_frame_id", odom_frame_id_));
+  CHECK(!odom_frame_id_.empty());
   CHECK(nh_private_.getParam("map_frame_id", map_frame_id_));
   CHECK(!map_frame_id_.empty());
 
@@ -69,13 +68,20 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
 
 VisualizerOutput::UniquePtr RosVisualizer::spinOnce(
     const VisualizerInput& viz_input) {
-  publishBackendOutput(viz_input.backend_output_);
-  publishFrontendOutput(viz_input.frontend_output_);
-  if (viz_input.mesher_output_) publishMesherOutput(viz_input.mesher_output_);
-  if (viz_input.lcd_output_)
-    lcd_visualizer_.publishLcdOutput(viz_input.lcd_output_);
+  if (viz_input.frontend_output_) {
+    publishFrontendOutput(viz_input.frontend_output_);
+  }
+
+  if (viz_input.backend_output_) {
+    publishBackendOutput(viz_input.backend_output_);
+  }
+
+  if (viz_input.mesher_output_) {
+    publishMesherOutput(viz_input.mesher_output_);
+  }
+
   // Return empty output, since in ROS, we only publish, not display...
-  return VIO::make_unique<VisualizerOutput>();
+  return std::make_unique<VisualizerOutput>();
 }
 
 void RosVisualizer::publishBackendOutput(
@@ -118,7 +124,7 @@ void RosVisualizer::publishTimeHorizonPointCloud(
       output->lmk_id_to_lmk_type_map_;
 
   PointCloudXYZRGB::Ptr msg(new PointCloudXYZRGB);
-  msg->header.frame_id = world_frame_id_;
+  msg->header.frame_id = odom_frame_id_;
   msg->is_dense = true;
   msg->height = 1;
   msg->width = points_with_id.size();
@@ -205,7 +211,7 @@ void RosVisualizer::publishPerFrameMesh3D(
 
   pcl_msgs::PolygonMesh::Ptr msg(new pcl_msgs::PolygonMesh());
   msg->header.stamp.fromNSec(output->timestamp_);
-  msg->header.frame_id = world_frame_id_;
+  msg->header.frame_id = odom_frame_id_;
 
   // Create point cloud to hold vertices.
   pcl::PointCloud<PointNormalUV> cloud;
@@ -310,7 +316,7 @@ void RosVisualizer::publishState(const BackendOutput::ConstPtr& output) const {
 
   // Create header.
   odometry_msg.header.stamp.fromNSec(ts);
-  odometry_msg.header.frame_id = world_frame_id_;
+  odometry_msg.header.frame_id = odom_frame_id_;
   odometry_msg.child_frame_id = base_link_frame_id_;
 
   // Position
@@ -512,7 +518,7 @@ void RosVisualizer::publishTf(const BackendOutput::ConstPtr& output) {
   // Publish base_link TF.
   geometry_msgs::TransformStamped odom_tf;
   odom_tf.header.stamp.fromNSec(timestamp);
-  odom_tf.header.frame_id = world_frame_id_;
+  odom_tf.header.frame_id = odom_frame_id_;
   odom_tf.child_frame_id = base_link_frame_id_;
 
   utils::gtsamPoseToRosTf(pose, &odom_tf.transform);

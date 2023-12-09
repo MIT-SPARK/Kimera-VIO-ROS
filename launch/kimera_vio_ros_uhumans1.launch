@@ -3,6 +3,8 @@
   <arg name="verbosity"      default="0"/>
   <arg name="online"         default="true"/>
   <arg name="use_lcd"        default="true"/>
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
 
   <param name="use_sim_time" value="true"/>
 
@@ -12,8 +14,6 @@
        if="$(arg log_output)"/>
   <arg name="log_gt_data" default="true"/>
   <arg name="gt_topic"    default="/tesse/odom"/>
-
-  <arg name="use_online_cam_params" default="false"/>
 
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path"
@@ -27,9 +27,7 @@
 
     <!-- Subscriber Topics -->
   <arg name="left_cam_topic"        default="/tesse/left_cam/image_raw"/>
-  <arg name="left_cam_info_topic"   default="/tesse/left_cam/camera_info"/>
   <arg name="right_cam_topic"       default="/tesse/right_cam/image_raw"/>
-  <arg name="right_cam_info_topic"  default="/tesse/right_cam/camera_info"/>
   <arg name="imu_topic"             default="/tesse/imu"/>
 
   <!-- Empty string ("") means no ground-truth available. Used for init if
@@ -46,8 +44,6 @@
       <remap from="left/image_raw"          to="$(arg left_cam_topic)"/>
       <remap from="right/image_raw"         to="$(arg right_cam_topic)"/>
 
-      <remap from="left/camera_info"        to="$(arg left_cam_info_topic)"/>
-      <remap from="right/camera_info"       to="$(arg right_cam_info_topic)"/>
       <!-- Output -->
       <remap from="/stereo_gray/points2"    to="/stereo_gray/points2"/>
       <remap from="/stereo_gray/disparity"  to="/stereo_gray/disparity"/>

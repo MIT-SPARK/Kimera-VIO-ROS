@@ -13,6 +13,8 @@
 #include "kimera_vio_ros/RosDataProviderInterface.h"
 #include "kimera_vio_ros/RosDisplay.h"
 #include "kimera_vio_ros/RosVisualizer.h"
+#include "kimera_vio_ros/RosLoopClosureVisualizer.h"
+#include "kimera_vio_ros/LcdRegistrationServer.h"
 
 namespace VIO {
 
@@ -22,7 +24,7 @@ class KimeraVioRos {
   KIMERA_POINTER_TYPEDEFS(KimeraVioRos);
 
   KimeraVioRos();
-  virtual ~KimeraVioRos() = default;
+  virtual ~KimeraVioRos();
 
  public:
   bool runKimeraVio();
@@ -52,10 +54,18 @@ class KimeraVioRos {
   VioParams::Ptr vio_params_;
   Pipeline::UniquePtr vio_pipeline_;
 
+  //! External LCD service manager
+  bool use_lcd_registration_server_;
+  std::unique_ptr<LcdRegistrationServer> lcd_registration_server_;
+
   //! Data provider
   RosDataProviderInterface::UniquePtr data_provider_;
+
+  //! Visualization
+  bool use_rviz_;  //! whether we want to use rviz for visualization or opencv.
   RosDisplay::UniquePtr ros_display_;
   RosVisualizer::UniquePtr ros_visualizer_;
+  RosLoopClosureVisualizer::Ptr ros_lcd_visualizer_;
 
   //! ROS Services
   ros::ServiceServer restart_vio_pipeline_srv_;

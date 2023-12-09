@@ -29,24 +29,25 @@ We kindly ask to cite our paper if you find this library useful:
 
 - Install ROS by following [our reference](./docs/ros_installation.md), or the official [ROS website](https://www.ros.org/install/).
 
-- ROS non-default dependencies for [mesh_rviz_plugins](https://github.com/ToniRV/mesh_rviz_plugins) (change `melodic` for your ROS distribution):
+- ROS non-default dependencies for [mesh_rviz_plugins](https://github.com/MIT-SPARK/mesh_rviz_plugins) (change `noetic` for your ROS distribution):
 ```bash
-sudo apt-get install ros-melodic-image-geometry ros-melodic-pcl-ros ros-melodic-cv-bridge
+sudo apt-get install ros-noetic-image-geometry ros-noetic-pcl-ros ros-noetic-cv-bridge
 ```
 
 - System dependencies:
 First, update package list: `sudo apt-get update`
 ```bash
+# For 20.04 (noetic)
 sudo apt-get install -y --no-install-recommends apt-utils
 sudo apt-get install -y \
       cmake build-essential unzip pkg-config autoconf \
       libboost-all-dev \
       libjpeg-dev libpng-dev libtiff-dev \
 # Use libvtk5-dev, libgtk2.0-dev in ubuntu 16.04 \
-      libvtk6-dev libgtk-3-dev \
+      libvtk7-dev libgtk-3-dev \
       libatlas-base-dev gfortran \
       libparmetis-dev \
-      python-wstool python-catkin-tools \
+      python3-wstool python3-catkin-tools \
 ```
 
 - GTSAM's Optional dependencies (highly recommended for speed)
@@ -116,7 +117,7 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
   ```bash
   rviz -d $(rospack find kimera_vio_ros)/rviz/kimera_vio_euroc.rviz
   ```
-  > Note: this rviz configuration makes use of a rviz plugin: [mesh_rviz_plugins](https://github.com/ToniRV/mesh_rviz_plugins). To visualize the textured 3D mesh, clone this plugin to your catkin workspace and catkin build it (note that this should be done automatically via `wstool`).
+  > Note: this rviz configuration makes use of a rviz plugin: [mesh_rviz_plugins](https://github.com/MIT-SPARK/mesh_rviz_plugins). To visualize the textured 3D mesh, clone this plugin to your catkin workspace and catkin build it (note that this should be done automatically via `wstool`).
 
   4. Finally, in another terminal, launch the downloaded Euroc rosbag:
   ```bash
@@ -125,7 +126,7 @@ Download a [Euroc](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisuali
 
   > Note that you will need to both source ROS and your `catkin_ws` for each new terminal unless you added the following lines to your `~/.bashrc` file:
   > ```bash
-  > source /opt/ros/melodic/setup.bash  # Change `melodic` for your ROS distribution.
+  > source /opt/ros/noetic/setup.bash  # Change `noetic` for your ROS distribution.
   > source ~/catkin_ws/devel/setup.bash # Change `bash` to the shell you use.
   > ```
 
@@ -150,10 +151,9 @@ catkin run_tests --no-deps --this
 ### Using camera_info topics instead of Yaml parameters
 
 It is sometimes convenient to use the `camera_info` topics to parse the camera's parameters.
-There are currently two ways of using these topics:
+There is currently only one way to use these topics:
  - Offline: using the launch file `launch/cam_info_yamlizer.launch` which will generate yaml files out of the topics.
  You need to make sure that the `frame_id`s and the ROS topics are correctly set. Also, mind that the left/right cam frame ids are typically set as static tfs in a rosbag, therefore, first launch the node, and then run the rosbag (in case you see an exception bcs of a missing frame_id).
- - Online: setting the flag `use_online_cam_params` (see `launch/kimera_vio_ros.launch`) to true, and ensuring ROS topics are correctly set.
 
 ### Restart Kimera-VIO
 
@@ -178,7 +178,7 @@ roslaunch kimera_vio_ros kimera_vio_ros_euroc run_stereo_dense:=1
 
 This will publish a `/stereo_gray/points2` topic, which you can visualize in Rviz as a 3D pointcloud.
 Alternatively, if you want to visualize the depth image, since Rviz does not provide a plugin to
-visualize a [disparity image](http://docs.ros.org/api/stereo_msgs/html/msg/DisparityImage.html), we also run a [disparity_image_proc](https://github.com/ToniRV/disparity_image_proc) nodelet that will publish the depth image to `/stereo_gray/disparity_image_proc/depth/image_raw`.
+visualize a [disparity image](http://docs.ros.org/api/stereo_msgs/html/msg/DisparityImage.html), we also run a [disparity_image_proc](https://github.com/MIT-SPARK/disparity_image_proc) nodelet that will publish the depth image to `/stereo_gray/disparity_image_proc/depth/image_raw`.
 
 # Hardware use
 
