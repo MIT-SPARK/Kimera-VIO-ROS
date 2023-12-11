@@ -19,9 +19,6 @@
 #include <kimera-vio/visualizer/Visualizer3D.h>
 #include <pcl/point_types.h>
 #include <pcl_ros/point_cloud.h>
-#include <pose_graph_tools/PoseGraph.h>
-#include <pose_graph_tools/PoseGraphEdge.h>
-#include <pose_graph_tools/PoseGraphNode.h>
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
 

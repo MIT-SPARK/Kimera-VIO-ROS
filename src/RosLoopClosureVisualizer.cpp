@@ -53,19 +53,22 @@ RosLoopClosureVisualizer::RosLoopClosureVisualizer() :
 
   // Publishers
   trajectory_pub_ = nh_.advertise<nav_msgs::Path>("optimized_trajectory", 1);
-  posegraph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1);
-  posegraph_incremental_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>(
+  posegraph_pub_ =
+      nh_.advertise<pose_graph_tools_msgs::PoseGraph>("pose_graph", 1);
+  posegraph_incremental_pub_ = nh_.advertise<pose_graph_tools_msgs::PoseGraph>(
       "pose_graph_incremental", 1000);
   odometry_pub_ = nh_.advertise<nav_msgs::Odometry>("optimized_odometry", 1);
-  bow_query_pub_ = nh_.advertise<pose_graph_tools::BowQueries>("bow_query", 1000);
-  vlc_frame_pub_ = nh_.advertise<pose_graph_tools::VLCFrames>("vlc_frames", 100);
+  bow_query_pub_ =
+      nh_.advertise<pose_graph_tools_msgs::BowQueries>("bow_query", 1000);
+  vlc_frame_pub_ =
+      nh_.advertise<pose_graph_tools_msgs::VLCFrames>("vlc_frames", 100);
   // Service
   vlc_frame_server_ = nh_.advertiseService(
       "vlc_frame_query", &RosLoopClosureVisualizer::VLCServiceCallback, this);
 
   // Initialize BoW queries
   for (uint16_t robot_id = 0; robot_id <= robot_id_; ++robot_id) {
-    pose_graph_tools::BowQueries msg;
+    pose_graph_tools_msgs::BowQueries msg;
     msg.destination_robot_id = robot_id;
     bow_queries_[robot_id] = msg;
   }
@@ -85,7 +88,7 @@ void RosLoopClosureVisualizer::publishLcdOutput(
   processBowQuery();
   if (publish_vlc_frames_) {
     size_t pose_id = frames_.size() - 1;
-    pose_graph_tools::VLCFrameMsg frame_msg;
+    pose_graph_tools_msgs::VLCFrameMsg frame_msg;
     if (getFrameMsg(pose_id, frame_msg)) {
       new_frames_msg_.frames.push_back(frame_msg);
     }
@@ -173,10 +176,10 @@ void RosLoopClosureVisualizer::publishOptimizedTrajectory(
 // And differentiate the inliers and the outliers
 void RosLoopClosureVisualizer::updateRejectedEdges() {
   // first update the rejected edges
-  for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
+  for (pose_graph_tools_msgs::PoseGraphEdge& loop_closure_edge :
        loop_closure_edges_) {
     bool is_inlier = false;
-    for (pose_graph_tools::PoseGraphEdge& inlier_edge : inlier_edges_) {
+    for (pose_graph_tools_msgs::PoseGraphEdge& inlier_edge : inlier_edges_) {
       if (loop_closure_edge.key_from == inlier_edge.key_from &&
           loop_closure_edge.key_to == inlier_edge.key_to) {
         is_inlier = true;
@@ -186,14 +189,14 @@ void RosLoopClosureVisualizer::updateRejectedEdges() {
     if (!is_inlier) {
       // set as rejected loop closure
       loop_closure_edge.type =
-          pose_graph_tools::PoseGraphEdge::REJECTED_LOOPCLOSE;
+          pose_graph_tools_msgs::PoseGraphEdge::REJECTED_LOOPCLOSE;
     }
   }
 
   // Then update the loop edges
-  for (pose_graph_tools::PoseGraphEdge& inlier_edge : inlier_edges_) {
+  for (pose_graph_tools_msgs::PoseGraphEdge& inlier_edge : inlier_edges_) {
     bool previously_stored = false;
-    for (pose_graph_tools::PoseGraphEdge& loop_closure_edge :
+    for (pose_graph_tools_msgs::PoseGraphEdge& loop_closure_edge :
          loop_closure_edges_) {
       if (inlier_edge.key_from == loop_closure_edge.key_from &&
           inlier_edge.key_to == loop_closure_edge.key_to) {
@@ -222,16 +225,16 @@ void RosLoopClosureVisualizer::updateNodesAndEdges(
     // check if between factor
     if (factor) {
       // convert between factor to PoseGraphEdge type
-      pose_graph_tools::PoseGraphEdge edge;
+      pose_graph_tools_msgs::PoseGraphEdge edge;
       edge.header.frame_id = map_frame_id_;
       edge.key_from = factor->front();
       edge.key_to = factor->back();
       edge.robot_from = robot_id_;
       edge.robot_to = robot_id_;
       if (edge.key_to == edge.key_from + 1) {  // check if odom
-        edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
+        edge.type = pose_graph_tools_msgs::PoseGraphEdge::ODOM;
       } else {
-        edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
+        edge.type = pose_graph_tools_msgs::PoseGraphEdge::LOOPCLOSE;
       }
       // transforms - translation
       const gtsam::Point3& translation = factor->measured().translation();
@@ -247,7 +250,7 @@ void RosLoopClosureVisualizer::updateNodesAndEdges(
       edge.pose.orientation.w = quaternion.w();
 
       // TODO: add covariance
-      if (edge.type == pose_graph_tools::PoseGraphEdge::ODOM) {
+      if (edge.type == pose_graph_tools_msgs::PoseGraphEdge::ODOM) {
         odometry_edges_.push_back(edge);
       } else {
         inlier_edges_.push_back(edge);
@@ -262,7 +265,7 @@ void RosLoopClosureVisualizer::updateNodesAndEdges(
   // Then store the values as nodes
   gtsam::KeyVector key_list = values.keys();
   for (size_t i = 0; i < key_list.size(); i++) {
-    pose_graph_tools::PoseGraphNode node;
+    pose_graph_tools_msgs::PoseGraphNode node;
     node.key = key_list[i];
     node.robot_id = robot_id_;
 
@@ -290,9 +293,9 @@ void RosLoopClosureVisualizer::updateNodesAndEdges(
   return;
 }
 
-pose_graph_tools::PoseGraph RosLoopClosureVisualizer::getPosegraphMsg() {
+pose_graph_tools_msgs::PoseGraph RosLoopClosureVisualizer::getPosegraphMsg() {
   // pose graph getter
-  pose_graph_tools::PoseGraph pose_graph;
+  pose_graph_tools_msgs::PoseGraph pose_graph;
   pose_graph.edges = odometry_edges_;  // add odometry edges to pg
   // then add loop closure edges to pg
   pose_graph.edges.insert(pose_graph.edges.end(),
@@ -313,7 +316,7 @@ void RosLoopClosureVisualizer::publishPoseGraph(
   const gtsam::NonlinearFactorGraph& nfg = lcd_output->nfg_;
   const gtsam::Values& values = lcd_output->states_;
   updateNodesAndEdges(lcd_output->timestamp_map_, nfg, values);
-  pose_graph_tools::PoseGraph graph = getPosegraphMsg();
+  pose_graph_tools_msgs::PoseGraph graph = getPosegraphMsg();
   graph.header.stamp.fromNSec(ts);
   graph.header.frame_id = map_frame_id_;
   posegraph_pub_.publish(graph);
@@ -325,11 +328,11 @@ void RosLoopClosureVisualizer::publishPoseGraph(
   // TODO(Yun) publish keyed-odometry instead in RosVisualizer
   // (Or create key in receiver - but need to make sure no msg drop)
   if (odometry_edges_.size() > 0) {
-    pose_graph_tools::PoseGraph incremental_graph;
-    pose_graph_tools::PoseGraphEdge last_odom_edge =
+    pose_graph_tools_msgs::PoseGraph incremental_graph;
+    pose_graph_tools_msgs::PoseGraphEdge last_odom_edge =
         odometry_edges_.at(odometry_edges_.size() - 1);
     last_odom_edge.header.stamp.fromNSec(ts);
-    last_odom_edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
+    last_odom_edge.type = pose_graph_tools_msgs::PoseGraphEdge::ODOM;
     last_odom_edge.robot_from = robot_id_;
     last_odom_edge.robot_to = robot_id_;
     incremental_graph.edges.push_back(last_odom_edge);
@@ -340,7 +343,7 @@ void RosLoopClosureVisualizer::publishPoseGraph(
     if (lcd_output->is_loop_closure_) {
       // Not directly taking the last lc_edge to bypass kimera-rpgo
       gtsam::Pose3 lc_transform = lcd_output->relative_pose_;
-      pose_graph_tools::PoseGraphEdge last_lc_edge;
+      pose_graph_tools_msgs::PoseGraphEdge last_lc_edge;
 
       const gtsam::Point3& translation = lc_transform.translation();
       const gtsam::Quaternion& quaternion =
@@ -357,7 +360,7 @@ void RosLoopClosureVisualizer::publishPoseGraph(
       last_lc_edge.pose.orientation.z = quaternion.z();
       last_lc_edge.pose.orientation.w = quaternion.w();
       last_lc_edge.header.stamp.fromNSec(ts);
-      last_lc_edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
+      last_lc_edge.type = pose_graph_tools_msgs::PoseGraphEdge::LOOPCLOSE;
       incremental_graph.edges.push_back(last_lc_edge);
       loop_closure_edges_.push_back(last_lc_edge);
       incremental_graph.edges.push_back(last_lc_edge);
@@ -390,14 +393,14 @@ void RosLoopClosureVisualizer::processBowQuery() {
   if (pose_id % bow_skip_num_ != 0)
     return;
 
-  pose_graph_tools::BowVector bow_vec_msg;
+  pose_graph_tools_msgs::BowVector bow_vec_msg;
   for (auto it = frames_.back().bow_vec_.begin();
        it != frames_.back().bow_vec_.end();
        ++it) {
     bow_vec_msg.word_ids.push_back(it->first);
     bow_vec_msg.word_values.push_back(it->second);
   }
-  pose_graph_tools::BowQuery bow_msg;
+  pose_graph_tools_msgs::BowQuery bow_msg;
   bow_msg.robot_id = robot_id_;
   bow_msg.pose_id = pose_id;
   bow_msg.bow_vector = bow_vec_msg;
@@ -437,15 +440,15 @@ void RosLoopClosureVisualizer::publishTimerCallback(const ros::TimerEvent& event
 }
 
 bool RosLoopClosureVisualizer::VLCServiceCallback(
-    pose_graph_tools::VLCFrameQuery::Request& request,
-    pose_graph_tools::VLCFrameQuery::Response& response) {
+    pose_graph_tools_msgs::VLCFrameQuery::Request& request,
+    pose_graph_tools_msgs::VLCFrameQuery::Response& response) {
   // Check requested frames belong to this robot
   CHECK(request.robot_id == robot_id_);
   response.frames.clear();
 
   // Loop through requested pose ids
   for (const auto& pose_id : request.pose_ids) {
-    pose_graph_tools::VLCFrameMsg frame_msg;
+    pose_graph_tools_msgs::VLCFrameMsg frame_msg;
     if (!getFrameMsg(pose_id, frame_msg)) {
       ROS_ERROR_STREAM("Requested frame " << pose_id << " does not exist!");
       continue;
@@ -456,8 +459,9 @@ bool RosLoopClosureVisualizer::VLCServiceCallback(
   return true;
 }
 
-bool RosLoopClosureVisualizer::getFrameMsg(int pose_id, 
-                                           pose_graph_tools::VLCFrameMsg& frame_msg) const {
+bool RosLoopClosureVisualizer::getFrameMsg(
+    int pose_id,
+    pose_graph_tools_msgs::VLCFrameMsg& frame_msg) const {
   if (pose_id >= frames_.size()) {
     return false;
   }

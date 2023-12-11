@@ -3,7 +3,7 @@
 
 namespace VIO {
 
-using pose_graph_tools::LcdFrameRegistration;
+using pose_graph_tools_msgs::LcdFrameRegistration;
 
 LcdRegistrationServer::LcdRegistrationServer(LcdModule* lcd_module)
     : nh_("~"), lcd_module_(CHECK_NOTNULL(lcd_module)) {

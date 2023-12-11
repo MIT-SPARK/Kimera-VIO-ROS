@@ -27,7 +27,7 @@
   <depend>rosbag</depend>
   <depend>cv_bridge</depend>
   <depend>tf</depend>
-  <depend>pose_graph_tools</depend>
+  <depend>pose_graph_tools_msgs</depend>
   <depend>mesh_rviz_plugins</depend>
 
   <depend>glog_catkin</depend>

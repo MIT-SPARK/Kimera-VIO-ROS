@@ -21,12 +21,12 @@
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
 
-#include <pose_graph_tools/PoseGraph.h>
-#include <pose_graph_tools/PoseGraphEdge.h>
-#include <pose_graph_tools/PoseGraphNode.h>
-#include <pose_graph_tools/VLCFrameQuery.h>
-#include <pose_graph_tools/VLCFrames.h>
-#include <pose_graph_tools/BowQueries.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
+#include <pose_graph_tools_msgs/PoseGraphEdge.h>
+#include <pose_graph_tools_msgs/PoseGraphNode.h>
+#include <pose_graph_tools_msgs/VLCFrameQuery.h>
+#include <pose_graph_tools_msgs/VLCFrames.h>
+#include <pose_graph_tools_msgs/BowQueries.h>
 
 #include <kimera-vio/backend/VioBackend-definitions.h>
 #include <kimera-vio/frontend/StereoVisionImuFrontend-definitions.h>
@@ -62,7 +62,7 @@ class RosLoopClosureVisualizer {
 
   void updateRejectedEdges();
 
-  pose_graph_tools::PoseGraph getPosegraphMsg();
+  pose_graph_tools_msgs::PoseGraph getPosegraphMsg();
 
   // Process bag-of-word vector associated to latest frame
   void processBowQuery();
@@ -71,8 +71,9 @@ class RosLoopClosureVisualizer {
   void publishTimerCallback(const ros::TimerEvent &event);
 
   // Service callback to send VLCFrame
-  bool VLCServiceCallback(pose_graph_tools::VLCFrameQuery::Request& request,
-                          pose_graph_tools::VLCFrameQuery::Response& response);
+  bool VLCServiceCallback(
+      pose_graph_tools_msgs::VLCFrameQuery::Request& request,
+      pose_graph_tools_msgs::VLCFrameQuery::Response& response);
 
  private:
   // ROS handles
@@ -97,10 +98,10 @@ class RosLoopClosureVisualizer {
   tf::TransformBroadcaster tf_broadcaster_;
 
   //! Stored pose graph related objects
-  std::vector<pose_graph_tools::PoseGraphEdge> loop_closure_edges_;
-  std::vector<pose_graph_tools::PoseGraphEdge> odometry_edges_;
-  std::vector<pose_graph_tools::PoseGraphEdge> inlier_edges_;
-  std::vector<pose_graph_tools::PoseGraphNode> pose_graph_nodes_;
+  std::vector<pose_graph_tools_msgs::PoseGraphEdge> loop_closure_edges_;
+  std::vector<pose_graph_tools_msgs::PoseGraphEdge> odometry_edges_;
+  std::vector<pose_graph_tools_msgs::PoseGraphEdge> inlier_edges_;
+  std::vector<pose_graph_tools_msgs::PoseGraphNode> pose_graph_nodes_;
   std::map<size_t, ros::Time> key_stamped_;
 
   struct lcd_frame {
@@ -133,17 +134,17 @@ class RosLoopClosureVisualizer {
   bool publish_vlc_frames_;
 
   // BoW queries to different robots
-  std::map<uint16_t, pose_graph_tools::BowQueries> bow_queries_;
+  std::map<uint16_t, pose_graph_tools_msgs::BowQueries> bow_queries_;
 
   // New VLC frames
-  pose_graph_tools::VLCFrames new_frames_msg_;
+  pose_graph_tools_msgs::VLCFrames new_frames_msg_;
 
   // ROS timer
   ros::Timer publish_timer_;
 
   // Helper function to convert a VLC frame into a ROS message
-  bool getFrameMsg(int pose_id, pose_graph_tools::VLCFrameMsg& frame_msg) const;
-
+  bool getFrameMsg(int pose_id,
+                   pose_graph_tools_msgs::VLCFrameMsg& frame_msg) const;
 };
 
 }  // namespace VIO

@@ -1,7 +1,7 @@
 #pragma once
 #include <kimera-vio/loopclosure/LcdModule.h>
 
-#include <pose_graph_tools/LcdFrameRegistration.h>
+#include <pose_graph_tools_msgs/LcdFrameRegistration.h>
 #include <ros/callback_queue.h>
 #include <ros/ros.h>
 
@@ -16,8 +16,8 @@ class LcdRegistrationServer {
  private:
   void spin();
 
-  bool srvCallback(pose_graph_tools::LcdFrameRegistration::Request& req,
-                   pose_graph_tools::LcdFrameRegistration::Response& res);
+  bool srvCallback(pose_graph_tools_msgs::LcdFrameRegistration::Request& req,
+                   pose_graph_tools_msgs::LcdFrameRegistration::Response& res);
 
   ros::NodeHandle nh_;
   LcdModule* lcd_module_;
