@@ -33,7 +33,7 @@
 - git:
     local-name: Kimera-RPGO
     uri: https://github.com/MIT-SPARK/Kimera-RPGO.git
-    version: master
+    version: bharadwajsirigadi-patch-1
 - git:
     local-name: Kimera-VIO
     uri: https://github.com/MIT-SPARK/Kimera-VIO.git
