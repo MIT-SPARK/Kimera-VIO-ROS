@@ -1,0 +1,20 @@
+<launch>
+    <!-- RealSense Camera Node -->
+    <include ns="robot0" file="$(find realsense2_camera)/launch/rs_camera.launch">
+        <!-- Camera configuration argeters -->
+        <arg name="enable_color" value="false" />
+        <arg name="enable_infra1" value="true" />
+        <arg name="enable_infra2" value="true" />
+        <arg name="enable_depth" value="false" />
+        <arg name="infra_width" value="640" />
+        <arg name="infra_height" value="480" />
+        <arg name="infra_fps" value="30" />
+        <arg name="enable_pointcloud" value="false" />
+        <arg name="pointcloud_texture_index" value="0" />
+        <arg name="enable_gyro" value="true" />
+        <arg name="enable_accel" value="true" />
+        <arg name="enable_sync" value="true" />
+        <arg name="unite_imu_method" value="linear_interpolation" />
+        <!-- Additional argeters like filters can be added here -->
+    </include>
+</launch>

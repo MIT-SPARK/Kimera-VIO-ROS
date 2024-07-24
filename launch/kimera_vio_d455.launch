@@ -14,18 +14,29 @@
   <arg name="lcd_no_optimize" default="false"/>
   <arg name="lcd_no_detection" default="false"/>
 
+  <arg name="visualize"    default="true" />
+  <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
+  <arg name="viz_type"     default="1" />
+  <!-- Use Rviz for visualization or OpenCV -->
+  <arg name="use_rviz"     default="true"/>
+
   <!-- Other settings -->
   <arg name="log_gt_data" default="true"/>
-  <arg name="should_use_sim_time" default="true"/>
+  <arg name="should_use_sim_time" default="false"/>
   <arg name="params_folder" value="$(find kimera_vio)/params/$(arg config_type)"/>
+  <!-- <arg name="sensor_folder" value="$(arg params_folder)"/> -->
   <arg if="$(arg log_output)" name="log_output_path" value="$(find kimera_vio_ros)/output_logs/$(arg config_type)"/>
 
   <!-- Subscribed Topics -->
+  <arg name="base_link_frame_id" default="camera_link"/>
+  <arg name="left_cam_frame_id"  default="camera_infra1_optical_frame"/>
+  <arg name="right_cam_frame_id" default="camera_infra2_optical_frame"/>
+
   <arg name="left_cam_topic" value="/$(arg robot_name)/$(arg camera_name)/infra1/image_rect_raw"/>
   <arg name="right_cam_topic" value="/$(arg robot_name)/$(arg camera_name)/infra2/image_rect_raw"/>
   <arg name="imu_topic"  value="/$(arg robot_name)/$(arg camera_name)/imu"/>
   <!-- Only used when parsing a rosbag -->
-  <arg name="external_odom_topic" value="/$(arg robot_name)/jackal_velocity_controller/odom"/>
+  <!-- <arg name="external_odom_topic" value=""/> -->
 
   <!-- Launch actual pipeline -->
   <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch"

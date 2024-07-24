@@ -13,7 +13,7 @@
 - git:
     local-name: gtsam
     uri: git@github.com:borglab/gtsam.git
-    version: develop
+    version: 4.2.0
 - git:
     local-name: opengv_catkin
     uri: git@github.com:MIT-SPARK/opengv_catkin.git
