@@ -49,6 +49,10 @@ KimeraVioRos::KimeraVioRos()
       "restart_kimera_vio", &KimeraVioRos::restartKimeraVio, this);
 
   CHECK(nh_private_.getParam("use_rviz", use_rviz_));
+  // Check that visualization flags are consistent
+  CHECK_EQ(use_rviz_, FLAGS_visualize)
+      << "visualize flags must match: use_rviz_ and FLAGS_visualize should "
+         "be the same";
 
   nh_private_.getParam("use_lcd_registration_server",
                        use_lcd_registration_server_);
@@ -304,7 +308,8 @@ void KimeraVioRos::connectVIO() {
                 std::placeholders::_1));
 
   if (vio_params_->frontend_type_ == VIO::FrontendType::kStereoImu) {
-    auto stereo_pipeline = dynamic_cast<StereoImuPipeline*>(vio_pipeline_.get());
+    auto stereo_pipeline =
+        dynamic_cast<StereoImuPipeline*>(vio_pipeline_.get());
     CHECK(stereo_pipeline);
 
     data_provider_->registerRightFrameCallback(

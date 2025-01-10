@@ -110,8 +110,6 @@ file and include this one to launch KimeraVIO on the dataset of your choice -->
   <arg name="include_pipeline_flags" default="false"/>
   <arg name="pipeline_flag_args" value="--flagfile=$(arg flags_folder)/Pipeline.flags"
        if="$(arg include_pipeline_flags)"/>
-  <arg name="pipeline_flag_args" value=""
-       unless="$(arg include_pipeline_flags)"/>
 
   <arg name="glog_dir" default=""/>
   <arg name="glog_to_dir" default="false"/>
