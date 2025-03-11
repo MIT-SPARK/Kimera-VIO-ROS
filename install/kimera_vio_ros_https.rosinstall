@@ -13,7 +13,7 @@
 - git:
     local-name: gtsam
     uri: https://github.com/borglab/gtsam.git
-    version: develop
+    version: 4.2
 - git:
     local-name: opengv_catkin
     uri: https://github.com/MIT-SPARK/opengv_catkin.git
@@ -37,10 +37,6 @@
 - git:
     local-name: Kimera-VIO
     uri: https://github.com/MIT-SPARK/Kimera-VIO.git
-    version: master
-- git:
-    local-name: Kimera-VIO-ROS
-    uri: https://github.com/MIT-SPARK/Kimera-VIO-ROS.git
     version: master
 - git:
     local-name: glog_catkin
